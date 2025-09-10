@@ -107,7 +107,7 @@ function ExamCreator() {
 
             <h2>Examen Creado:</h2>
             {preguntas.map((p, idx) => (
-                <div key={idx} style={{ marginBottom: '15px' }}>
+                <div key={idx} style={{ marginBottom: '156px' }}>
                     <strong>{idx + 1}. {p.texto}</strong>
                     <div>
                         {p.opciones.map((op, i) => (
