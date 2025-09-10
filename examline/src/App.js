@@ -1,13 +1,13 @@
-import { useState} from "react";
+import { useState } from "react";
 import { signupUser } from "./services/api"; // Asegurate que la ruta sea correcta
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 function App() {
  
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
-  const navigate = useNavigate();
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -44,9 +44,12 @@ function App() {
           />
         </div>
         <button type="submit" style={{ marginTop: "10px" }}>Crear Usuario</button>
-        <button type="button" style={{ marginTop: "10px" }} onClick={() => {navigate("/")}}>Crear Exam</button>
-      </form>
+        <Link to="./ExamCreator" style={{ textDecoration: "none", marginLeft: "10px" }}>
+          <button type="button" style={{ marginTop: "10px" }}>Crear Exam</button>
+        </Link>
 
+      </form>
+     
       {message && <p style={{ marginTop: "20px" }}>{message}</p>}
     </div>
   );

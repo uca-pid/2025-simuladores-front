@@ -1,7 +1,7 @@
     import React from 'react';  
     import { useNavigate } from 'react-router-dom';
     
-    function Exam() {
+    function ExamCreator() {
     const navigate = useNavigate();
 
     return (
@@ -12,4 +12,4 @@
     );
     }
 
-    export default Exam;
+    export default ExamCreator;
