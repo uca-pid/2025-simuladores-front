@@ -100,7 +100,7 @@ function ExamCreator() {
             </button>
 
             <button onClick={handleAbrirExamen} style={{ marginTop: '10px', marginLeft: '10px' }} disabled={preguntas.length === 0}>
-                Finalizar Examen
+                Finalizar Exameen
             </button>
 
             <hr />
