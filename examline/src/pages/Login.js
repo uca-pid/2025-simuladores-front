@@ -1,4 +1,3 @@
-// src/pages/Login.jsx
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -7,9 +6,10 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [validated, setValidated] = useState(false);
+  const [error, setError] = useState(""); // para mostrar errores del backend
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const form = e.currentTarget;
 
@@ -18,9 +18,32 @@ const Login = () => {
       return;
     }
 
-    // Simulación de login
-    localStorage.setItem("profesorNombre", email || "Profesor");
-    navigate("/dashboard"); // Cambiar por la ruta real del profesor
+    try {
+      // Llamada al endpoint de login
+      const res = await fetch("http://localhost:4000/users/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Error al iniciar sesión");
+        return;
+      }
+
+      // Guardar info del usuario
+      localStorage.setItem("profesorNombre", data.nombre);
+      localStorage.setItem("userId", data.userId);
+
+      // Redirigir al dashboard o página principal
+      navigate("/principal"); 
+
+    } catch (err) {
+      console.error(err);
+      setError("Error al conectar con el servidor");
+    }
   };
 
   return (
@@ -28,7 +51,9 @@ const Login = () => {
       <div className="card shadow-lg border-0 rounded-4" style={{ maxWidth: "400px", width: "100%" }}>
         <div className="card-body p-5 text-center">
           <img src="/logo.png" alt="Examline" className="mb-4" style={{ width: "150px", height: "auto" }} />
-          <h2 className="mb-4 fw-bold text-primary">Login de Profesores</h2>
+          <h2 className="mb-4 fw-bold text-primary">Login</h2>
+
+          {error && <div className="alert alert-danger">{error}</div>}
 
           <form noValidate className={validated ? "was-validated" : ""} onSubmit={handleSubmit}>
             <div className="mb-3 text-start">
@@ -72,5 +97,6 @@ const Login = () => {
 };
 
 export default Login;
+
 
 
