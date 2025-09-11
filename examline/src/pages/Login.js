@@ -37,7 +37,7 @@ const Login = () => {
       localStorage.setItem("profesorNombre", data.nombre);
       localStorage.setItem("userId", data.userId);
 
-      // Redirigir al dashboard o página principal
+      // Redirigir a página principal
       navigate("/principal"); 
 
     } catch (err) {

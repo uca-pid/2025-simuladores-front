@@ -1,24 +1,26 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import Registro from "./pages/Registro";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Login from "./pages/Login";
+import Registro from "./pages/Registro";
 import Principal from "./pages/Principal";
+import ExamCreator from "./pages/ExamCreator";
+import ExamView from "./pages/ExamView";
 
 function App() {
   return (
     <Router>
       <Routes>
-        {/* Redirige la raíz al login */}
-        <Route path="/" element={<Navigate to="/login" />} />
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Registro />} />
         <Route path="/principal" element={<Principal />} />
+        <Route path="/exam-creator" element={<ExamCreator />} />
+        <Route path="/examen/:examId" element={<ExamView />} />
+        <Route path="*" element={<Login />} /> {/* default */}
       </Routes>
     </Router>
   );
 }
 
 export default App;
-
 
 
 
