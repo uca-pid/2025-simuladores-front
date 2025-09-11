@@ -16,43 +16,57 @@ function ExamCreator() {
         setCorrecta(0);
     };
 
-    // Función para abrir el examen en una nueva pestaña
-
+   
     const handleAbrirExamen = () => {
-        // Save exam data to localStorage
+      
         localStorage.setItem('examData', JSON.stringify(preguntas));
-        // Open /exam route in a new tab
+     
         window.open('/exam', '_blank');
-        // Download SEB config
+       
         descargarSEB();
     };
 
-    // Función para descargar el archivo .seb
-    function descargarSEB() {
-        const sebPlist = `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>startUrl</key>
-    <string>http://localhost:3000/exam</string>
-    <key>browserWindowAllowReload</key>
-    <true/>
-    <key>allowQuit</key>
-    <true/>
-    <key>showReloadButton</key>
-    <false/>
-    <key>showURL</key>
-    <false/>
-</dict>
-</plist>`;
-        const blob = new Blob([sebPlist], { type: "application/xml" });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = "examen.seb";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
+function descargarSEB() {
+  const sebPlist = `<?xml version="1.0" encoding="UTF-8"?>
+  <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+   "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+  <plist version="1.0">
+    <dict>
+      <key>startUrl</key>
+      <string>http://localhost:3000/exam</string>
+
+      <!-- Contraseña para salir de SEB -->
+      <key>quitPassword</key>
+      <string>1234</string>
+
+      <!-- Contraseña para proteger configuración -->
+      <key>settingsPassword</key>
+      <string>1234</string>
+
+      <!-- Opciones básicas -->
+      <key>browserWindowAllowReload</key>
+      <true/>
+      <key>allowQuit</key>
+      <true/>
+      <key>showReloadButton</key>
+      <false/>
+      <key>showURL</key>
+      <false/>
+      <key>fullScreen</key>
+      <true/>
+      <key>kioskMode</key>
+      <true/>
+    </dict>
+  </plist>`;
+
+  const blob = new Blob([sebPlist], { type: "application/xml" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "examen.seb";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
 
     return (
         <div style={{ padding: '20px' }}>
