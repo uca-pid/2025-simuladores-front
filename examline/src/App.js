@@ -4,6 +4,7 @@ import Registro from "./pages/Registro";
 import Principal from "./pages/Principal";
 import ExamCreator from "./pages/ExamCreator";
 import ExamView from "./pages/ExamView";
+import UserSettingsPage from "./pages/userSettings";
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
         <Route path="/principal" element={<Principal />} />
         <Route path="/exam-creator" element={<ExamCreator />} />
         <Route path="/examen/:examId" element={<ExamView />} />
+        <Route path="/user-settings" element={<UserSettingsPage userId={Number(localStorage.getItem("userId"))} />} />
         <Route path="*" element={<Login />} /> {/* default */}
       </Routes>
     </Router>

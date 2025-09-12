@@ -21,6 +21,7 @@ const Principal = () => {
   }, [userId]);
 
   const handleCrearExamen = () => navigate("/exam-creator");
+  const handleUserSettings = () => navigate("/user-settings");
   const handleVerExamen = (examId) => navigate(`/examen/${examId}`);
   const handleLogout = () => {
     localStorage.clear();
@@ -34,6 +35,9 @@ const Principal = () => {
         <div>
           <button className="btn btn-success me-2" onClick={handleCrearExamen}>
             Crear Examen
+          </button>
+          <button className="btn btn-success me-2" onClick={handleUserSettings}>
+            Configuración
           </button>
           <button className="btn btn-outline-danger" onClick={handleLogout}>
             Cerrar Sesión
