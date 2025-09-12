@@ -15,12 +15,7 @@ function App() {
         <Route path="/principal" element={<Principal />} />
         <Route path="/exam-creator" element={<ExamCreator />} />
         <Route path="/examen/:examId" element={<ExamView />} />
-        <Route path="/user-settings" element={
-          <UserSettingsPage key={Number(localStorage.getItem("userId"))}
-                            userId={Number(localStorage.getItem("userId"))}
-          />
-         }
-      />
+        <Route path="/user-settings" element={<UserSettingsPage />} />
         <Route path="*" element={<Login />} /> {/* default */}
       </Routes>
     </Router>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
-export default function UserSettingsPage({ userId }) {
+export default function UserSettingsPage() {
+  const userId = Number(localStorage.getItem("userId"));
   const [formData, setFormData] = useState({ nombre: '', email: '', password: '' });
   const [loading, setLoading] = useState(true);
 
