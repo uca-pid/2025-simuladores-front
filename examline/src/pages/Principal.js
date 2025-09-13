@@ -38,21 +38,23 @@ const Principal = () => {
       ) : (
         <div className="row g-3">
           {exams.map(exam => (
-            <div key={exam.id} className="col-md-4">
-              <div className="card h-100 shadow-sm">
-                <div className="card-body d-flex flex-column">
-                  <h5 className="card-title">{exam.titulo}</h5>
-                  <p className="card-text">Preguntas: {exam.preguntas.length}</p>
-                  <button
-                    className="btn btn-primary mt-auto"
-                    onClick={() => handleVerExamen(exam.id)}
-                  >
-                    Ver preguntas
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
+  <div key={exam.id} className="col-md-4">
+    <div className="card h-100 shadow-sm">
+      <div className="card-body d-flex flex-column">
+        <h5 className="card-title">{exam.titulo}</h5>
+        <p className="card-text mb-1"><strong>Código de examen:</strong> {exam.id}</p>  {/* <-- ID agregado */}
+        <p className="card-text">Preguntas: {exam.preguntas.length}</p>
+        <button
+          className="btn btn-primary mt-auto"
+          onClick={() => handleVerExamen(exam.id)}
+        >
+          Ver preguntas
+        </button>
+      </div>
+    </div>
+  </div>
+))}
+
         </div>
       )}
     </div>
