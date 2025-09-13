@@ -31,17 +31,16 @@ const Registro = () => {
   };
 
   const validatePassword = (password) => {
-  if (!password) return "Debe ingresar una contraseña.";
-  if (password.length < 8) return "Debe tener al menos 8 caracteres.";
-  if (!/[A-Z]/.test(password)) return "Debe incluir al menos una letra mayúscula.";
-  if (!/[a-z]/.test(password)) return "Debe incluir al menos una letra minúscula.";
-  if (!/\d/.test(password)) return "Debe incluir al menos un número.";
-  if (!/[@$!%*?&#+^()_={}[\]<>|~]/.test(password)) 
-    return "Debe incluir al menos un carácter especial.";
-  if (/\s/.test(password)) return "No se permiten espacios en blanco.";
-  return "";
-};
-
+    if (!password) return "Debe ingresar una contraseña.";
+    if (password.length < 8) return "Debe tener al menos 8 caracteres.";
+    if (!/[A-ZÁÉÍÓÚÜÑ]/.test(password)) return "Debe incluir al menos una letra mayúscula.";
+    if (!/[a-záéíóúüñ]/.test(password)) return "Debe incluir al menos una letra minúscula.";
+    if (!/\d/.test(password)) return "Debe incluir al menos un número.";
+    if (!/[@$!%*?&#+^()_={}[\]<>|~]/.test(password))
+      return "Debe incluir al menos un carácter especial.";
+    if (/\s/.test(password)) return "No se permiten espacios en blanco.";
+    return "";
+  };
 
   // ---------------- Submit ----------------
   const handleSubmit = async (e) => {
@@ -55,7 +54,7 @@ const Registro = () => {
     setEmailError(emailErr);
     setPasswordError(passwordErr);
 
-    if (nombreErr || emailErr || passwordErr) return; // No enviar si hay errores
+    if (nombreErr || emailErr || passwordErr) return;
 
     try {
       // 1️⃣ Registro
@@ -91,12 +90,17 @@ const Registro = () => {
         return;
       }
 
-      // 3️⃣ Guardar sesión y redirigir
+      // 3️⃣ Guardar sesión
       localStorage.setItem("userId", loginData.userId);
       localStorage.setItem("name", loginData.nombre);
       localStorage.setItem("rol", loginData.rol);
 
-      navigate("/principal");
+      // 4️⃣ Redirigir según rol
+      if (loginData.rol === "professor") {
+        navigate("/principal");
+      } else {
+        navigate("/student-exam");
+      }
     } catch (err) {
       console.error(err);
       setError("Error al conectar con el servidor");
@@ -168,7 +172,7 @@ const Registro = () => {
               {passwordError && <div className="invalid-feedback">{passwordError}</div>}
             </div>
 
-            {/* Checkbox de rol */}
+            {/* Switch de rol */}
             <div className="form-check form-switch mb-3 text-start">
               <input
                 className="form-check-input"
@@ -198,4 +202,3 @@ const Registro = () => {
 };
 
 export default Registro;
-
