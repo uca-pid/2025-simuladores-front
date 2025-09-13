@@ -31,7 +31,7 @@ const Principal = () => {
   return (
     <div className="container py-5">
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h1 className="text-primary">Bienvenido, {localStorage.getItem("profesorNombre")}</h1>
+        <h1 className="text-primary">Bienvenido, {localStorage.getItem("name")}</h1>
         <div>
           <button className="btn btn-success me-2" onClick={handleCrearExamen}>
             Crear Examen

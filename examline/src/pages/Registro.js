@@ -56,7 +56,7 @@ const Registro = () => {
 
       // 3️⃣ Guardar sesión y redirigir
       localStorage.setItem("userId", loginData.userId);
-      localStorage.setItem("nombre", loginData.nombre);
+      localStorage.setItem("name", loginData.nombre);
       localStorage.setItem("rol", loginData.rol); // 👈 también guardamos rol
 
       navigate("/principal");

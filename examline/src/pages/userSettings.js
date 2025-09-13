@@ -43,31 +43,37 @@ export default function UserSettingsPage() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    const submitData = { nombre: formData.nombre, email: formData.email };
-    if (formData.password.trim() !== "") submitData.password = formData.password;
+  e.preventDefault();
+  const submitData = { nombre: formData.nombre, email: formData.email };
+  if (formData.password.trim() !== "") submitData.password = formData.password;
 
-    try {
-      const res = await fetch(`${API_URL}/users/${userId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(submitData),
-      });
+  try {
+    const res = await fetch(`${API_URL}/users/${userId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(submitData),
+    });
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || "Error actualizando usuario");
-      }
-
-      const updatedUser = await res.json();
-      console.log("Usuario actualizado:", updatedUser);
-      alert("Usuario actualizado correctamente");
-      setFormData((prev) => ({ ...prev, password: "" }));
-    } catch (err) {
-      console.error("Error actualizando usuario", err);
-      alert(err.message);
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.error || "Error actualizando usuario");
     }
+
+    const updatedUser = await res.json();
+    console.log("Usuario actualizado:", updatedUser);
+
+    // 👇 Actualizar localStorage
+    localStorage.setItem("name", updatedUser.nombre);
+    localStorage.setItem("email", updatedUser.email);
+
+    alert("Usuario actualizado correctamente");
+    setFormData((prev) => ({ ...prev, password: "" }));
+  } catch (err) {
+    console.error("Error actualizando usuario", err);
+    alert(err.message);
+  }
   };
+
 
   const handleDelete = async () => {
     if (!window.confirm("¿Seguro que deseas eliminar tu cuenta? Esta acción no se puede deshacer.")) return;

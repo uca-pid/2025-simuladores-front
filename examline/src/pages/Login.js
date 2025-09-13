@@ -34,7 +34,7 @@
         }
 
         // Guardar info del usuario
-        localStorage.setItem("profesorNombre", data.nombre);
+        localStorage.setItem("name", data.nombre);
         localStorage.setItem("userId", data.userId);
 
         // Redirigir a página principal
