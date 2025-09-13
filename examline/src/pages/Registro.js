@@ -109,92 +109,97 @@ const Registro = () => {
 
   return (
     <div className="bg-light d-flex align-items-center justify-content-center vh-100">
-      <div className="card shadow-lg border-0 rounded-4" style={{ maxWidth: "400px", width: "100%" }}>
-        <div className="card-body p-5 text-center">
-          <img src="/logo.png" alt="Examline" className="mb-4" style={{ width: "150px", height: "auto" }} />
-          <h2 className="mb-4 fw-bold text-primary">Registro</h2>
+      <div className="card shadow-lg border-0 rounded-4" style={{ maxWidth: "800px", width: "100%" }}>
+        <div className="row g-0">
+          {/* Columna izquierda: Logo y título */}
+          <div className="col-md-5 d-flex flex-column justify-content-center align-items-center p-4">
+            <img src="/logo.png" alt="Examline" className="mb-4" style={{ width: "150px", height: "auto" }} />
+            <h2 className="fw-bold text-primary text-center">Registro</h2>
+          </div>
 
-          {error && <div className="alert alert-danger">{error}</div>}
-
-          <form onSubmit={handleSubmit} noValidate>
-            {/* Nombre */}
-            <div className="mb-3 text-start">
-              <label htmlFor="nombre" className="form-label">Nombre</label>
-              <input
-                type="text"
-                className={`form-control ${nombreError ? "is-invalid" : ""}`}
-                id="nombre"
-                value={nombre}
-                onChange={(e) => {
-                  setNombre(e.target.value);
-                  setNombreError(validateName(e.target.value));
-                }}
-              />
-              <div className="form-text text-primary">
-                Solo letras, espacios y caracteres como tildes, ñ, apóstrofes o guiones.
+          {/* Columna derecha: Formulario */}
+          <div className="col-md-7 p-5 bg-light">
+            {error && <div className="alert alert-danger">{error}</div>}
+            <form onSubmit={handleSubmit} noValidate>
+              {/* Nombre */}
+              <div className="mb-3 text-start">
+                <input
+                  type="text"
+                  className={`form-control ${nombreError ? "is-invalid" : ""}`}
+                  id="nombre"
+                  placeholder="Nombre"
+                  value={nombre}
+                  onChange={(e) => {
+                    setNombre(e.target.value);
+                    setNombreError(validateName(e.target.value));
+                  }}
+                />
+                <div className="form-text text-primary">
+                  Solo letras, espacios y caracteres como tildes, ñ, apóstrofes o guiones.
+                </div>
+                {nombreError && <div className="invalid-feedback">{nombreError}</div>}
               </div>
-              {nombreError && <div className="invalid-feedback">{nombreError}</div>}
-            </div>
 
-            {/* Email */}
-            <div className="mb-3 text-start">
-              <label htmlFor="email" className="form-label">Email</label>
-              <input
-                type="email"
-                className={`form-control ${emailError ? "is-invalid" : ""}`}
-                id="email"
-                value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  setEmailError(validateEmail(e.target.value));
-                }}
-              />
-              <div className="form-text text-primary">Debe tener formato ejemplo@dominio.com</div>
-              {emailError && <div className="invalid-feedback">{emailError}</div>}
-            </div>
-
-            {/* Contraseña */}
-            <div className="mb-3 text-start">
-              <label htmlFor="password" className="form-label">Contraseña</label>
-              <input
-                type="password"
-                className={`form-control ${passwordError ? "is-invalid" : ""}`}
-                id="password"
-                value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  setPasswordError(validatePassword(e.target.value));
-                }}
-              />
-              <div className="form-text text-primary">
-                Debe incluir al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial. No se permiten espacios.
+              {/* Email */}
+              <div className="mb-3 text-start">
+                <input
+                  type="email"
+                  className={`form-control ${emailError ? "is-invalid" : ""}`}
+                  id="email"
+                  placeholder="Email"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setEmailError(validateEmail(e.target.value));
+                  }}
+                />
+                <div className="form-text text-primary">Debe tener formato ejemplo@dominio.com</div>
+                {emailError && <div className="invalid-feedback">{emailError}</div>}
               </div>
-              {passwordError && <div className="invalid-feedback">{passwordError}</div>}
-            </div>
 
-            {/* Switch de rol */}
-            <div className="form-check form-switch mb-3 text-start">
-              <input
-                className="form-check-input"
-                type="checkbox"
-                id="isProfessor"
-                checked={isProfessor}
-                onChange={() => setIsProfessor(!isProfessor)}
-              />
-              <label className="form-check-label" htmlFor="isProfessor">
-                Registrarme como profesor
-              </label>
-            </div>
+              {/* Contraseña */}
+              <div className="mb-3 text-start">
+                <input
+                  type="password"
+                  className={`form-control ${passwordError ? "is-invalid" : ""}`}
+                  id="password"
+                  placeholder="Contraseña"
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setPasswordError(validatePassword(e.target.value));
+                  }}
+                />
+                <div className="form-text text-primary">
+                  Debe incluir al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial. No se permiten espacios.
+                </div>
+                {passwordError && <div className="invalid-feedback">{passwordError}</div>}
+              </div>
 
-            {/* Botón */}
-            <div className="d-grid mb-3">
-              <button type="submit" className="btn btn-primary btn-lg">Registrarse</button>
-            </div>
+              {/* Switch de rol */}
+              <div className="form-check form-switch mb-3 text-start">
+                <input
+                  className="form-check-input"
+                  type="checkbox"
+                  id="isProfessor"
+                  checked={isProfessor}
+                  onChange={() => setIsProfessor(!isProfessor)}
+                />
+                <label className="form-check-label" htmlFor="isProfessor">
+                  Registrarme como profesor
+                </label>
+              </div>
 
-            <p className="mb-0">
-              ¿Ya tenés cuenta? <Link to="/login">Inicia sesión</Link>.
-            </p>
-          </form>
+              {/* Botón */}
+              <div className="d-grid mb-3">
+                <button type="submit" className="btn btn-primary btn-lg">Registrarse</button>
+              </div>
+
+              <p className="mb-0">
+                ¿Ya tenés cuenta? <Link to="/login">Inicia sesión</Link>.
+              </p>
+            </form>
+          </div>
         </div>
       </div>
     </div>
