@@ -76,7 +76,7 @@ export default function UserSettingsPage() {
 
 
   const handleDelete = async () => {
-    if (!window.confirm("¿Seguro que deseas eliminar tu cuenta? Esta acción no se puede deshacer.")) return;
+    if (!window.confirm("¿Seguro que deseas eliminar tu cuenta? Esta acciósn no se puede deshacer.")) return;
 
     try {
       const res = await fetch(`${API_URL}/users/${userId}`, {
