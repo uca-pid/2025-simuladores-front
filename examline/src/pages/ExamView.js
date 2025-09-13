@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
+import BackToMainButton from "../components/BackToMainButton";
 
-const ExamView = ({ examId: propExamId }) => {
+const ExamView = ({ examId: propExamId, onBack }) => {
   const { examId: routeExamId } = useParams();
   const navigate = useNavigate();
 
@@ -36,12 +37,13 @@ const ExamView = ({ examId: propExamId }) => {
     <div className="container py-5">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h1 className="text-primary">{exam.titulo}</h1>
-        <button
-          className="btn btn-outline-secondary"
-          onClick={() => navigate("/principal")}
-        >
-          Volver a Principal
-        </button>
+        {propExamId ? (
+          <button className="btn btn-outline-secondary" onClick={onBack}>
+            Volver
+          </button>
+        ) : (
+          <BackToMainButton />
+        )}
       </div>
 
       {exam.preguntas.length === 0 ? (

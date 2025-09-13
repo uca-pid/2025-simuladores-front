@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
+import UserHeader from "../components/UserHeader";
 
 const Principal = () => {
   const [exams, setExams] = useState([]);
@@ -21,31 +22,17 @@ const Principal = () => {
   }, [userId]);
 
   const handleCrearExamen = () => navigate("/exam-creator");
-  const handleUserSettings = () => navigate("/user-settings");
   const handleVerExamen = (examId) => navigate(`/examen/${examId}`);
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate("/login");
-  };
 
   return (
     <div className="container py-5">
+      <UserHeader />
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h1 className="text-primary">Bienvenido, {localStorage.getItem("name")}</h1>
-        <div>
-          <button className="btn btn-success me-2" onClick={handleCrearExamen}>
-            Crear Examen
-          </button>
-          <button className="btn btn-success me-2" onClick={handleUserSettings}>
-            Configuración
-          </button>
-          <button className="btn btn-outline-danger" onClick={handleLogout}>
-            Cerrar Sesión
-          </button>
-        </div>
+        <h2 className="mb-0">Exámenes creados</h2>
+        <button className="btn btn-success" onClick={handleCrearExamen}>
+          Crear Examen
+        </button>
       </div>
-
-      <h2 className="mb-3">Exámenes creados</h2>
       {exams.length === 0 ? (
         <p className="text-muted">No hay exámenes creados.</p>
       ) : (

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
+import BackToMainButton from "../components/BackToMainButton";
 
 export default function UserSettingsPage() {
   const userId = Number(localStorage.getItem("userId"));
@@ -147,7 +148,7 @@ export default function UserSettingsPage() {
           Configuración de Usuario
         </h1>
         <div className="d-flex gap-2">
-          <button className="btn btn-outline-secondary" onClick={() => navigate("/principal")}>Volver a Principal</button>
+          <BackToMainButton />
           <button className="btn btn-outline-danger" onClick={handleDelete}>Eliminar cuenta</button>
         </div>
       </div>

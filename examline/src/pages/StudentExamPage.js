@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import ExamView from "./ExamView";
+import UserHeader from "../components/UserHeader";
 
 const StudentExamPage = () => {
   const [examId, setExamId] = useState("");
@@ -14,6 +15,7 @@ const StudentExamPage = () => {
 
   return (
     <div className="container py-5">
+      <UserHeader />
       {!submittedId ? (
         <>
           <h2 className="mb-4 text-primary">Ingresar examen</h2>
@@ -31,7 +33,7 @@ const StudentExamPage = () => {
           </form>
         </>
       ) : (
-        <ExamView examId={submittedId} />
+        <ExamView examId={submittedId} onBack={() => setSubmittedId(null)} />
       )}
     </div>
   );
