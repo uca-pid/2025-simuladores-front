@@ -1,4 +1,3 @@
-// src/pages/Registro.jsx
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -7,59 +6,65 @@ const Registro = () => {
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isProfessor, setIsProfessor] = useState(false);
   const [validated, setValidated] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  const form = e.currentTarget;
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const form = e.currentTarget;
 
-  if (!form.checkValidity()) {
-    setValidated(true);
-    return;
-  }
-
-  try {
-    // 1️⃣ Crear el usuario
-    const signupRes = await fetch("http://localhost:4000/users/signup", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nombre, email, password }),
-    });
-
-    const signupData = await signupRes.json();
-
-    if (!signupRes.ok) {
-      setError(signupData.error || "Error en el registro");
+    if (!form.checkValidity()) {
+      setValidated(true);
       return;
     }
 
-    // 2️⃣ Si el registro fue exitoso, loguear al usuario
-    const loginRes = await fetch("http://localhost:4000/users/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
+    try {
+      // 1️⃣ Crear el usuario
+      const signupRes = await fetch("http://localhost:4000/users/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nombre,
+          email,
+          password,
+          rol: isProfessor ? "professor" : "student", // 👈 envía rol
+        }),
+      });
 
-    const loginData = await loginRes.json();
+      const signupData = await signupRes.json();
 
-    if (!loginRes.ok) {
-      setError(loginData.error || "Error al iniciar sesión después del registro");
-      return;
+      if (!signupRes.ok) {
+        setError(signupData.error || "Error en el registro");
+        return;
+      }
+
+      // 2️⃣ Si el registro fue exitoso, loguear al usuario
+      const loginRes = await fetch("http://localhost:4000/users/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const loginData = await loginRes.json();
+
+      if (!loginRes.ok) {
+        setError(loginData.error || "Error al iniciar sesión después del registro");
+        return;
+      }
+
+      // 3️⃣ Guardar sesión y redirigir
+      localStorage.setItem("userId", loginData.userId);
+      localStorage.setItem("nombre", loginData.nombre);
+      localStorage.setItem("rol", loginData.rol); // 👈 también guardamos rol
+
+      navigate("/principal");
+    } catch (err) {
+      console.error(err);
+      setError("Error al conectar con el servidor");
     }
-
-    // 3️⃣ Guardar sesión y redirigir
-    localStorage.setItem("userId", loginData.userId);
-    localStorage.setItem("nombre", loginData.nombre);
-
-    navigate("/principal");
-  } catch (err) {
-    console.error(err);
-    setError("Error al conectar con el servidor");
-  }
-};
-
+  };
 
   return (
     <div className="bg-light d-flex align-items-center justify-content-center vh-100">
@@ -110,6 +115,20 @@ const handleSubmit = async (e) => {
               <div className="invalid-feedback">Ingrese su contraseña</div>
             </div>
 
+            {/* 👇 Checkbox para rol */}
+            <div className="form-check form-switch mb-3 text-start">
+              <input
+                className="form-check-input"
+                type="checkbox"
+                id="isProfessor"
+                checked={isProfessor}
+                onChange={() => setIsProfessor(!isProfessor)}
+              />
+              <label className="form-check-label" htmlFor="isProfessor">
+                Registrarme como profesor
+              </label>
+            </div>
+
             <div className="d-grid mb-3">
               <button type="submit" className="btn btn-primary btn-lg">Registrarse</button>
             </div>
@@ -125,4 +144,3 @@ const handleSubmit = async (e) => {
 };
 
 export default Registro;
-
