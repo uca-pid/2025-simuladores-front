@@ -2,12 +2,17 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 
-const ExamView = () => {
-  const { examId } = useParams();
-  const [exam, setExam] = useState(null);
+const ExamView = ({ examId: propExamId }) => {
+  const { examId: routeExamId } = useParams();
   const navigate = useNavigate();
 
+  // 👇 Si llega examId por prop, lo usa; si no, usa el de la URL
+  const examId = propExamId || routeExamId;
+
+  const [exam, setExam] = useState(null);
+
   useEffect(() => {
+    if (!examId) return;
     const fetchExam = async () => {
       try {
         const res = await fetch(`http://localhost:4000/exams/${examId}`);
@@ -58,7 +63,10 @@ const ExamView = () => {
                           j === p.correcta ? "list-group-item-success" : ""
                         }`}
                       >
-                        {o} {j === p.correcta && <span className="badge bg-success ms-2">Correcta</span>}
+                        {o}{" "}
+                        {j === p.correcta && (
+                          <span className="badge bg-success ms-2">Correcta</span>
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -73,5 +81,6 @@ const ExamView = () => {
 };
 
 export default ExamView;
+
 
 
