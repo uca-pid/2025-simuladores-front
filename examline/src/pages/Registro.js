@@ -7,21 +7,58 @@ const Registro = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isProfessor, setIsProfessor] = useState(false);
-  const [validated, setValidated] = useState(false);
+
+  const [nombreError, setNombreError] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
   const [error, setError] = useState("");
+
   const navigate = useNavigate();
 
+  // ---------------- Validaciones ----------------
+  const validateName = (name) => {
+    if (!name.trim()) return "Debe ingresar un nombre.";
+    if (!/^[a-zA-ZÁÉÍÓÚÜÑáéíóúüñ' -]+$/.test(name))
+      return "Solo se permiten letras, espacios y caracteres como tildes, ñ, apóstrofes o guiones.";
+    return "";
+  };
+
+  const validateEmail = (email) => {
+    if (!email.trim()) return "Debe ingresar un email.";
+    if (!/^[A-Za-zÑñ0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-zÑñ0-9-]+(\.[A-Za-zÑñ0-9-]+)+$/.test(email))
+      return "El email no es válido.";
+    return "";
+  };
+
+  const validatePassword = (password) => {
+  if (!password) return "Debe ingresar una contraseña.";
+  if (password.length < 8) return "Debe tener al menos 8 caracteres.";
+  if (!/[A-Z]/.test(password)) return "Debe incluir al menos una letra mayúscula.";
+  if (!/[a-z]/.test(password)) return "Debe incluir al menos una letra minúscula.";
+  if (!/\d/.test(password)) return "Debe incluir al menos un número.";
+  if (!/[@$!%*?&#+^()_={}[\]<>|~]/.test(password)) 
+    return "Debe incluir al menos un carácter especial.";
+  if (/\s/.test(password)) return "No se permiten espacios en blanco.";
+  return "";
+};
+
+
+  // ---------------- Submit ----------------
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const form = e.currentTarget;
 
-    if (!form.checkValidity()) {
-      setValidated(true);
-      return;
-    }
+    const nombreErr = validateName(nombre);
+    const emailErr = validateEmail(email);
+    const passwordErr = validatePassword(password);
+
+    setNombreError(nombreErr);
+    setEmailError(emailErr);
+    setPasswordError(passwordErr);
+
+    if (nombreErr || emailErr || passwordErr) return; // No enviar si hay errores
 
     try {
-      // 1️⃣ Crear el usuario
+      // 1️⃣ Registro
       const signupRes = await fetch("http://localhost:4000/users/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -29,7 +66,7 @@ const Registro = () => {
           nombre,
           email,
           password,
-          rol: isProfessor ? "professor" : "student", // 👈 envía rol
+          rol: isProfessor ? "professor" : "student",
         }),
       });
 
@@ -40,7 +77,7 @@ const Registro = () => {
         return;
       }
 
-      // 2️⃣ Si el registro fue exitoso, loguear al usuario
+      // 2️⃣ Login automático
       const loginRes = await fetch("http://localhost:4000/users/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -57,7 +94,7 @@ const Registro = () => {
       // 3️⃣ Guardar sesión y redirigir
       localStorage.setItem("userId", loginData.userId);
       localStorage.setItem("name", loginData.nombre);
-      localStorage.setItem("rol", loginData.rol); // 👈 también guardamos rol
+      localStorage.setItem("rol", loginData.rol);
 
       navigate("/principal");
     } catch (err) {
@@ -75,47 +112,63 @@ const Registro = () => {
 
           {error && <div className="alert alert-danger">{error}</div>}
 
-          <form noValidate className={validated ? "was-validated" : ""} onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} noValidate>
+            {/* Nombre */}
             <div className="mb-3 text-start">
               <label htmlFor="nombre" className="form-label">Nombre</label>
               <input
                 type="text"
-                className="form-control"
+                className={`form-control ${nombreError ? "is-invalid" : ""}`}
                 id="nombre"
-                required
                 value={nombre}
-                onChange={(e) => setNombre(e.target.value)}
+                onChange={(e) => {
+                  setNombre(e.target.value);
+                  setNombreError(validateName(e.target.value));
+                }}
               />
-              <div className="invalid-feedback">Ingrese su nombre</div>
+              <div className="form-text text-primary">
+                Solo letras, espacios y caracteres como tildes, ñ, apóstrofes o guiones.
+              </div>
+              {nombreError && <div className="invalid-feedback">{nombreError}</div>}
             </div>
 
+            {/* Email */}
             <div className="mb-3 text-start">
               <label htmlFor="email" className="form-label">Email</label>
               <input
                 type="email"
-                className="form-control"
+                className={`form-control ${emailError ? "is-invalid" : ""}`}
                 id="email"
-                required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setEmailError(validateEmail(e.target.value));
+                }}
               />
-              <div className="invalid-feedback">Ingrese un email válido</div>
+              <div className="form-text text-primary">Debe tener formato ejemplo@dominio.com</div>
+              {emailError && <div className="invalid-feedback">{emailError}</div>}
             </div>
 
+            {/* Contraseña */}
             <div className="mb-3 text-start">
               <label htmlFor="password" className="form-label">Contraseña</label>
               <input
                 type="password"
-                className="form-control"
+                className={`form-control ${passwordError ? "is-invalid" : ""}`}
                 id="password"
-                required
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setPasswordError(validatePassword(e.target.value));
+                }}
               />
-              <div className="invalid-feedback">Ingrese su contraseña</div>
+              <div className="form-text text-primary">
+                Debe incluir al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial. No se permiten espacios.
+              </div>
+              {passwordError && <div className="invalid-feedback">{passwordError}</div>}
             </div>
 
-            {/* 👇 Checkbox para rol */}
+            {/* Checkbox de rol */}
             <div className="form-check form-switch mb-3 text-start">
               <input
                 className="form-check-input"
@@ -129,6 +182,7 @@ const Registro = () => {
               </label>
             </div>
 
+            {/* Botón */}
             <div className="d-grid mb-3">
               <button type="submit" className="btn btn-primary btn-lg">Registrarse</button>
             </div>
@@ -144,3 +198,4 @@ const Registro = () => {
 };
 
 export default Registro;
+
