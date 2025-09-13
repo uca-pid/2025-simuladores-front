@@ -91,36 +91,33 @@ export default function UserSettingsPage() {
 
   return (
     <div className="container py-5">
+      {/* Título y botón Volver */}
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h1 className="text-primary">Configuración de Usuario</h1>
-        <button className="btn btn-outline-danger" onClick={handleDelete}>
-          Eliminar cuenta
-        </button>
+        <h1 className="text-primary flex-grow-1 me-3" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          Configuración de Usuario
+        </h1>
+        <div className="d-flex gap-2">
+          <button className="btn btn-outline-secondary" onClick={() => navigate("/principal")}>
+            Volver a Principal
+          </button>
+          <button className="btn btn-outline-danger" onClick={handleDelete}>
+            Eliminar cuenta
+          </button>
+        </div>
       </div>
 
+      {/* Formulario */}
       <div className="card shadow-sm">
         <div className="card-body">
           <form onSubmit={handleSubmit}>
             <div className="mb-3">
               <label className="form-label">Nombre</label>
-              <input
-                type="text"
-                name="nombre"
-                value={formData.nombre}
-                onChange={handleChange}
-                className="form-control"
-              />
+              <input type="text" name="nombre" value={formData.nombre} onChange={handleChange} className="form-control" />
             </div>
 
             <div className="mb-3">
               <label className="form-label">Email</label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                className="form-control"
-              />
+              <input type="email" name="email" value={formData.email} onChange={handleChange} className="form-control" />
             </div>
 
             <div className="mb-3">
@@ -135,7 +132,7 @@ export default function UserSettingsPage() {
               />
             </div>
 
-            <button type="submit" className="btn btn-success">
+            <button type="submit" className="btn btn-success w-100">
               Guardar cambios
             </button>
           </form>
