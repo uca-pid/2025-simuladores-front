@@ -5,6 +5,7 @@ import Principal from "./pages/Principal";
 import ExamCreator from "./pages/ExamCreator";
 import ExamView from "./pages/ExamView";
 import UserSettingsPage from "./pages/userSettings";
+import StudentExamPage from "./pages/StudentExamPage"; // 👈 NUEVO
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
         <Route path="/principal" element={<Principal />} />
         <Route path="/exam-creator" element={<ExamCreator />} />
         <Route path="/examen/:examId" element={<ExamView />} />
+        <Route path="/student-exam" element={<StudentExamPage />} /> {/* 👈 NUEVO */}
         <Route path="/user-settings" element={<UserSettingsPage />} />
         <Route path="*" element={<Login />} /> {/* default */}
       </Routes>
@@ -23,6 +25,7 @@ function App() {
 }
 
 export default App;
+
 
 
 
