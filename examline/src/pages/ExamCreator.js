@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
+import BackToMainButton from "../components/BackToMainButton";
 
 const ExamCreator = () => {
   const navigate = useNavigate();
@@ -66,7 +67,10 @@ const ExamCreator = () => {
 
   return (
     <div className="container mt-5">
-      <h1>Crear Examen</h1>
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h1>Crear Examen</h1>
+        <BackToMainButton />
+      </div>
 
       {error && <div className="alert alert-danger">{error}</div>}
 

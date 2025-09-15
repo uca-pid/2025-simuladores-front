@@ -6,7 +6,7 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [validated, setValidated] = useState(false);
-  const [error, setError] = useState(""); // para mostrar errores del backend
+  const [error, setError] = useState("");
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -19,7 +19,6 @@ const Login = () => {
     }
 
     try {
-      // Llamada al endpoint de login
       const res = await fetch("http://localhost:4000/users/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -34,11 +33,16 @@ const Login = () => {
       }
 
       // Guardar info del usuario
-      localStorage.setItem("profesorNombre", data.nombre);
+      localStorage.setItem("name", data.nombre);
       localStorage.setItem("userId", data.userId);
+      localStorage.setItem("rol", data.rol); // 👈 guardar rol también
 
-      // Redirigir a página principal
-      navigate("/principal"); 
+      // Redirigir según rol
+      if (data.rol === "professor") {
+        navigate("/principal");
+      } else {
+        navigate("/student-exam");
+      }
 
     } catch (err) {
       console.error(err);
@@ -97,6 +101,3 @@ const Login = () => {
 };
 
 export default Login;
-
-
-
