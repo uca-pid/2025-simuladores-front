@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
-import ExamView from "./ExamView";
+import ExamView from "./ExamView"; // muestra respuestas correctas
+import ExamViewStudent from "./ExamAttempt"; // muestra sin respuestas
 import UserHeader from "../components/UserHeader";
 
 const StudentExamPage = () => {
   const [examId, setExamId] = useState("");
   const [submittedId, setSubmittedId] = useState(null);
   const [history, setHistory] = useState([]);
+  const [fromHistory, setFromHistory] = useState(false); // saber si viene de historial
 
   const userId = localStorage.getItem("userId");
 
@@ -13,6 +15,7 @@ const StudentExamPage = () => {
     e.preventDefault();
     if (examId.trim()) {
       setSubmittedId(examId.trim());
+      setFromHistory(false); // ID ingresado directamente
     }
   };
 
@@ -63,7 +66,10 @@ const StudentExamPage = () => {
                   key={h.id}
                   className="list-group-item d-flex justify-content-between align-items-center"
                   style={{ cursor: "pointer" }}
-                  onClick={() => setSubmittedId(h.exam.id)} // 🔹 al click abrir el examen
+                  onClick={() => {
+                    setSubmittedId(h.exam.id);
+                    setFromHistory(true); // viene del historial
+                  }}
                 >
                   <span>{h.exam.titulo}</span>
                   <small className="text-muted">
@@ -77,13 +83,20 @@ const StudentExamPage = () => {
       )}
 
       {submittedId && (
-        <ExamView examId={submittedId} onBack={() => setSubmittedId(null)} />
+        <>
+          {fromHistory ? (
+            <ExamView examId={submittedId} onBack={() => setSubmittedId(null)} />
+          ) : (
+            <ExamViewStudent examId={submittedId} onBack={() => setSubmittedId(null)} />
+          )}
+        </>
       )}
     </div>
   );
 };
 
 export default StudentExamPage;
+
 
 
 
