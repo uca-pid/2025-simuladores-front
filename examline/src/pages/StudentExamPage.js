@@ -38,7 +38,7 @@ const StudentExamPage = () => {
 
   return (
     <div className="container py-5">
-      <UserHeader />
+      {!submittedId && <UserHeader />}
 
       {!submittedId && (
         <>
