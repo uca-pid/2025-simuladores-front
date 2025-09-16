@@ -2,17 +2,17 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import BackToMainButton from "../components/BackToMainButton";
+import { useAuth } from "../contexts/AuthContext";
+import { getUserById, updateUser } from "../services/api";
 
 export default function UserSettingsPage() {
-  const userId = Number(localStorage.getItem("userId"));
+  const { user, logout, login, token } = useAuth();
   const [formData, setFormData] = useState({ nombre: "", email: "", password: "" });
   const [nombreError, setNombreError] = useState("");
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-
-  const API_URL = "http://localhost:4000";
 
   // ---------------- Validaciones ----------------
   const validateName = (name) => {
@@ -42,7 +42,7 @@ export default function UserSettingsPage() {
 
   // ---------------- Cargar usuario ----------------
   useEffect(() => {
-    if (!userId) {
+    if (!user) {
       alert("Usuario no identificado");
       setLoading(false);
       return;
@@ -51,11 +51,7 @@ export default function UserSettingsPage() {
     setFormData({ nombre: "", email: "", password: "" });
     setLoading(true);
 
-    fetch(`${API_URL}/users/${userId}`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Error al cargar usuario");
-        return res.json();
-      })
+    getUserById(user.userId)
       .then((data) => {
         setFormData({ nombre: data.nombre, email: data.email, password: "" });
         setLoading(false);
@@ -65,7 +61,7 @@ export default function UserSettingsPage() {
         alert("No se pudieron cargar los datos del usuario");
         setLoading(false);
       });
-  }, [userId]);
+  }, [user]);
 
   // ---------------- Handlers ----------------
   const handleChange = (e) => {
@@ -97,29 +93,25 @@ export default function UserSettingsPage() {
     if (formData.password.trim() !== "") submitData.password = formData.password;
 
     try {
-      const res = await fetch(`${API_URL}/users/${userId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(submitData),
-      });
+      const updatedUser = await updateUser(user.userId, submitData);
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        if (errorData.error) {
-          if (errorData.error.includes("email")) setEmailError(errorData.error);
-        }
-        throw new Error(errorData.error || "Error actualizando usuario");
-      }
-
-      const updatedUser = await res.json();
-      localStorage.setItem("name", updatedUser.nombre);
-      localStorage.setItem("email", updatedUser.email);
+      // Update the auth context with the new user data
+      const updatedUserData = {
+        ...user,
+        nombre: updatedUser.nombre,
+        email: updatedUser.email
+      };
+      login(token, updatedUserData);
 
       alert("Usuario actualizado correctamente");
       setFormData((prev) => ({ ...prev, password: "" }));
     } catch (err) {
       console.error("Error actualizando usuario", err);
-      alert(err.message);
+      if (err.message && err.message.includes("email")) {
+        setEmailError(err.message);
+      } else {
+        alert(err.message || "Error actualizando usuario");
+      }
     }
   };
 
@@ -127,11 +119,18 @@ export default function UserSettingsPage() {
     if (!window.confirm("¿Seguro que deseas eliminar tu cuenta? Esta acciósn no se puede deshacer.")) return;
 
     try {
-      const res = await fetch(`${API_URL}/users/${userId}`, { method: "DELETE" });
+      const res = await fetch(`http://localhost:4000/users/${user.userId}`, { 
+        method: "DELETE",
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
       if (!res.ok) throw new Error("Error eliminando usuario");
 
       alert("Cuenta eliminada correctamente");
-      localStorage.clear();
+      logout();
       navigate("/login");
     } catch (err) {
       console.error("Error eliminando usuario", err);

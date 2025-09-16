@@ -1,12 +1,13 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 
 const BackToMainButton = ({ className = "btn btn-outline-secondary" }) => {
   const navigate = useNavigate();
-  const userRole = localStorage.getItem("rol");
+  const { user } = useAuth();
 
   const handleBackToMain = () => {
-    if (userRole === "professor") {
+    if (user?.rol === "professor") {
       navigate("/principal");
     } else {
       navigate("/student-exam");
@@ -14,7 +15,7 @@ const BackToMainButton = ({ className = "btn btn-outline-secondary" }) => {
   };
 
   const getButtonText = () => {
-    if (userRole === "professor") {
+    if (user?.rol === "professor") {
       return "Volver a Principal";
     } else {
       return "Volver al Inicio";

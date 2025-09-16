@@ -1,12 +1,15 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { useAuth } from "../contexts/AuthContext";
+import { signupUser, loginUser } from "../services/api";
 
 const Registro = () => {
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isProfessor, setIsProfessor] = useState(false);
+  const { login } = useAuth();
 
   const [nombreError, setNombreError] = useState("");
   const [emailError, setEmailError] = useState("");
@@ -58,45 +61,21 @@ const Registro = () => {
 
     try {
       // 1️⃣ Registro
-      const signupRes = await fetch("http://localhost:4000/users/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nombre,
-          email,
-          password,
-          rol: isProfessor ? "professor" : "student",
-        }),
+      const signupData = await signupUser({
+        nombre,
+        email,
+        password,
+        rol: isProfessor ? "professor" : "student",
       });
-
-      const signupData = await signupRes.json();
-
-      if (!signupRes.ok) {
-        setError(signupData.error || "Error en el registro");
-        return;
-      }
 
       // 2️⃣ Login automático
-      const loginRes = await fetch("http://localhost:4000/users/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
+      const loginData = await loginUser({ email, password });
 
-      const loginData = await loginRes.json();
-
-      if (!loginRes.ok) {
-        setError(loginData.error || "Error al iniciar sesión después del registro");
-        return;
-      }
-
-      // 3️⃣ Guardar sesión
-      localStorage.setItem("userId", loginData.userId);
-      localStorage.setItem("name", loginData.nombre);
-      localStorage.setItem("rol", loginData.rol);
+      // 3️⃣ Usar contexto de autenticación
+      login(loginData.token, loginData.user);
 
       // 4️⃣ Redirigir según rol
-      if (loginData.rol === "professor") {
+      if (loginData.user.rol === "professor") {
         navigate("/principal");
       } else {
         navigate("/student-exam");

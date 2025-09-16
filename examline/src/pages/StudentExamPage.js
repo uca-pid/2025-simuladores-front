@@ -2,14 +2,17 @@ import React, { useState, useEffect } from "react";
 import ExamView from "./ExamView"; // muestra respuestas correctas
 import ExamViewStudent from "./ExamAttempt"; // muestra sin respuestas
 import UserHeader from "../components/UserHeader";
+import { useAuth } from "../contexts/AuthContext";
+import { getExamHistory } from "../services/api";
 
 const StudentExamPage = () => {
   const [examId, setExamId] = useState("");
   const [submittedId, setSubmittedId] = useState(null);
   const [history, setHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState("");
   const [fromHistory, setFromHistory] = useState(false); // saber si viene de historial
-
-  const userId = localStorage.getItem("userId");
+  const { user, isLoading } = useAuth();
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -21,20 +24,25 @@ const StudentExamPage = () => {
 
   // 🔹 Traer historial
   useEffect(() => {
-    if (!userId) return;
+    if (!user?.userId) return; // Make sure user and userId exist
 
     const fetchHistory = async () => {
       try {
-        const res = await fetch(`http://localhost:4000/exams/history/${userId}`);
-        const data = await res.json();
-        setHistory(data);
+        setHistoryLoading(true);
+        setHistoryError("");
+        const data = await getExamHistory(user.userId);
+        setHistory(Array.isArray(data) ? data : []); // Ensure it's always an array
       } catch (err) {
         console.error("Error al cargar historial:", err);
+        setHistoryError(err.message || "Error al cargar el historial");
+        setHistory([]); // Set empty array on error
+      } finally {
+        setHistoryLoading(false);
       }
     };
 
     fetchHistory();
-  }, [userId, submittedId]); // refresca después de abrir un examen
+  }, [user, submittedId]); // refresca después de abrir un examen
 
   return (
     <div className="container py-5">
@@ -57,7 +65,24 @@ const StudentExamPage = () => {
           </form>
 
           <h3 className="text-secondary mb-3">Historial de exámenes vistos</h3>
-          {history.length === 0 ? (
+          
+          {isLoading ? (
+            <div className="d-flex justify-content-center">
+              <div className="spinner-border text-primary" role="status">
+                <span className="visually-hidden">Cargando usuario...</span>
+              </div>
+            </div>
+          ) : historyLoading ? (
+            <div className="d-flex justify-content-center">
+              <div className="spinner-border text-primary" role="status">
+                <span className="visually-hidden">Cargando historial...</span>
+              </div>
+            </div>
+          ) : historyError ? (
+            <div className="alert alert-danger" role="alert">
+              {historyError}
+            </div>
+          ) : history.length === 0 ? (
             <p>No has visto ningún examen aún.</p>
           ) : (
             <ul className="list-group">
