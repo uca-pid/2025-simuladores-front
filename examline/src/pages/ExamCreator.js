@@ -68,14 +68,14 @@ const ExamCreator = () => {
   return (
     <div className="container mt-5">
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h1>Crear Examen</h1>
+        <h1 className="text-primary">Crear Examen</h1>
         <BackToMainButton />
       </div>
 
       {error && <div className="alert alert-danger">{error}</div>}
 
       <div className="mb-3">
-        <label className="form-label">Título del examen</label>
+        <h3>Título del examen</h3>
         <input
           type="text"
           className="form-control"

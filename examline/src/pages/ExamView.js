@@ -6,6 +6,7 @@ import BackToMainButton from "../components/BackToMainButton";
 const ExamView = ({ examId: propExamId, onBack }) => {
   const { examId: routeExamId } = useParams();
   const examId = propExamId || routeExamId;
+  const userId = localStorage.getItem("userId"); // alumno logueado
 
   const [exam, setExam] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -17,7 +18,10 @@ const ExamView = ({ examId: propExamId, onBack }) => {
     const fetchExam = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`http://localhost:4000/exams/${examId}`);
+        const url = userId
+          ? `http://localhost:4000/exams/${examId}?userId=${userId}`
+          : `http://localhost:4000/exams/${examId}`;
+        const res = await fetch(url);
         if (!res.ok) {
           throw new Error("Examen no encontrado");
         }
@@ -34,7 +38,7 @@ const ExamView = ({ examId: propExamId, onBack }) => {
     };
 
     fetchExam();
-  }, [examId]);
+  }, [examId, userId]);
 
   if (loading) {
     return (
@@ -61,7 +65,13 @@ const ExamView = ({ examId: propExamId, onBack }) => {
     <div className="container py-5">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h1 className="text-primary">{exam.titulo || "Sin título"}</h1>
-        {propExamId ? <button className="btn btn-outline-secondary" onClick={onBack}>Volver</button> : <BackToMainButton />}
+        {propExamId ? (
+          <button className="btn btn-outline-secondary" onClick={onBack}>
+            Volver
+          </button>
+        ) : (
+          <BackToMainButton />
+        )}
       </div>
 
       {!exam.preguntas || exam.preguntas.length === 0 ? (
@@ -72,15 +82,21 @@ const ExamView = ({ examId: propExamId, onBack }) => {
             <div key={i} className="col-md-6">
               <div className="card shadow-sm h-100">
                 <div className="card-body">
-                  <h5 className="card-title">{i + 1}. {p.texto || "Sin texto"}</h5>
+                  <h5 className="card-title">
+                    {i + 1}. {p.texto || "Sin texto"}
+                  </h5>
                   <ul className="list-group list-group-flush mt-3">
                     {p.opciones?.map((o, j) => (
                       <li
                         key={j}
-                        className={`list-group-item ${j === p.correcta ? "list-group-item-success" : ""}`}
+                        className={`list-group-item ${
+                          j === p.correcta ? "list-group-item-success" : ""
+                        }`}
                       >
                         {o || "Opción vacía"}{" "}
-                        {j === p.correcta && <span className="badge bg-success ms-2">Correcta</span>}
+                        {j === p.correcta && (
+                          <span className="badge bg-success ms-2">Correcta</span>
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -95,6 +111,7 @@ const ExamView = ({ examId: propExamId, onBack }) => {
 };
 
 export default ExamView;
+
 
 
 
