@@ -6,7 +6,7 @@ const StudentExamPage = () => {
   const [examId, setExamId] = useState("");
   const [submittedId, setSubmittedId] = useState(null);
 
-  // Función para generar y descargar archivo SEB apuntando al examen
+  // Función para generar y descargar archivo SEB apuntando ald examen
   async function descargarSEB(contra, id) {
     async function hashSHA256(text) {
       const encoder = new TextEncoder();
