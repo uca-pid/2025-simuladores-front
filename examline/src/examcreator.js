@@ -23,50 +23,71 @@ function ExamCreator() {
      
         window.open('/exam', '_blank');
        
-        descargarSEB();
+        descargarSEB('12345');
     };
 
-function descargarSEB() {
+async function descargarSEB(contra) {
+  // Genera SHA-256 en hexadecimal
+  async function hashSHA256(text) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(text);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  const hashedQuitPassword = await hashSHA256(contra);
+  const hashedSettingsPassword = await hashSHA256(contra); // igual que quit, o otra contraseña
+
   const sebPlist = `<?xml version="1.0" encoding="UTF-8"?>
-  <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
-   "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-  <plist version="1.0">
-    <dict>
-      <key>startUrl</key>
-      <string>http://localhost:3000/exam</string>
-
-      <!-- Contraseña para salir de SEB -->
-      <key>quitPassword</key>
-      <string>1234</string>
-
-      <!-- Contraseña para proteger configuración -->
-      <key>settingsPassword</key>
-      <string>1234</string>
-
-      <!-- Opciones básicas -->
-      <key>browserWindowAllowReload</key>
-      <true/>
-      <key>allowQuit</key>
-      <true/>
-      <key>showReloadButton</key>
-      <false/>
-      <key>showURL</key>
-      <false/>
-      <key>fullScreen</key>
-      <true/>
-      <key>kioskMode</key>
-      <true/>
-    </dict>
-  </plist>`;
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+ "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>startURL</key>
+    <string>http://localhost:3000/exam</string>
+    <key>hashedQuitPassword</key>
+    <string>${hashedQuitPassword}</string>
+    <key>hashedAdminPassword</key>
+    <string>${hashedSettingsPassword}</string>
+    <key>allowQuit</key>
+    <true/>
+    <key>fullScreen</key>
+    <true/>
+    <key>kioskMode</key>
+    <true/>
+    <key>urlFilterEnable</key>
+    <true/>
+    <key>urlFilterRules</key>
+    <array>
+      <dict>
+        <key>action</key>
+        <string>allow</string>
+        <key>url</key>
+        <string>http://localhost:3000/*</string>
+      </dict>
+      <dict>
+        <key>action</key>
+        <string>allow</string>
+        <key>url</key>
+        <string>http://127.0.0.1:3000/*</string>
+      </dict>
+    </array>
+  </dict>
+</plist>
+`;
 
   const blob = new Blob([sebPlist], { type: "application/xml" });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
-  link.download = "examen.seb";
+  link.download = "examen_local.seb";
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
 }
+
+
+
 
     return (
         <div style={{ padding: '20px' }}>

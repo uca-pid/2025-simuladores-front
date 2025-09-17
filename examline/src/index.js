@@ -4,7 +4,7 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import './index.css';
 import App from './App';
-import ExamCreator from './ExamCreator';
+import ExamCreator from './examcreator';
 import Exam from './Exam';
 import reportWebVitals from './reportWebVitals';
 
@@ -14,7 +14,7 @@ root.render(
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<App />} />
-        <Route path="/ExamCreator" element={<ExamCreator />} />
+        <Route path="/examcreator" element={<ExamCreator />} />
         <Route path="/exam" element={<Exam />} />
       </Routes>
     </BrowserRouter>
