@@ -22,7 +22,7 @@ const Registro = () => {
   const validateName = (name) => {
     if (!name.trim()) return "Debe ingresar un nombre.";
     if (!/^[a-zA-ZÁÉÍÓÚÜÑáéíóúüñ' -]+$/.test(name))
-      return "Solo se permiten letras, espacios y caracteres como tildes, ñ, apóstrofes o guiones.";
+      return "Solo se permiten letras, letras con tildes, espacios y caracteres como ñ, apóstrofes o guiones.";
     return "";
   };
 
@@ -114,7 +114,7 @@ const Registro = () => {
                   }}
                 />
                 <div className="form-text text-primary">
-                  Solo letras, espacios y caracteres como tildes, ñ, apóstrofes o guiones.
+                  Solo letras, letras con tildes, espacios y caracteres como ñ, apóstrofes o guiones.
                 </div>
                 {nombreError && <div className="invalid-feedback">{nombreError}</div>}
               </div>
