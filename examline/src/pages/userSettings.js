@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import BackToMainButton from "../components/BackToMainButton";
+import Modal from "../components/Modal";
 import { useAuth } from "../contexts/AuthContext";
 import { getUserById, updateUser } from "../services/api";
 
@@ -12,7 +13,31 @@ export default function UserSettingsPage() {
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [modal, setModal] = useState({
+    show: false,
+    type: 'info',
+    title: '',
+    message: '',
+    onConfirm: null,
+    showCancel: false
+  });
   const navigate = useNavigate();
+
+  // ---------------- Modal helper ----------------
+  const showModal = (type, title, message, onConfirm = null, showCancel = false) => {
+    setModal({
+      show: true,
+      type,
+      title,
+      message,
+      onConfirm,
+      showCancel
+    });
+  };
+
+  const closeModal = () => {
+    setModal(prev => ({ ...prev, show: false }));
+  };
 
   // ---------------- Validaciones ----------------
   const validateName = (name) => {
@@ -43,7 +68,7 @@ export default function UserSettingsPage() {
   // ---------------- Cargar usuario ----------------
   useEffect(() => {
     if (!user) {
-      alert("Usuario no identificado");
+      showModal('error', 'Error', 'Usuario no identificado');
       setLoading(false);
       return;
     }
@@ -58,7 +83,7 @@ export default function UserSettingsPage() {
       })
       .catch((err) => {
         console.error("Error cargando usuario", err);
-        alert("No se pudieron cargar los datos del usuario");
+        showModal('error', 'Error', 'No se pudieron cargar los datos del usuario');
         setLoading(false);
       });
   }, [user]);
@@ -103,39 +128,48 @@ export default function UserSettingsPage() {
       };
       login(token, updatedUserData);
 
-      alert("Usuario actualizado correctamente");
+      showModal('success', '¡Éxito!', 'Usuario actualizado correctamente');
       setFormData((prev) => ({ ...prev, password: "" }));
     } catch (err) {
       console.error("Error actualizando usuario", err);
       if (err.message && err.message.includes("email")) {
         setEmailError(err.message);
       } else {
-        alert(err.message || "Error actualizando usuario");
+        showModal('error', 'Error', err.message || 'Error actualizando usuario');
       }
     }
   };
 
   const handleDelete = async () => {
-    if (!window.confirm("¿Seguro que deseas eliminar tu cuenta? Esta acciósn no se puede deshacer.")) return;
+    showModal(
+      'confirm',
+      'Confirmar eliminación',
+      '¿Seguro que deseas eliminar tu cuenta? Esta acción no se puede deshacer.',
+      async () => {
+        closeModal();
+        try {
+          const res = await fetch(`http://localhost:4000/users/${user.userId}`, { 
+            method: "DELETE",
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (!res.ok) throw new Error("Error eliminando usuario");
 
-    try {
-      const res = await fetch(`http://localhost:4000/users/${user.userId}`, { 
-        method: "DELETE",
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          showModal('success', '¡Cuenta eliminada!', 'Cuenta eliminada correctamente', () => {
+            logout();
+            navigate("/login");
+            closeModal();
+          });
+        } catch (err) {
+          console.error("Error eliminando usuario", err);
+          showModal('error', 'Error', err.message);
         }
-      });
-      
-      if (!res.ok) throw new Error("Error eliminando usuario");
-
-      alert("Cuenta eliminada correctamente");
-      logout();
-      navigate("/login");
-    } catch (err) {
-      console.error("Error eliminando usuario", err);
-      alert(err.message);
-    }
+      },
+      true
+    );
   };
 
   if (loading) return <p className="text-center mt-5">Cargando...</p>;
@@ -199,6 +233,19 @@ export default function UserSettingsPage() {
           </form>
         </div>
       </div>
+
+      {/* Modal Component */}
+      <Modal
+        show={modal.show}
+        onClose={closeModal}
+        onConfirm={modal.onConfirm}
+        title={modal.title}
+        message={modal.message}
+        type={modal.type}
+        showCancel={modal.showCancel}
+        confirmText={modal.type === 'confirm' ? 'Eliminar' : 'Aceptar'}
+        cancelText="Cancelar"
+      />
     </div>
   );
 }
