@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { useAuth } from "../contexts/AuthContext";
+import { getExamById } from "../services/api";
 
 const ExamAttempt = ({ examId: propExamId, onBack }) => {
   const { examId: routeExamId } = useParams();
   const examId = propExamId || routeExamId;
+  const { user } = useAuth();
 
   const [exam, setExam] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -16,11 +19,7 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
     const fetchExam = async () => {
       try {
         setLoading(true);
-        const userId = localStorage.getItem("userId");
-        const url = `http://localhost:4000/exams/${examId}?userId=${userId}`;
-        const res = await fetch(url);
-        if (!res.ok) throw new Error("Examen no encontrado");
-        const data = await res.json();
+        const data = await getExamById(examId);
         setExam(data);
         setError(null);
       } catch (err) {

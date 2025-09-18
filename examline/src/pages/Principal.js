@@ -2,24 +2,36 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import UserHeader from "../components/UserHeader";
+import { useAuth } from "../contexts/AuthContext";
+import { getExams } from "../services/api";
 
 const Principal = () => {
   const [exams, setExams] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const navigate = useNavigate();
-  const userId = Number(localStorage.getItem("userId"));
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchExams = async () => {
       try {
-        const res = await fetch(`http://localhost:4000/exams?profesorId=${userId}`);
-        const data = await res.json();
-        setExams(data);
+        setLoading(true);
+        setError("");
+        const data = await getExams();
+        setExams(Array.isArray(data) ? data : []);
       } catch (err) {
-        console.error(err);
+        console.error("Error fetching exams:", err);
+        setError(err.message || "Error al cargar los exámenes");
+        setExams([]); // Ensure it's always an array
+      } finally {
+        setLoading(false);
       }
     };
-    fetchExams();
-  }, [userId]);
+
+    if (user) {
+      fetchExams();
+    }
+  }, [user]);
 
   const handleCrearExamen = () => navigate("/exam-creator");
   const handleVerExamen = (examId) => navigate(`/examen/${examId}`);
@@ -33,28 +45,38 @@ const Principal = () => {
           Crear Examen
         </button>
       </div>
-      {exams.length === 0 ? (
+      
+      {loading ? (
+        <div className="d-flex justify-content-center">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Cargando...</span>
+          </div>
+        </div>
+      ) : error ? (
+        <div className="alert alert-danger" role="alert">
+          {error}
+        </div>
+      ) : exams.length === 0 ? (
         <p className="text-muted">No hay exámenes creados.</p>
       ) : (
         <div className="row g-3">
-          {exams.map(exam => (
-  <div key={exam.id} className="col-md-4">
-    <div className="card h-100 shadow-sm">
-      <div className="card-body d-flex flex-column">
-        <h5 className="card-title">{exam.titulo}</h5>
-        <p className="card-text mb-1"><strong>Código de examen:</strong> {exam.id}</p>  {/* <-- ID agregado */}
-        <p className="card-text">Preguntas: {exam.preguntas.length}</p>
-        <button
-          className="btn btn-primary mt-auto"
-          onClick={() => handleVerExamen(exam.id)}
-        >
-          Ver preguntas
-        </button>
-      </div>
-    </div>
-  </div>
-))}
-
+          {(Array.isArray(exams) ? exams : []).map(exam => (
+            <div key={exam.id} className="col-md-4">
+              <div className="card h-100 shadow-sm">
+                <div className="card-body d-flex flex-column">
+                  <h5 className="card-title">{exam.titulo}</h5>
+                  <p className="card-text mb-1"><strong>Código de examen:</strong> {exam.id}</p>
+                  <p className="card-text">Preguntas: {exam.preguntas?.length || 0}</p>
+                  <button
+                    className="btn btn-primary mt-auto"
+                    onClick={() => handleVerExamen(exam.id)}
+                  >
+                    Ver preguntas
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

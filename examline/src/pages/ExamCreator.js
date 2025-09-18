@@ -3,9 +3,12 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import BackToMainButton from "../components/BackToMainButton";
+import { useAuth } from "../contexts/AuthContext";
+import { createExam } from "../services/api";
 
 const ExamCreator = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [titulo, setTitulo] = useState("");
   const [preguntas, setPreguntas] = useState([]);
   const [textoPregunta, setTextoPregunta] = useState("");
@@ -44,19 +47,8 @@ const ExamCreator = () => {
     }
 
     try {
-      const res = await fetch("http://localhost:4000/exams/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          titulo,
-          profesorId: Number(localStorage.getItem("userId")),
-          preguntas
-        })
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Error al crear examen");
-
+      const data = await createExam({ titulo, preguntas });
+      
       // Volver a la Página Principal
       navigate("/principal");
     } catch (err) {

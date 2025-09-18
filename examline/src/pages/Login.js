@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 const Login = () => {
@@ -8,6 +9,7 @@ const Login = () => {
   const [validated, setValidated] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -32,13 +34,11 @@ const Login = () => {
         return;
       }
 
-      // Guardar info del usuario
-      localStorage.setItem("name", data.nombre);
-      localStorage.setItem("userId", data.userId);
-      localStorage.setItem("rol", data.rol); // 👈 guardar rol también
+      // Use the new auth context to handle login
+      login(data.token, data.user);
 
       // Redirigir según rol
-      if (data.rol === "professor") {
+      if (data.user.rol === "professor") {
         navigate("/principal");
       } else {
         navigate("/student-exam");

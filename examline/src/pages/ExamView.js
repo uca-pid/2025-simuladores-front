@@ -2,11 +2,13 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import BackToMainButton from "../components/BackToMainButton";
+import { useAuth } from "../contexts/AuthContext";
+import { getExamById } from "../services/api";
 
 const ExamView = ({ examId: propExamId, onBack }) => {
   const { examId: routeExamId } = useParams();
   const examId = propExamId || routeExamId;
-  const userId = localStorage.getItem("userId"); // alumno logueado
+  const { user } = useAuth();
 
   const [exam, setExam] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -18,14 +20,7 @@ const ExamView = ({ examId: propExamId, onBack }) => {
     const fetchExam = async () => {
       try {
         setLoading(true);
-        const url = userId
-          ? `http://localhost:4000/exams/${examId}?userId=${userId}`
-          : `http://localhost:4000/exams/${examId}`;
-        const res = await fetch(url);
-        if (!res.ok) {
-          throw new Error("Examen no encontrado");
-        }
-        const data = await res.json();
+        const data = await getExamById(examId);
         setExam(data);
         setError(null);
       } catch (err) {
@@ -38,7 +33,7 @@ const ExamView = ({ examId: propExamId, onBack }) => {
     };
 
     fetchExam();
-  }, [examId, userId]);
+  }, [examId, user?.userId]);
 
   if (loading) {
     return (

@@ -2,17 +2,42 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import BackToMainButton from "../components/BackToMainButton";
+import Modal from "../components/Modal";
+import { useAuth } from "../contexts/AuthContext";
+import { getUserById, updateUser } from "../services/api";
 
 export default function UserSettingsPage() {
-  const userId = Number(localStorage.getItem("userId"));
+  const { user, logout, login, token } = useAuth();
   const [formData, setFormData] = useState({ nombre: "", email: "", password: "" });
   const [nombreError, setNombreError] = useState("");
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [modal, setModal] = useState({
+    show: false,
+    type: 'info',
+    title: '',
+    message: '',
+    onConfirm: null,
+    showCancel: false
+  });
   const navigate = useNavigate();
 
-  const API_URL = "http://localhost:4000";
+  // ---------------- Modal helper ----------------
+  const showModal = (type, title, message, onConfirm = null, showCancel = false) => {
+    setModal({
+      show: true,
+      type,
+      title,
+      message,
+      onConfirm,
+      showCancel
+    });
+  };
+
+  const closeModal = () => {
+    setModal(prev => ({ ...prev, show: false }));
+  };
 
   // ---------------- Validaciones ----------------
   const validateName = (name) => {
@@ -42,8 +67,8 @@ export default function UserSettingsPage() {
 
   // ---------------- Cargar usuario ----------------
   useEffect(() => {
-    if (!userId) {
-      alert("Usuario no identificado");
+    if (!user) {
+      showModal('error', 'Error', 'Usuario no identificado');
       setLoading(false);
       return;
     }
@@ -51,21 +76,17 @@ export default function UserSettingsPage() {
     setFormData({ nombre: "", email: "", password: "" });
     setLoading(true);
 
-    fetch(`${API_URL}/users/${userId}`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Error al cargar usuario");
-        return res.json();
-      })
+    getUserById(user.userId)
       .then((data) => {
         setFormData({ nombre: data.nombre, email: data.email, password: "" });
         setLoading(false);
       })
       .catch((err) => {
         console.error("Error cargando usuario", err);
-        alert("No se pudieron cargar los datos del usuario");
+        showModal('error', 'Error', 'No se pudieron cargar los datos del usuario');
         setLoading(false);
       });
-  }, [userId]);
+  }, [user]);
 
   // ---------------- Handlers ----------------
   const handleChange = (e) => {
@@ -97,46 +118,58 @@ export default function UserSettingsPage() {
     if (formData.password.trim() !== "") submitData.password = formData.password;
 
     try {
-      const res = await fetch(`${API_URL}/users/${userId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(submitData),
-      });
+      const updatedUser = await updateUser(user.userId, submitData);
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        if (errorData.error) {
-          if (errorData.error.includes("email")) setEmailError(errorData.error);
-        }
-        throw new Error(errorData.error || "Error actualizando usuario");
-      }
+      // Update the auth context with the new user data
+      const updatedUserData = {
+        ...user,
+        nombre: updatedUser.nombre,
+        email: updatedUser.email
+      };
+      login(token, updatedUserData);
 
-      const updatedUser = await res.json();
-      localStorage.setItem("name", updatedUser.nombre);
-      localStorage.setItem("email", updatedUser.email);
-
-      alert("Usuario actualizado correctamente");
+      showModal('success', '¡Éxito!', 'Usuario actualizado correctamente');
       setFormData((prev) => ({ ...prev, password: "" }));
     } catch (err) {
       console.error("Error actualizando usuario", err);
-      alert(err.message);
+      if (err.message && err.message.includes("email")) {
+        setEmailError(err.message);
+      } else {
+        showModal('error', 'Error', err.message || 'Error actualizando usuario');
+      }
     }
   };
 
   const handleDelete = async () => {
-    if (!window.confirm("¿Seguro que deseas eliminar tu cuenta? Esta acciósn no se puede deshacer.")) return;
+    showModal(
+      'confirm',
+      'Confirmar eliminación',
+      '¿Seguro que deseas eliminar tu cuenta? Esta acción no se puede deshacer.',
+      async () => {
+        closeModal();
+        try {
+          const res = await fetch(`http://localhost:4000/users/${user.userId}`, { 
+            method: "DELETE",
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (!res.ok) throw new Error("Error eliminando usuario");
 
-    try {
-      const res = await fetch(`${API_URL}/users/${userId}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Error eliminando usuario");
-
-      alert("Cuenta eliminada correctamente");
-      localStorage.clear();
-      navigate("/login");
-    } catch (err) {
-      console.error("Error eliminando usuario", err);
-      alert(err.message);
-    }
+          showModal('success', '¡Cuenta eliminada!', 'Cuenta eliminada correctamente', () => {
+            logout();
+            navigate("/login");
+            closeModal();
+          });
+        } catch (err) {
+          console.error("Error eliminando usuario", err);
+          showModal('error', 'Error', err.message);
+        }
+      },
+      true
+    );
   };
 
   if (loading) return <p className="text-center mt-5">Cargando...</p>;
@@ -200,6 +233,19 @@ export default function UserSettingsPage() {
           </form>
         </div>
       </div>
+
+      {/* Modal Component */}
+      <Modal
+        show={modal.show}
+        onClose={closeModal}
+        onConfirm={modal.onConfirm}
+        title={modal.title}
+        message={modal.message}
+        type={modal.type}
+        showCancel={modal.showCancel}
+        confirmText={modal.type === 'confirm' ? 'Eliminar' : 'Aceptar'}
+        cancelText="Cancelar"
+      />
     </div>
   );
 }
