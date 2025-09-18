@@ -82,7 +82,7 @@ const Registro = () => {
       }
     } catch (err) {
       console.error(err);
-      setError("Error al conectar con el servidor");
+      setError("El email ya está registrado");
     }
   };
 
