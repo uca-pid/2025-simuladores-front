@@ -131,7 +131,7 @@ export default function UserSettingsPage() {
       showModal('success', '¡Éxito!', 'Usuario actualizado correctamente');
       setFormData((prev) => ({ ...prev, password: "" }));
     } catch (err) {
-      console.error("Error actualizando usuario", err);
+      console.error("El email ya está registrado", err);
       if (err.message && err.message.includes("email")) {
         setEmailError(err.message);
       } else {
