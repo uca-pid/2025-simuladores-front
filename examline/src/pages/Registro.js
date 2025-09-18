@@ -39,7 +39,7 @@ const Registro = () => {
     if (!/[A-ZÁÉÍÓÚÜÑ]/.test(password)) return "Debe incluir al menos una letra mayúscula.";
     if (!/[a-záéíóúüñ]/.test(password)) return "Debe incluir al menos una letra minúscula.";
     if (!/\d/.test(password)) return "Debe incluir al menos un número.";
-    if (!/[@$!%*?&#+^()_={}[\]<>|~]/.test(password))
+    if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?~`¡¿]/.test(password))
       return "Debe incluir al menos un carácter especial.";
     if (/\s/.test(password)) return "No se permiten espacios en blanco.";
     return "";
