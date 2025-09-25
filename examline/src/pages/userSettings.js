@@ -8,9 +8,8 @@ import { getUserById, updateUser } from "../services/api";
 
 export default function UserSettingsPage() {
   const { user, logout, login, token } = useAuth();
-  const [formData, setFormData] = useState({ nombre: "", email: "", password: "" });
+  const [formData, setFormData] = useState({ nombre: "", email: "", password: "", currentPassword: "" });
   const [nombreError, setNombreError] = useState("");
-  const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState({
@@ -47,13 +46,6 @@ export default function UserSettingsPage() {
     return "";
   };
 
-  const validateEmail = (email) => {
-    if (!email.trim()) return "Debe ingresar un email.";
-    if (!/^[A-Za-zÑñ0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-zÑñ0-9-]+(\.[A-Za-zÑñ0-9-]+)+$/.test(email))
-      return "El email no es válido.";
-    return "";
-  };
-
   const validatePassword = (password) => {
     if (password.trim() === "") return ""; // Permitir dejar en blanco si no quiere cambiar
     if (password.length < 8) return "Debe tener al menos 8 caracteres.";
@@ -73,12 +65,12 @@ export default function UserSettingsPage() {
       return;
     }
 
-    setFormData({ nombre: "", email: "", password: "" });
+    setFormData({ nombre: "", email: "", password: "", currentPassword: "" });
     setLoading(true);
 
     getUserById(user.userId)
       .then((data) => {
-        setFormData({ nombre: data.nombre, email: data.email, password: "" });
+        setFormData({ nombre: data.nombre, email: data.email, password: "", currentPassword: "" });
         setLoading(false);
       })
       .catch((err) => {
@@ -95,48 +87,47 @@ export default function UserSettingsPage() {
 
     // Validaciones en tiempo real
     if (name === "nombre") setNombreError(validateName(value));
-    if (name === "email") setEmailError(validateEmail(value));
     if (name === "password") setPasswordError(validatePassword(value));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validaciones finales antes de enviar
     const nombreErr = validateName(formData.nombre);
-    const emailErr = validateEmail(formData.email);
     const passwordErr = validatePassword(formData.password);
 
     setNombreError(nombreErr);
-    setEmailError(emailErr);
     setPasswordError(passwordErr);
 
-    if (nombreErr || emailErr || passwordErr) return;
+    // Validar que si quiere cambiar contraseña, ingrese la actual
+    if (formData.password.trim() !== "" && !formData.currentPassword) {
+      setPasswordError("Debe ingresar la contraseña actual para cambiarla");
+      return;
+    }
+
+    if (nombreErr || passwordErr) return;
 
     // Preparar datos para enviar
-    const submitData = { nombre: formData.nombre, email: formData.email };
-    if (formData.password.trim() !== "") submitData.password = formData.password;
+    const submitData = { nombre: formData.nombre };
+    if (formData.password.trim() !== "") {
+      submitData.password = formData.password;
+      submitData.currentPassword = formData.currentPassword;
+    }
 
     try {
       const updatedUser = await updateUser(user.userId, submitData);
 
-      // Update the auth context with the new user data
       const updatedUserData = {
         ...user,
         nombre: updatedUser.nombre,
-        email: updatedUser.email
       };
       login(token, updatedUserData);
 
       showModal('success', '¡Éxito!', 'Usuario actualizado correctamente');
-      setFormData((prev) => ({ ...prev, password: "" }));
+      setFormData((prev) => ({ ...prev, password: "", currentPassword: "" }));
     } catch (err) {
-      console.error("El email ya está registrado", err);
-      if (err.message && err.message.includes("email")) {
-        setEmailError(err.message);
-      } else {
-        showModal('error', 'Error', err.message || 'Error actualizando usuario');
-      }
+      console.error("Error actualizando usuario", err);
+      showModal('error', 'Error', err.message || 'Error actualizando usuario');
     }
   };
 
@@ -202,22 +193,34 @@ export default function UserSettingsPage() {
               {nombreError && <div className="invalid-feedback">{nombreError}</div>}
             </div>
 
-            {/* Email */}
+            {/* Email (solo lectura) */}
             <div className="mb-3">
               <label className="form-label">Email</label>
               <input
                 type="email"
                 name="email"
                 value={formData.email}
-                onChange={handleChange}
-                className={`form-control ${emailError ? "is-invalid" : ""}`}
+                className="form-control"
+                disabled
               />
-              {emailError && <div className="invalid-feedback">{emailError}</div>}
             </div>
 
-            {/* Contraseña */}
+            {/* Contraseña actual */}
             <div className="mb-3">
-              <label className="form-label">Contraseña</label>
+              <label className="form-label">Contraseña actual</label>
+              <input
+                type="password"
+                name="currentPassword"
+                value={formData.currentPassword}
+                onChange={handleChange}
+                className="form-control"
+                placeholder="Ingrese su contraseña actual si desea cambiarla"
+              />
+            </div>
+
+            {/* Nueva contraseña */}
+            <div className="mb-3">
+              <label className="form-label">Nueva contraseña</label>
               <input
                 type="password"
                 name="password"
@@ -234,7 +237,6 @@ export default function UserSettingsPage() {
         </div>
       </div>
 
-      {/* Modal Component */}
       <Modal
         show={modal.show}
         onClose={closeModal}
@@ -249,3 +251,4 @@ export default function UserSettingsPage() {
     </div>
   );
 }
+
