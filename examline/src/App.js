@@ -9,6 +9,7 @@ import ExamView from "./pages/ExamView";
 import UserSettingsPage from "./pages/userSettings";
 import StudentExamPage from "./pages/StudentExamPage"; // 👈 NUEVO
 import ExamWindows from "./pages/ExamWindows";
+import StudentInscriptions from "./pages/StudentInscriptions";
 
 function App() {
   return (
@@ -41,6 +42,11 @@ function App() {
             <ProfessorRoute>
               <ExamWindows />
             </ProfessorRoute>
+          } />
+          <Route path="/student-inscriptions" element={
+            <StudentRoute>
+              <StudentInscriptions />
+            </StudentRoute>
           } />
           <Route path="/user-settings" element={
             <AuthenticatedRoute>

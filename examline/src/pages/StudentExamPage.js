@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import ExamView from "./ExamView"; // muestra respuestas correctas
 import ExamViewStudent from "./ExamAttempt"; // muestra sin respuestas
 import UserHeader from "../components/UserHeader";
@@ -50,7 +51,17 @@ const StudentExamPage = () => {
 
       {!submittedId && (
         <>
-          <h2 className="mb-4 text-primary">Ingresar examen</h2>
+          <div className="d-flex justify-content-between align-items-center mb-4">
+            <h2 className="text-primary mb-0">Panel de Estudiante</h2>
+            <button 
+              className="btn btn-info"
+              onClick={() => window.location.href = '/student-inscriptions'}
+            >
+              Mis Inscripciones
+            </button>
+          </div>
+
+          <h3 className="mb-3">Ingresar examen por código</h3>
           <form onSubmit={handleSubmit} className="d-flex gap-2 mb-4">
             <input
               type="text"
