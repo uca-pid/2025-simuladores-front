@@ -1,8 +1,11 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import BackToMainButton from '../components/BackToMainButton';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 export default function ExamWindowsPage() {
+  const navigate = useNavigate();
+
   // Datos de ejemplo
   const exams = [
     { id: 1, titulo: 'Matemática 1' },
@@ -75,7 +78,6 @@ export default function ExamWindowsPage() {
   };
 
   const handleCreateWindow = () => {
-    // Crear un id temporal para la ventana visual
     const newWindow = {
       id: examWindows.length + 1,
       exam: exams.find(e => e.id === parseInt(formData.examId)),
@@ -89,10 +91,8 @@ export default function ExamWindowsPage() {
       estado: 'programada'
     };
 
-    // Agregar visualmente
     setExamWindows(prev => [...prev, newWindow]);
     setShowCreateModal(false);
-    // Reset form
     setFormData({
       examId: exams[0].id,
       fechaInicio: '',
@@ -150,6 +150,14 @@ export default function ExamWindowsPage() {
                       Ventana activa
                     </label>
                   </div>
+                </div>
+                <div className="card-footer d-flex justify-content-between">
+                  <button
+                    className="btn btn-sm btn-outline-info"
+                    onClick={() => navigate(`/exam-windows-inscriptions`)}
+                  >
+                    Ver Inscripciones ({window.inscripciones.length})
+                  </button>
                 </div>
               </div>
             </div>
@@ -250,4 +258,5 @@ export default function ExamWindowsPage() {
     </div>
   );
 }
+
 
