@@ -59,33 +59,43 @@ const Registro = () => {
 
     if (nombreErr || emailErr || passwordErr) return;
 
-    try {
-      // 1️⃣ Registro
-      const signupData = await signupUser({
-        nombre,
-        email,
-        password,
-        rol: isProfessor ? "professor" : "student",
-      });
+  try {
+  // 1️⃣ Registro
+  const signupData = await signupUser({
+    nombre,
+    email,
+    password,
+    rol: isProfessor ? "professor" : "student",
+  });
 
-      // 2️⃣ Login automático
-      const loginData = await loginUser({ email, password });
+  // 2️⃣ Login automático
+  const loginData = await loginUser({ email, password });
 
-      // 3️⃣ Usar contexto de autenticación
-      login(loginData.token, loginData.user);
+  // 3️⃣ Usar contexto de autenticación
+  login(loginData.token, loginData.user);
 
-      // 4️⃣ Redirigir según rol
-      if (loginData.user.rol === "professor") {
-        navigate("/principal");
-      } else {
-        navigate("/student-exam");
-      }
-    } catch (err) {
-      console.error(err);
-      setError("El email ya está registrado");
-    }
-  };
+  // 4️⃣ Redirigir según rol
+  if (loginData.user.rol === "professor") {
+    navigate("/principal");
+  } else {
+    navigate("/student-exam");
+  }
 
+} catch (err) {
+  console.error("Error en registro:", err);
+
+  // ✅ si usás fetch + la solución que te pasé en api.js
+  if (err.status === 400) {
+    setError(err.data?.error || "El email ya está registrado.");
+  } else if (err.status === 500) {
+    setError("Error en el servidor. Inténtalo más tarde.");
+  } else if (err.status) {
+    setError("Error desconocido al registrarse.");
+  } else {
+    setError("No se pudo conectar al servidor. Revisa tu conexión.");
+  }
+}
+  };  
   return (
     <div className="bg-light d-flex align-items-center justify-content-center vh-100">
       <div className="card shadow-lg border-0 rounded-4" style={{ maxWidth: "800px", width: "100%" }}>
