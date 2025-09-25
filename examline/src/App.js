@@ -8,6 +8,7 @@ import ExamCreator from "./pages/ExamCreator";
 import ExamView from "./pages/ExamView";
 import UserSettingsPage from "./pages/userSettings";
 import StudentExamPage from "./pages/StudentExamPage"; // 👈 NUEVO
+import ExamWindows from "./pages/ExamWindows";
 
 function App() {
   return (
@@ -35,6 +36,11 @@ function App() {
             <StudentRoute>
               <StudentExamPage />
             </StudentRoute>
+          } />
+          <Route path="/exam-windows" element={
+            <ProfessorRoute>
+              <ExamWindows />
+            </ProfessorRoute>
           } />
           <Route path="/user-settings" element={
             <AuthenticatedRoute>
