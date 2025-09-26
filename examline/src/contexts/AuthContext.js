@@ -84,7 +84,7 @@ export const AuthProvider = ({ children }) => {
     if (!currentToken) return false;
 
     try {
-      const response = await fetch('http://localhost:4000/users/refresh-token', {
+      const response = await fetch('https://two025-simuladores-back-1.onrender.com/users/refresh-token', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${currentToken}`,

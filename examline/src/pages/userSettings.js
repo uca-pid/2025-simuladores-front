@@ -139,7 +139,7 @@ export default function UserSettingsPage() {
       async () => {
         closeModal();
         try {
-          const res = await fetch(`http://localhost:4000/users/${user.userId}`, { 
+          const res = await fetch(`https://two025-simuladores-back-1.onrender.com/users/${user.userId}`, { 
             method: "DELETE",
             headers: {
               'Authorization': `Bearer ${token}`,
