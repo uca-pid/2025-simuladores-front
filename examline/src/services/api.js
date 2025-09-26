@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:4000'; // Make sure this matches your backend port
+const API_BASE_URL = 'https://two025-simuladores-back-1.onrender.com'; // Make sure this matches your backend port
 
 // Helper function to get auth headers
 const getAuthHeaders = () => {
