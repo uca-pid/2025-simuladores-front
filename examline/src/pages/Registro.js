@@ -71,7 +71,7 @@ const Registro = () => {
 
   try {
   // 1️⃣ Registro
-  const signupData = await signupUser({
+  await signupUser({
     nombre,
     email,
     password,
