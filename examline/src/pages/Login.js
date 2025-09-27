@@ -8,6 +8,8 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [validated, setValidated] = useState(false);
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isOnCooldown, setIsOnCooldown] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
 
@@ -15,10 +17,18 @@ const Login = () => {
     e.preventDefault();
     const form = e.currentTarget;
 
+    // Prevent submission if already loading or on cooldown
+    if (isLoading || isOnCooldown) {
+      return;
+    }
+
     if (!form.checkValidity()) {
       setValidated(true);
       return;
     }
+
+    setIsLoading(true);
+    setError("");
 
     try {
       const res = await fetch("https://two025-simuladores-back-1.onrender.com/users/login", {
@@ -47,6 +57,13 @@ const Login = () => {
     } catch (err) {
       console.error(err);
       setError("Error al conectar con el servidor");
+    } finally {
+      setIsLoading(false);
+      // Start cooldown period
+      setIsOnCooldown(true);
+      setTimeout(() => {
+        setIsOnCooldown(false);
+      }, 1000); // 1 second cooldown
     }
   };
 
@@ -87,7 +104,22 @@ const Login = () => {
             </div>
 
             <div className="d-grid mb-3">
-              <button type="submit" className="btn btn-primary btn-lg">Ingresar</button>
+              <button 
+                type="submit" 
+                className="btn btn-primary btn-lg"
+                disabled={isLoading || isOnCooldown}
+              >
+                {isLoading ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    Ingresando...
+                  </>
+                ) : isOnCooldown ? (
+                  "Espera..."
+                ) : (
+                  "Ingresar"
+                )}
+              </button>
             </div>
 
             <p className="mb-1">

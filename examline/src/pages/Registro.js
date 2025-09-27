@@ -15,6 +15,8 @@ const Registro = () => {
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isOnCooldown, setIsOnCooldown] = useState(false);
 
   const navigate = useNavigate();
 
@@ -49,6 +51,11 @@ const Registro = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // Prevent submission if already loading or on cooldown
+    if (isLoading || isOnCooldown) {
+      return;
+    }
+
     const nombreErr = validateName(nombre);
     const emailErr = validateEmail(email);
     const passwordErr = validatePassword(password);
@@ -58,6 +65,9 @@ const Registro = () => {
     setPasswordError(passwordErr);
 
     if (nombreErr || emailErr || passwordErr) return;
+
+    setIsLoading(true);
+    setError("");
 
   try {
   // 1️⃣ Registro
@@ -94,6 +104,13 @@ const Registro = () => {
   } else {
     setError("No se pudo conectar al servidor. Revisa tu conexión.");
   }
+} finally {
+  setIsLoading(false);
+  // Start cooldown period
+  setIsOnCooldown(true);
+  setTimeout(() => {
+    setIsOnCooldown(false);
+  }, 1000); // 1 second cooldown
 }
   };  
   return (
@@ -181,7 +198,22 @@ const Registro = () => {
 
               {/* Botón */}
               <div className="d-grid mb-3">
-                <button type="submit" className="btn btn-primary btn-lg">Registrarse</button>
+                <button 
+                  type="submit" 
+                  className="btn btn-primary btn-lg"
+                  disabled={isLoading || isOnCooldown}
+                >
+                  {isLoading ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      Registrando...
+                    </>
+                  ) : isOnCooldown ? (
+                    "Espera..."
+                  ) : (
+                    "Registrarse"
+                  )}
+                </button>
               </div>
 
               <p className="mb-0">
