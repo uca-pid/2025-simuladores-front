@@ -8,6 +8,9 @@ import ExamCreator from "./pages/ExamCreator";
 import ExamView from "./pages/ExamView";
 import UserSettingsPage from "./pages/userSettings";
 import StudentExamPage from "./pages/StudentExamPage"; // 👈 NUEVO
+import ExamWindows from "./pages/ExamWindows";
+import StudentInscriptions from "./pages/StudentInscriptions";
+import WindowInscriptions from "./pages/WindowInscriptions";
 
 function App() {
   return (
@@ -34,6 +37,21 @@ function App() {
           <Route path="/student-exam" element={
             <StudentRoute>
               <StudentExamPage />
+            </StudentRoute>
+          } />
+          <Route path="/exam-windows" element={
+            <ProfessorRoute>
+              <ExamWindows />
+            </ProfessorRoute>
+          } />
+          <Route path="/exam-windows-inscriptions" element={
+            <ProfessorRoute>
+              <WindowInscriptions />
+            </ProfessorRoute>
+          } />
+          <Route path="/student-inscriptions" element={
+            <StudentRoute>
+              <StudentInscriptions />
             </StudentRoute>
           } />
           <Route path="/user-settings" element={

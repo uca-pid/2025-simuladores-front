@@ -40,11 +40,21 @@ const Principal = () => {
     <div className="container py-5">
       <UserHeader />
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2 className="mb-0">Exámenes creados</h2>
-        <button className="btn btn-success" onClick={handleCrearExamen}>
-          Crear Examen
-        </button>
+        <h2 className="mb-0">Panel de Profesor</h2>
+        <div className="d-flex gap-2">
+          <button 
+            className="btn btn-info" 
+            onClick={() => navigate("/exam-windows")}
+          >
+            Ventanas de Examen
+          </button>
+          <button className="btn btn-success" onClick={handleCrearExamen}>
+            Crear Examen
+          </button>
+        </div>
       </div>
+
+      <h3 className="mb-3">Exámenes creados</h3>
       
       {loading ? (
         <div className="d-flex justify-content-center">
@@ -84,4 +94,6 @@ const Principal = () => {
 };
 
 export default Principal;
+
+
 
