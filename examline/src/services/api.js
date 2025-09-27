@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://two025-simuladores-back-1.onrender.com'; // Make sure this matches your backend port
+const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
 
 // Helper function to get auth headers
 const getAuthHeaders = () => {

@@ -31,7 +31,8 @@ const Login = () => {
     setError("");
 
     try {
-      const res = await fetch("https://two025-simuladores-back-1.onrender.com/users/login", {
+      const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
+      const res = await fetch(`${API_BASE_URL}/users/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),

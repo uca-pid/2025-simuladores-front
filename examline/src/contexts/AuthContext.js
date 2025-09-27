@@ -84,7 +84,8 @@ export const AuthProvider = ({ children }) => {
     if (!currentToken) return false;
 
     try {
-      const response = await fetch('https://two025-simuladores-back-1.onrender.com/users/refresh-token', {
+      const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
+      const response = await fetch(`${API_BASE_URL}/users/refresh-token`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${currentToken}`,
