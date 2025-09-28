@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { loginUser } from "../services/api";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 const Login = () => {
@@ -31,19 +32,8 @@ const Login = () => {
     setError("");
 
     try {
-      const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
-      const res = await fetch(`${API_BASE_URL}/users/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || "Error al iniciar sesión");
-        return;
-      }
+      // Use the API service which handles password hashing
+      const data = await loginUser({ email, password });
 
       // Use the new auth context to handle login
       login(data.token, data.user);
@@ -57,7 +47,7 @@ const Login = () => {
 
     } catch (err) {
       console.error(err);
-      setError("Error al conectar con el servidor");
+      setError(err.message || "Error al iniciar sesión");
     } finally {
       setIsLoading(false);
       // Start cooldown period

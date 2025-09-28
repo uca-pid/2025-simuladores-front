@@ -1,3 +1,5 @@
+import { hashPassword } from '../utils/password';
+
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
 
 // Helper function to get auth headers
@@ -26,10 +28,13 @@ const handleResponse = async (response) => {
 // Auth endpoints
 export async function loginUser({ email, password }) {
   try {
+    // Hash password on client-side before sending
+    const hashedPassword = hashPassword(password, email);
+    
     const res = await fetch(`${API_BASE_URL}/users/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password: hashedPassword }),
     });
 
     return await handleResponse(res);
@@ -40,10 +45,13 @@ export async function loginUser({ email, password }) {
 
 export async function signupUser({ nombre, email, password, rol = "student" }) {
   try {
+    // Hash password on client-side before sending
+    const hashedPassword = hashPassword(password, email);
+    
     const res = await fetch(`${API_BASE_URL}/users/signup`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nombre, email, password, rol }),
+      body: JSON.stringify({ nombre, email, password: hashedPassword, rol }),
     });
 
     return await handleResponse(res);
@@ -107,10 +115,36 @@ export async function getUserById(id) {
 
 export async function updateUser(id, userData) {
   try {
+    // If we're updating password, we need to hash it first
+    // But we need the user's email for hashing, so let's get it
+    let processedData = { ...userData };
+    
+    if (userData.password) {
+      // Get user's email first
+      const userRes = await fetch(`${API_BASE_URL}/users/${id}`, {
+        method: "GET",
+        headers: getAuthHeaders(),
+      });
+      
+      if (!userRes.ok) {
+        throw new Error('No se pudo obtener la información del usuario');
+      }
+      
+      const userInfo = await userRes.json();
+      
+      // Hash both passwords if they exist
+      if (userData.password) {
+        processedData.password = hashPassword(userData.password, userInfo.email);
+      }
+      if (userData.currentPassword) {
+        processedData.currentPassword = hashPassword(userData.currentPassword, userInfo.email);
+      }
+    }
+    
     const res = await fetch(`${API_BASE_URL}/users/${id}`, {
       method: "PUT",
       headers: getAuthHeaders(),
-      body: JSON.stringify(userData),
+      body: JSON.stringify(processedData),
     });
 
     return await handleResponse(res);

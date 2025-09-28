@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { useAuth } from "../contexts/AuthContext";
 import { signupUser, loginUser } from "../services/api";
+import { validatePasswordStrength } from "../utils/password";
 
 const Registro = () => {
   const [nombre, setNombre] = useState("");
@@ -37,14 +38,9 @@ const Registro = () => {
 
   const validatePassword = (password) => {
     if (!password) return "Debe ingresar una contraseña.";
-    if (password.length < 8) return "Debe tener al menos 8 caracteres.";
-    if (!/[A-ZÁÉÍÓÚÜÑ]/.test(password)) return "Debe incluir al menos una letra mayúscula.";
-    if (!/[a-záéíóúüñ]/.test(password)) return "Debe incluir al menos una letra minúscula.";
-    if (!/\d/.test(password)) return "Debe incluir al menos un número.";
-    if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?~`¡¿]/.test(password))
-      return "Debe incluir al menos un carácter especial.";
-    if (/\s/.test(password)) return "No se permiten espacios en blanco.";
-    return "";
+    
+    const validation = validatePasswordStrength(password);
+    return validation.isValid ? "" : validation.message;
   };
 
   // ---------------- Submit ----------------
