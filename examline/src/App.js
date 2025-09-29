@@ -44,7 +44,7 @@ function App() {
               <ExamWindows />
             </ProfessorRoute>
           } />
-          <Route path="/exam-windows-inscriptions" element={
+          <Route path="/exam-windows/:windowId/inscriptions" element={
             <ProfessorRoute>
               <WindowInscriptions />
             </ProfessorRoute>

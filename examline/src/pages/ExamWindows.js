@@ -44,22 +44,52 @@ export default function ExamWindowsPage() {
     try {
       setLoading(true);
       
+      if (!token) {
+        console.error('No token available');
+        navigate('/login');
+        return;
+      }
+      
       // Cargar exámenes del profesor
       const examsRes = await fetch(`${API_BASE_URL}/exams`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
+      
+      if (examsRes.status === 401) {
+        console.error('Token expirado o inválido');
+        navigate('/login');
+        return;
+      }
+      
       if (examsRes.ok) {
         const examsData = await examsRes.json();
         setExams(examsData);
+      } else {
+        console.error('Error cargando exámenes:', examsRes.status, await examsRes.text());
       }
 
       // Cargar ventanas de examen
       const windowsRes = await fetch(`${API_BASE_URL}/exam-windows/profesor`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
+      
+      if (windowsRes.status === 401) {
+        console.error('Token expirado o inválido al cargar ventanas');
+        navigate('/login');
+        return;
+      }
+      
       if (windowsRes.ok) {
         const windowsData = await windowsRes.json();
         setExamWindows(windowsData);
+      } else {
+        console.error('Error cargando ventanas:', windowsRes.status, await windowsRes.text());
       }
     } catch (error) {
       console.error('Error cargando datos:', error);
@@ -283,7 +313,12 @@ export default function ExamWindowsPage() {
                   </button>
                   <button 
                     className="btn btn-sm btn-outline-info"
-                    onClick={() => navigate(`/exam-windows/${window.id}/inscriptions`)}
+                    onClick={() => {
+                      console.log('Navegando a inscripciones, windowId:', window.id);
+                      console.log('Usuario actual:', user);
+                      console.log('Token actual:', token ? 'exists' : 'missing');
+                      navigate(`/exam-windows/${window.id}/inscriptions`);
+                    }}
                   >
                     Ver Inscripciones ({window.inscripciones.length})
                   </button>
