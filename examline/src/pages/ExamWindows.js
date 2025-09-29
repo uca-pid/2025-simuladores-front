@@ -371,7 +371,19 @@ export default function ExamWindowsPage() {
                         {window.notas && (
                           <div className="exam-info-item">
                             <i className="fas fa-sticky-note"></i>
-                            <span>{window.notas}</span>
+                            <span 
+                              style={{
+                                display: '-webkit-box',
+                                WebkitLineClamp: 4,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                maxHeight: '5em',
+                                lineHeight: '1.25em'
+                              }}
+                            >
+                              {window.notas}
+                            </span>
                           </div>
                         )}
                       </div>
@@ -417,7 +429,7 @@ export default function ExamWindowsPage() {
                           }}
                         >
                           <i className="fas fa-info-circle"></i>
-                          Más información
+                          Información y lista de inscriptos
                         </button>
                       </div>
                       
