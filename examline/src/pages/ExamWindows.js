@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import BackToMainButton from '../components/BackToMainButton';
 import Modal from '../components/Modal';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import '../button-styles.css';
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
 
 export default function ExamWindowsPage() {
@@ -308,16 +309,16 @@ export default function ExamWindowsPage() {
   const getStatusBadge = (estado) => {
     const badges = {
       programada: 'bg-primary',
-      cerrada_inscripciones: 'bg-warning',
+      cerrada_inscripciones: 'bg-warning text-dark',
       en_curso: 'bg-success',
       finalizada: 'bg-secondary'
     };
     
     const labels = {
-      programada: 'Programada',
-      cerrada_inscripciones: 'Cerrada',
-      en_curso: 'En Curso',
-      finalizada: 'Finalizada'
+      programada: '📅 Programada',
+      cerrada_inscripciones: '🔒 Cerrada a Inscripciones',
+      en_curso: '▶️ En Curso',
+      finalizada: '✅ Finalizada'
     };
 
     return (
@@ -325,6 +326,67 @@ export default function ExamWindowsPage() {
         {labels[estado] || estado}
       </span>
     );
+  };
+
+  // Función para alternar inscripciones (abrir/cerrar)
+  const handleToggleInscripciones = async (windowId, currentEstado) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/exam-windows/${windowId}/toggle-inscripciones`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        showModal('success', '¡Éxito!', result.message);
+        loadData(); // Recargar datos
+      } else {
+        const errorData = await response.json();
+        showModal('error', 'Error', errorData.error || 'Error al cambiar el estado de inscripciones');
+      }
+    } catch (error) {
+      console.error('Error en toggle inscripciones:', error);
+      showModal('error', 'Error', 'Error de conexión');
+    }
+  };
+
+  // Función para actualizar estados automáticamente
+  const handleUpdateStatuses = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/exam-windows/update-statuses`, {
+        method: 'PATCH',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        
+        if (result.updatedCount > 0) {
+          // Mostrar detalles de las ventanas actualizadas
+          const details = result.updatedWindows.map(w => 
+            `• ${w.titulo}: ${w.estadoAnterior} → ${w.estadoNuevo}`
+          ).join('\n');
+          
+          showModal(
+            'success', 
+            '¡Estados Actualizados!', 
+            `Se actualizaron ${result.updatedCount} ventana(s):\n\n${details}`
+          );
+          loadData(); // Recargar datos
+        } else {
+          showModal('info', 'Sin Cambios', 'Todos los estados están actualizados según sus horarios.');
+        }
+      } else {
+        const errorData = await response.json();
+        showModal('error', 'Error', errorData.error || 'Error al actualizar los estados');
+      }
+    } catch (error) {
+      console.error('Error actualizando estados:', error);
+      showModal('error', 'Error', 'Error de conexión al actualizar estados');
+    }
   };
 
   if (loading) {
@@ -354,6 +416,16 @@ export default function ExamWindowsPage() {
             <div className="col-12 col-lg-4">
               <div className="d-flex flex-column flex-sm-row gap-2 justify-content-lg-end">
                 <button 
+                  className="modern-btn modern-btn-secondary flex-fill flex-sm-grow-0" 
+                  onClick={handleUpdateStatuses}
+                  disabled={examWindows.length === 0}
+                  style={{ minWidth: '160px' }}
+                  title="Actualizar estados automáticamente según fechas y horarios"
+                >
+                  <i className="fas fa-sync-alt me-2"></i>
+                  Actualizar Estados
+                </button>
+                <button 
                   className="modern-btn modern-btn-primary flex-fill flex-sm-grow-0" 
                   onClick={handleCreateWindow}
                   disabled={exams.length === 0}
@@ -377,6 +449,51 @@ export default function ExamWindowsPage() {
           Necesitas crear al menos un examen antes de poder programar ventanas.
         </div>
       )}
+
+      {/* Panel informativo de estados */}
+      <div className="modern-card mb-4">
+        <div className="modern-card-body" style={{ padding: '1rem' }}>
+          <h6 className="mb-3" style={{ color: 'var(--text-color-2)', fontWeight: '600' }}>
+            <i className="fas fa-info-circle me-2" style={{ color: 'var(--primary-color)' }}></i>
+            Estados de las Ventanas de Examen
+          </h6>
+          <div className="row g-3">
+            <div className="col-6 col-md-3">
+              <div className="d-flex align-items-center">
+                <span className="badge bg-primary me-2">📅 Programada</span>
+                <small className="text-muted">Abierta a inscripciones</small>
+              </div>
+            </div>
+            <div className="col-6 col-md-3">
+              <div className="d-flex align-items-center">
+                <span className="badge bg-warning text-dark me-2">🔒 Cerrada</span>
+                <small className="text-muted">Sin nuevas inscripciones</small>
+              </div>
+            </div>
+            <div className="col-6 col-md-3">
+              <div className="d-flex align-items-center">
+                <span className="badge bg-success me-2">▶️ En Curso</span>
+                <small className="text-muted">Examen en progreso</small>
+              </div>
+            </div>
+            <div className="col-6 col-md-3">
+              <div className="d-flex align-items-center">
+                <span className="badge bg-secondary me-2">✅ Finalizada</span>
+                <small className="text-muted">Examen completado</small>
+              </div>
+            </div>
+          </div>
+          <div className="alert alert-light mt-3 mb-0" style={{ 
+            fontSize: '0.85rem', 
+            backgroundColor: 'rgba(13, 202, 240, 0.05)',
+            border: '1px solid rgba(13, 202, 240, 0.1)',
+            color: 'var(--text-color-2)'
+          }}>
+            <i className="fas fa-lightbulb me-2" style={{ color: 'var(--primary-color)' }}></i>
+            <strong>Controles:</strong> Usa "Abrir/Cerrar" para controlar inscripciones manualmente. El botón "Actualizar Estados" revisa automáticamente qué ventanas cambiaron según horarios.
+          </div>
+        </div>
+      </div>
 
       <div className="modern-card">
         <div className="modern-card-header">
@@ -485,6 +602,30 @@ export default function ExamWindowsPage() {
                       </div>
                       
                       <div className="exam-actions">
+                        {/* Botón para abrir/cerrar inscripciones - solo para estados programada/cerrada_inscripciones */}
+                        {(['programada', 'cerrada_inscripciones'].includes(window.estado)) && (
+                          <button 
+                            className={`modern-btn modern-btn-sm ${
+                              window.estado === 'programada' 
+                                ? 'modern-btn-warning' 
+                                : 'modern-btn-success'
+                            }`}
+                            onClick={() => handleToggleInscripciones(window.id, window.estado)}
+                            title={
+                              window.estado === 'programada' 
+                                ? 'Cerrar inscripciones' 
+                                : 'Abrir inscripciones'
+                            }
+                          >
+                            <i className={`fas ${
+                              window.estado === 'programada' 
+                                ? 'fa-lock' 
+                                : 'fa-unlock'
+                            }`}></i>
+                            {window.estado === 'programada' ? 'Cerrar' : 'Abrir'}
+                          </button>
+                        )}
+                        
                         <button 
                           className="modern-btn modern-btn-secondary modern-btn-sm"
                           onClick={() => handleEditWindow(window)}
@@ -502,7 +643,7 @@ export default function ExamWindowsPage() {
                           }}
                         >
                           <i className="fas fa-info-circle"></i>
-                          Información y lista de inscriptos
+                          Información y Lista de Inscriptos
                         </button>
                       </div>
                       
