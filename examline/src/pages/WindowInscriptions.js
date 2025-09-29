@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import BackToMainButton from '../components/BackToMainButton';
 import Modal from '../components/Modal';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import '../modern-examline.css';
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:4000';
 
 export default function WindowInscriptionsPage() {
@@ -221,15 +222,30 @@ export default function WindowInscriptionsPage() {
     return now >= canManageFrom && now <= end;
   };
 
-  if (loading) return <div className="text-center mt-5">Cargando...</div>;
+  if (loading) {
+    return (
+      <div className="container py-5">
+        <div className="loading-container">
+          <div className="modern-spinner"></div>
+          <p>Cargando inscripciones...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!examWindow) {
     return (
-      <div className="container py-4">
-        <div className="alert alert-danger">
-          Ventana de examen no encontrada.
+      <div className="container py-5">
+        <div className="empty-state">
+          <div className="empty-icon">
+            <i className="fas fa-exclamation-triangle"></i>
+          </div>
+          <h4 className="empty-title">Ventana no encontrada</h4>
+          <p className="empty-subtitle">
+            La ventana de examen solicitada no existe o no tienes permisos para verla.
+          </p>
+          <BackToMainButton />
         </div>
-        <BackToMainButton />
       </div>
     );
   }
@@ -238,33 +254,75 @@ export default function WindowInscriptionsPage() {
   const canManage = canManageAttendance();
 
   return (
-    <div className="container py-4">
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h1 className="text-primary">Inscripciones - {examWindow.exam.titulo}</h1>
-        <BackToMainButton />
+    <div className="container py-5">
+      <div className="modern-card mb-4">
+        <div className="modern-card-header">
+          <div className="d-flex justify-content-between align-items-center">
+            <h1 className="page-title mb-0">
+              <i className="fas fa-users me-3"></i>
+              Inscripciones - {examWindow.exam.titulo}
+            </h1>
+            <BackToMainButton />
+          </div>
+        </div>
       </div>
 
       {/* Información de la ventana */}
-      <div className="card mb-4">
-        <div className="card-header d-flex justify-content-between align-items-center">
-          <h5 className="mb-0">Información de la Ventana</h5>
-          <span className={`badge ${status.class}`}>{status.text}</span>
+      <div className="modern-card mb-4">
+        <div className="modern-card-header">
+          <div className="d-flex justify-content-between align-items-center">
+            <h3 className="modern-card-title">
+              <i className="fas fa-info-circle me-2"></i>
+              Información de la Ventana
+            </h3>
+            <span className={`badge ${status.class === 'bg-primary' ? 'badge-primary' : status.class === 'bg-success' ? 'badge-success' : 'badge-secondary'}`}>
+              <i className={`fas me-2 ${
+                status.text === 'Programada' ? 'fa-clock' :
+                status.text === 'En Curso' ? 'fa-play-circle' :
+                'fa-flag-checkered'
+              }`}></i>
+              {status.text}
+            </span>
+          </div>
         </div>
-        <div className="card-body">
-          <div className="row">
+        <div className="modern-card-body">
+          <div className="row g-4">
             <div className="col-md-6">
-              <p><strong>Fecha:</strong> {new Date(examWindow.fechaInicio).toLocaleDateString()}</p>
-              <p><strong>Hora:</strong> {new Date(examWindow.fechaInicio).toLocaleTimeString()}</p>
-              <p><strong>Duración:</strong> {examWindow.duracion} minutos</p>
+              <div className="exam-info">
+                <div className="exam-info-item">
+                  <i className="fas fa-calendar"></i>
+                  <span><strong>Fecha:</strong> {new Date(examWindow.fechaInicio).toLocaleDateString()}</span>
+                </div>
+                <div className="exam-info-item">
+                  <i className="fas fa-clock"></i>
+                  <span><strong>Hora:</strong> {new Date(examWindow.fechaInicio).toLocaleTimeString()}</span>
+                </div>
+                <div className="exam-info-item">
+                  <i className="fas fa-hourglass-half"></i>
+                  <span><strong>Duración:</strong> {examWindow.duracion} minutos</span>
+                </div>
+              </div>
             </div>
             <div className="col-md-6">
-              <p><strong>Modalidad:</strong> {examWindow.modalidad}</p>
-              <p><strong>Cupo:</strong> {inscriptions.length}/{examWindow.cupoMaximo}</p>
-              <p><strong>Activa:</strong> {examWindow.activa ? 'Sí' : 'No'}</p>
+              <div className="exam-info">
+                <div className="exam-info-item">
+                  <i className="fas fa-laptop"></i>
+                  <span><strong>Modalidad:</strong> {examWindow.modalidad}</span>
+                </div>
+                <div className="exam-info-item">
+                  <i className="fas fa-users"></i>
+                  <span><strong>Cupo:</strong> {inscriptions.length}/{examWindow.cupoMaximo}</span>
+                </div>
+                <div className="exam-info-item">
+                  <i className={`fas ${examWindow.activa ? 'fa-check-circle text-success' : 'fa-times-circle text-danger'}`}></i>
+                  <span><strong>Activa:</strong> {examWindow.activa ? 'Sí' : 'No'}</span>
+                </div>
+              </div>
             </div>
           </div>
           {examWindow.notas && (
-            <div className="alert alert-info mt-2">
+            <div className="alert alert-light mt-3">
+              <i className="fas fa-sticky-note me-2"></i>
               <strong>Notas:</strong> {examWindow.notas}
             </div>
           )}
@@ -273,17 +331,24 @@ export default function WindowInscriptionsPage() {
 
       {/* Controles de gestión */}
       {canManage && inscriptions.length > 0 && (
-        <div className="card mb-4">
-          <div className="card-body">
-            <h6>Gestión de Asistencia</h6>
-            <p className="text-muted small">
+        <div className="modern-card mb-4">
+          <div className="modern-card-header">
+            <h3 className="modern-card-title">
+              <i className="fas fa-user-check me-2"></i>
+              Gestión de Asistencia
+            </h3>
+          </div>
+          <div className="modern-card-body">
+            <p className="text-muted mb-3">
+              <i className="fas fa-info-circle me-2"></i>
               Marca a los estudiantes como presentes para habilitarlos a rendir el examen.
             </p>
             <button 
-              className="btn btn-success"
+              className="modern-btn modern-btn-primary"
               onClick={markAllPresent}
               disabled={inscriptions.every(i => i.presente === true)}
             >
+              <i className="fas fa-user-check me-2"></i>
               Marcar Todos como Presentes
             </button>
           </div>
@@ -291,49 +356,76 @@ export default function WindowInscriptionsPage() {
       )}
 
       {/* Lista de inscripciones */}
-      <div className="card">
-        <div className="card-header">
-          <h5 className="mb-0">
+      <div className="modern-card">
+        <div className="modern-card-header">
+          <h3 className="modern-card-title">
+            <i className="fas fa-user-graduate me-2"></i>
             Estudiantes Inscriptos ({inscriptions.length})
-          </h5>
+          </h3>
         </div>
-        <div className="card-body">
+        <div className="modern-card-body">
           {inscriptions.length === 0 ? (
-            <div className="alert alert-info">
-              No hay estudiantes inscriptos en esta ventana.
+            <div className="empty-state">
+              <div className="empty-icon">
+                <i className="fas fa-user-slash"></i>
+              </div>
+              <h4 className="empty-title">Sin inscripciones</h4>
+              <p className="empty-subtitle">
+                No hay estudiantes inscriptos en esta ventana de examen.
+              </p>
             </div>
           ) : (
             <div className="table-responsive">
-              <table className="table table-striped">
-                <thead>
+              <table className="table table-hover">
+                <thead className="table-light">
                   <tr>
-                    <th>Estudiante</th>
-                    <th>Email</th>
-                    <th>Fecha Inscripción</th>
-                    {canManage && <th>Acciones</th>}
+                    <th scope="col">
+                      <i className="fas fa-user me-2"></i>
+                      Estudiante
+                    </th>
+                    <th scope="col">
+                      <i className="fas fa-envelope me-2"></i>
+                      Email
+                    </th>
+                    <th scope="col">
+                      <i className="fas fa-calendar-plus me-2"></i>
+                      Fecha Inscripción
+                    </th>
+                    {canManage && (
+                      <th scope="col" className="text-center">
+                        <i className="fas fa-tasks me-2"></i>
+                        Acciones
+                      </th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
-                  {inscriptions.map(inscription => (
-                    <tr key={inscription.id}>
-                      <td>{inscription.user.nombre}</td>
-                      <td>{inscription.user.email}</td>
+                  {inscriptions.map((inscription, index) => (
+                    <tr key={inscription.id} className={`fade-in-up`} style={{animationDelay: `${index * 0.1}s`}}>
+                      <td className="fw-semibold">{inscription.user.nombre}</td>
+                      <td className="text-muted">{inscription.user.email}</td>
                       <td>{new Date(inscription.inscribedAt).toLocaleDateString()}</td>
                       {canManage && (
-                        <td>
+                        <td className="text-center">
                           <div className="btn-group" role="group">
                             <button 
-                              className={`btn btn-sm ${inscription.presente === true ? 'btn-success' : 'btn-outline-success'}`}
+                              className={`modern-btn modern-btn-sm ${
+                                inscription.presente === true ? 'modern-btn-primary' : 'modern-btn-secondary'
+                              }`}
                               onClick={() => handleAttendanceToggle(inscription.id, inscription.presente)}
                               disabled={inscription.presente === true}
                             >
+                              <i className="fas fa-check me-1"></i>
                               Presente
                             </button>
                             <button 
-                              className={`btn btn-sm ${inscription.presente === false ? 'btn-danger' : 'btn-outline-danger'}`}
+                              className={`modern-btn modern-btn-sm ${
+                                inscription.presente === false ? 'modern-btn-danger' : 'modern-btn-secondary'
+                              }`}
                               onClick={() => handleAttendanceToggle(inscription.id, inscription.presente)}
                               disabled={inscription.presente === false}
                             >
+                              <i className="fas fa-times me-1"></i>
                               Ausente
                             </button>
                           </div>
