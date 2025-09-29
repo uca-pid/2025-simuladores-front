@@ -51,70 +51,141 @@ const StudentExamPage = () => {
 
       {!submittedId && (
         <>
-          <div className="d-flex justify-content-between align-items-center mb-4">
-            <h2 className="text-primary mb-0">Panel de Estudiante</h2>
-            <button 
-              className="btn btn-info"
-              onClick={() => window.location.href = '/student-inscriptions'}
-            >
-              Mis Inscripciones
-            </button>
+          {/* Header */}
+          <div className="modern-card mb-4">
+            <div className="modern-card-header">
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <h1 className="page-title mb-1">
+                    <i className="fas fa-user-graduate me-2" style={{ color: 'var(--primary-color)' }}></i>
+                    Panel de Estudiante
+                  </h1>
+                  <p className="page-subtitle mb-0">Accede a tus exámenes y revisa tu historial</p>
+                </div>
+                <button 
+                  className="modern-btn modern-btn-secondary"
+                  onClick={() => window.location.href = '/student-inscriptions'}
+                >
+                  <i className="fas fa-clipboard-list me-2"></i>
+                  Mis Inscripciones
+                </button>
+              </div>
+            </div>
           </div>
 
-          <h3 className="mb-3">Ingresar examen por código</h3>
-          <form onSubmit={handleSubmit} className="d-flex gap-2 mb-4">
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Ingrese el ID del examen"
-              value={examId}
-              onChange={(e) => setExamId(e.target.value)}
-            />
-            <button type="submit" className="btn btn-success">
-              Ver Examen
-            </button>
-          </form>
+          {/* Ingresar por código */}
+          <div className="modern-card mb-4">
+            <div className="modern-card-header">
+              <h3 className="modern-card-title">
+                <i className="fas fa-key me-2"></i>
+                Acceder por Código
+              </h3>
+            </div>
+            <div className="modern-card-body">
+              <form onSubmit={handleSubmit} className="d-flex gap-3">
+                <div className="flex-grow-1">
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Ingresa el ID del examen"
+                    value={examId}
+                    onChange={(e) => setExamId(e.target.value)}
+                    style={{
+                      padding: '0.75rem 1rem',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '8px',
+                      fontSize: '1rem'
+                    }}
+                  />
+                </div>
+                <button type="submit" className="modern-btn modern-btn-primary">
+                  <i className="fas fa-search me-2"></i>
+                  Buscar Examen
+                </button>
+              </form>
+            </div>
+          </div>
 
-          <h3 className="text-secondary mb-3">Historial de exámenes vistos</h3>
-          
-          {isLoading ? (
-            <div className="d-flex justify-content-center">
-              <div className="spinner-border text-primary" role="status">
-                <span className="visually-hidden">Cargando usuario...</span>
-              </div>
+          {/* Historial */}
+          <div className="modern-card">
+            <div className="modern-card-header">
+              <h3 className="modern-card-title">
+                <i className="fas fa-history me-2"></i>
+                Historial de Exámenes ({history.length})
+              </h3>
             </div>
-          ) : historyLoading ? (
-            <div className="d-flex justify-content-center">
-              <div className="spinner-border text-primary" role="status">
-                <span className="visually-hidden">Cargando historial...</span>
-              </div>
+            <div className="modern-card-body">
+              {isLoading ? (
+                <div className="loading-container">
+                  <div className="modern-spinner"></div>
+                  <p>Cargando usuario...</p>
+                </div>
+              ) : historyLoading ? (
+                <div className="loading-container">
+                  <div className="modern-spinner"></div>
+                  <p>Cargando historial...</p>
+                </div>
+              ) : historyError ? (
+                <div className="error-message">
+                  <i className="fas fa-exclamation-triangle"></i>
+                  {historyError}
+                </div>
+              ) : history.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-icon">
+                    <i className="fas fa-file-alt"></i>
+                  </div>
+                  <h4 className="empty-title">No hay exámenes en el historial</h4>
+                  <p className="empty-subtitle">
+                    Una vez que tomes un examen, aparecerá aquí para futuras consultas
+                  </p>
+                </div>
+              ) : (
+                <div className="row g-3">
+                  {history.map((h, index) => (
+                    <div key={h.id} className="col-lg-6">
+                      <div 
+                        className={`exam-card fade-in-up`} 
+                        style={{ cursor: "pointer", animationDelay: `${index * 0.1}s` }}
+                        onClick={() => {
+                          setSubmittedId(h.exam.id);
+                          setFromHistory(true);
+                        }}
+                      >
+                        <div className="exam-card-header">
+                          <h5 className="exam-title">{h.exam.titulo}</h5>
+                          <span className="exam-badge">
+                            <i className="fas fa-eye"></i>
+                            Visto
+                          </span>
+                        </div>
+                        <div className="exam-card-body">
+                          <div className="exam-info">
+                            <div className="exam-info-item">
+                              <i className="fas fa-calendar"></i>
+                              <span>{new Date(h.viewedAt).toLocaleDateString()}</span>
+                            </div>
+                            <div className="exam-info-item">
+                              <i className="fas fa-clock"></i>
+                              <span>{new Date(h.viewedAt).toLocaleTimeString()}</span>
+                            </div>
+                            <div className="exam-info-item">
+                              <i className="fas fa-hashtag"></i>
+                              <span>ID: {h.exam.id}</span>
+                            </div>
+                          </div>
+                          <button className="modern-btn modern-btn-secondary modern-btn-sm w-100 mt-2">
+                            <i className="fas fa-eye me-2"></i>
+                            Ver Examen Nuevamente
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          ) : historyError ? (
-            <div className="alert alert-danger" role="alert">
-              {historyError}
-            </div>
-          ) : history.length === 0 ? (
-            <p>No has visto ningún examen aún.</p>
-          ) : (
-            <ul className="list-group">
-              {history.map((h) => (
-                <li
-                  key={h.id}
-                  className="list-group-item d-flex justify-content-between align-items-center"
-                  style={{ cursor: "pointer" }}
-                  onClick={() => {
-                    setSubmittedId(h.exam.id);
-                    setFromHistory(true); // viene del historial
-                  }}
-                >
-                  <span>{h.exam.titulo}</span>
-                  <small className="text-muted">
-                    {new Date(h.viewedAt).toLocaleString()}
-                  </small>
-                </li>
-              ))}
-            </ul>
-          )}
+          </div>
         </>
       )}
 
