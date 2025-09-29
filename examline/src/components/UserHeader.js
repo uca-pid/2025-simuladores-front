@@ -1,6 +1,5 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { FiSettings, FiLogOut } from "react-icons/fi"; // tuerca y puerta
 import { useAuth } from "../contexts/AuthContext";
 import "bootstrap/dist/css/bootstrap.min.css";
 
@@ -17,25 +16,54 @@ const UserHeader = () => {
   const userName = user?.nombre || "Usuario";
 
   return (
-    <header className="d-flex justify-content-between align-items-center mb-4 p-3 bg-primary text-white rounded shadow-sm">
-      <div>
-        <h2 className="m-0 fw-bold">Bienvenido, {userName}</h2>
-      </div>
-      <div className="d-flex align-items-center gap-2">
-        <button
-          className="btn btn-light d-flex align-items-center gap-1"
-          onClick={handleUserSettings}
-        >
-          <FiSettings />
-          Modificar datos
-        </button>
-        <button
-          className="btn btn-danger d-flex align-items-center gap-1"
-          onClick={handleLogout}
-        >
-          <FiLogOut />
-          Cerrar Sesión
-        </button>
+    <header className="modern-card mb-4">
+      <div className="modern-card-body">
+        <div className="d-flex justify-content-between align-items-center">
+          <div className="d-flex align-items-center gap-3">
+            <div className="user-avatar" style={{ 
+              width: '50px', 
+              height: '50px',
+              fontSize: '1.2rem'
+            }}>
+              {userName.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <h2 className="mb-1" style={{ 
+                fontSize: '1.5rem', 
+                fontWeight: '600',
+                color: 'var(--text-color-2)'
+              }}>
+                Bienvenido, {userName}
+              </h2>
+              <p className="mb-0" style={{ 
+                color: 'var(--text-color-1)', 
+                fontSize: '0.9rem' 
+              }}>
+                {user?.rol === 'professor' ? 'Profesor' : 'Estudiante'} • {user?.email}
+              </p>
+            </div>
+          </div>
+          <div className="d-flex align-items-center gap-2">
+            <button
+              className="modern-btn modern-btn-secondary"
+              onClick={handleUserSettings}
+            >
+              <i className="fas fa-cog me-2"></i>
+              Configuración
+            </button>
+            <button
+              className="modern-btn modern-btn-secondary"
+              onClick={handleLogout}
+              style={{ 
+                color: 'var(--danger-color)', 
+                borderColor: 'var(--danger-color)' 
+              }}
+            >
+              <i className="fas fa-sign-out-alt me-2"></i>
+              Cerrar Sesión
+            </button>
+          </div>
+        </div>
       </div>
     </header>
   );
