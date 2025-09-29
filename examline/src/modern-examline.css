@@ -27,7 +27,7 @@
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background-color: #f8fafc;
+  background-color: #e2e8f0;
   color: var(--text-color-2);
   line-height: 1.6;
 }
@@ -191,7 +191,7 @@ body {
 .search-input:focus {
   outline: none;
   border-color: var(--primary-color);
-  background: white;
+  background: #ffffff;
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
@@ -385,20 +385,21 @@ body {
 .modern-card {
   background: white;
   border-radius: 12px;
-  box-shadow: var(--card-shadow);
-  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e2e8f0;
   overflow: hidden;
   transition: all 0.3s ease;
 }
 
 .modern-card:hover {
-  box-shadow: var(--card-shadow-lg);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  transform: translateY(-1px);
 }
 
 .modern-card-header {
   padding: 1.5rem;
-  border-bottom: 1px solid var(--border-color);
-  background: white;
+  border-bottom: 1px solid #e2e8f0;
+  background: #fafbfc;
 }
 
 .modern-card-title {
@@ -416,8 +417,8 @@ body {
 .exam-card {
   background: white;
   border-radius: 12px;
-  box-shadow: var(--card-shadow);
-  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e2e8f0;
   overflow: hidden;
   transition: all 0.3s ease;
   position: relative;
@@ -425,13 +426,13 @@ body {
 
 .exam-card:hover {
   transform: translateY(-2px);
-  box-shadow: var(--card-shadow-lg);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
 .exam-card-header {
   padding: 1.25rem;
   background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .exam-title {
@@ -499,6 +500,11 @@ body {
   text-decoration: none;
 }
 
+.modern-btn-sm {
+  padding: 0.5rem 1rem;
+  font-size: 0.8rem;
+}
+
 .modern-btn:focus {
   outline: none;
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
@@ -515,15 +521,27 @@ body {
 }
 
 .modern-btn-secondary {
-  background: white;
+  background: #f1f5f9;
   color: var(--text-color-2);
   border: 1px solid var(--border-color);
 }
 
 .modern-btn-secondary:hover {
-  background: var(--light-color);
+  background: #e2e8f0;
   border-color: var(--primary-color);
   color: var(--primary-color);
+}
+
+.modern-btn-danger {
+  background: var(--danger-color);
+  color: white;
+  border: 1px solid var(--danger-color);
+}
+
+.modern-btn-danger:hover {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: white;
 }
 
 .modern-btn-sm {
@@ -659,8 +677,80 @@ body {
   color: var(--success-color);
   padding: 1rem;
   border-radius: 8px;
-  margin-bottom: 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+}
+
+/* Responsive improvements */
+@media (max-width: 576px) {
+  .modern-btn {
+    padding: 0.6rem 1rem;
+    font-size: 0.85rem;
+  }
+  
+  .modern-btn-sm {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.75rem;
+  }
+  
+  .user-avatar {
+    width: 35px !important;
+    height: 35px !important;
+    font-size: 0.9rem !important;
+  }
+  
+  .modern-card-body {
+    padding: 1rem !important;
+  }
+}
+
+/* Form elements within cards - Better contrast */
+.modern-card .form-control,
+.modern-card input[type="text"],
+.modern-card input[type="email"],
+.modern-card input[type="password"],
+.modern-card input[type="number"],
+.modern-card textarea,
+.modern-card select {
+  background-color: #f8fafc;
+  border: 1px solid #d1d5db;
+  color: var(--text-color-2);
+}
+
+.modern-card .form-control:focus,
+.modern-card input:focus,
+.modern-card textarea:focus,
+.modern-card select:focus {
+  background-color: #ffffff;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+/* Badge and label improvements */
+.modern-card .badge {
+  background-color: #f1f5f9 !important;
+  color: var(--text-color-2) !important;
+  border: 1px solid #d1d5db;
+}
+
+.modern-card .badge-primary {
+  background-color: rgba(99, 102, 241, 0.1) !important;
+  color: var(--primary-color) !important;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.modern-card .badge-success {
+  background-color: rgba(16, 185, 129, 0.1) !important;
+  color: var(--success-color) !important;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.modern-card .badge-warning {
+  background-color: rgba(245, 158, 11, 0.1) !important;
+  color: var(--warning-color) !important;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.modern-card .badge-danger {
+  background-color: rgba(239, 68, 68, 0.1) !important;
+  color: var(--danger-color) !important;
+  border: 1px solid rgba(239, 68, 68, 0.3);
 }

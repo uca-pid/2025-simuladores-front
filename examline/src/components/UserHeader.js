@@ -18,7 +18,8 @@ const UserHeader = () => {
   return (
     <header className="modern-card mb-4">
       <div className="modern-card-body">
-        <div className="d-flex justify-content-between align-items-center">
+        {/* Desktop Layout */}
+        <div className="d-none d-md-flex justify-content-between align-items-center">
           <div className="d-flex align-items-center gap-3">
             <div className="user-avatar" style={{ 
               width: '50px', 
@@ -52,15 +53,57 @@ const UserHeader = () => {
               Configuración
             </button>
             <button
-              className="modern-btn modern-btn-secondary"
+              className="modern-btn modern-btn-danger"
               onClick={handleLogout}
-              style={{ 
-                color: 'var(--danger-color)', 
-                borderColor: 'var(--danger-color)' 
-              }}
             >
               <i className="fas fa-sign-out-alt me-2"></i>
               Cerrar Sesión
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile Layout */}
+        <div className="d-md-none">
+          <div className="d-flex align-items-center gap-3 mb-3">
+            <div className="user-avatar" style={{ 
+              width: '40px', 
+              height: '40px',
+              fontSize: '1rem'
+            }}>
+              {userName.charAt(0).toUpperCase()}
+            </div>
+            <div className="flex-grow-1">
+              <h2 className="mb-1" style={{ 
+                fontSize: '1.2rem', 
+                fontWeight: '600',
+                color: 'var(--text-color-2)'
+              }}>
+                {userName}
+              </h2>
+              <p className="mb-0" style={{ 
+                color: 'var(--text-color-1)', 
+                fontSize: '0.8rem' 
+              }}>
+                {user?.rol === 'professor' ? 'Profesor' : 'Estudiante'}
+              </p>
+            </div>
+          </div>
+          <div className="d-flex gap-2">
+            <button
+              className="modern-btn modern-btn-secondary modern-btn-sm flex-grow-1"
+              onClick={handleUserSettings}
+            >
+              <i className="fas fa-cog me-1"></i>
+              <span className="d-none d-sm-inline">Configuración</span>
+              <span className="d-sm-none">Config</span>
+            </button>
+            <button
+              className="modern-btn modern-btn-danger modern-btn-sm flex-grow-1"
+              onClick={handleLogout}
+            >
+              <i className="fas fa-sign-out-alt me-1"></i>
+              <span className="d-none d-sm-inline">Cerrar Sesión</span>
+              <span className="d-sm-none">Salir</span>
             </button>
           </div>
         </div>
