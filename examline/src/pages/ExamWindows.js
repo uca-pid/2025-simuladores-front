@@ -22,6 +22,7 @@ export default function ExamWindowsPage() {
     cupoMaximo: 30,
     notas: ''
   });
+  const [validationErrors, setValidationErrors] = useState({});
   const [modal, setModal] = useState({
     show: false,
     type: 'info',
@@ -132,6 +133,11 @@ export default function ExamWindowsPage() {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Limpiar error de validación para este campo
+    if (validationErrors[name]) {
+      setValidationErrors(prev => ({ ...prev, [name]: false }));
+    }
   };
 
   const resetForm = () => {
@@ -144,6 +150,7 @@ export default function ExamWindowsPage() {
       notas: ''
     });
     setEditingWindow(null);
+    setValidationErrors({});
   };
 
   const handleCreateWindow = () => {
@@ -164,8 +171,60 @@ export default function ExamWindowsPage() {
     setShowCreateModal(true);
   };
 
+  const validateForm = () => {
+    const errors = [];
+    const fieldErrors = {};
+    
+    // Validar campos obligatorios
+    if (!formData.examId) {
+      errors.push('Debe seleccionar un examen');
+      fieldErrors.examId = true;
+    }
+    
+    if (!formData.fechaInicio) {
+      errors.push('Debe seleccionar una fecha y hora de inicio');
+      fieldErrors.fechaInicio = true;
+    }
+    
+    if (!formData.duracion || formData.duracion <= 0) {
+      errors.push('La duración debe ser mayor a 0 minutos');
+      fieldErrors.duracion = true;
+    }
+    
+    if (!formData.modalidad) {
+      errors.push('Debe seleccionar una modalidad');
+      fieldErrors.modalidad = true;
+    }
+    
+    if (!formData.cupoMaximo || formData.cupoMaximo <= 0) {
+      errors.push('El cupo máximo debe ser mayor a 0');
+      fieldErrors.cupoMaximo = true;
+    }
+    
+    // Validar que la fecha no sea en el pasado
+    if (formData.fechaInicio) {
+      const fechaInicio = new Date(formData.fechaInicio);
+      const ahora = new Date();
+      
+      if (fechaInicio <= ahora) {
+        errors.push('La fecha y hora de inicio debe ser en el futuro');
+        fieldErrors.fechaInicio = true;
+      }
+    }
+    
+    setValidationErrors(fieldErrors);
+    return errors;
+  };
+
   const handleSaveWindow = async (e) => {
     e.preventDefault();
+    
+    // Validar formulario
+    const validationErrors = validateForm();
+    if (validationErrors.length > 0) {
+      showModal('error', 'Datos inválidos', validationErrors.join('\n'));
+      return;
+    }
     
     try {
       const url = editingWindow 
@@ -536,9 +595,10 @@ export default function ExamWindowsPage() {
                         disabled={editingWindow}
                         style={{
                           borderRadius: '8px',
-                          border: '1px solid var(--border-color)',
+                          border: `1px solid ${validationErrors.examId ? '#dc3545' : 'var(--border-color)'}`,
                           padding: '0.6rem',
-                          fontSize: '0.9rem'
+                          fontSize: '0.9rem',
+                          boxShadow: validationErrors.examId ? '0 0 0 0.2rem rgba(220, 53, 69, 0.25)' : 'none'
                         }}
                       >
                         <option value="">Selecciona un examen</option>
@@ -569,9 +629,10 @@ export default function ExamWindowsPage() {
                         required
                         style={{
                           borderRadius: '8px',
-                          border: '1px solid var(--border-color)',
+                          border: `1px solid ${validationErrors.fechaInicio ? '#dc3545' : 'var(--border-color)'}`,
                           padding: '0.6rem',
-                          fontSize: '0.9rem'
+                          fontSize: '0.9rem',
+                          boxShadow: validationErrors.fechaInicio ? '0 0 0 0.2rem rgba(220, 53, 69, 0.25)' : 'none'
                         }}
                       />
                     </div>
@@ -602,8 +663,9 @@ export default function ExamWindowsPage() {
                         required
                         style={{
                           borderRadius: '8px',
-                          border: '1px solid var(--border-color)',
+                          border: `1px solid ${validationErrors.duracion ? '#dc3545' : 'var(--border-color)'}`,
                           padding: '0.6rem',
+                          boxShadow: validationErrors.duracion ? '0 0 0 0.2rem rgba(220, 53, 69, 0.25)' : 'none',
                           fontSize: '0.9rem'
                         }}
                       />
@@ -631,8 +693,9 @@ export default function ExamWindowsPage() {
                         required
                         style={{
                           borderRadius: '8px',
-                          border: '1px solid var(--border-color)',
+                          border: `1px solid ${validationErrors.cupoMaximo ? '#dc3545' : 'var(--border-color)'}`,
                           padding: '0.6rem',
+                          boxShadow: validationErrors.cupoMaximo ? '0 0 0 0.2rem rgba(220, 53, 69, 0.25)' : 'none',
                           fontSize: '0.9rem'
                         }}
                       />
@@ -658,9 +721,10 @@ export default function ExamWindowsPage() {
                         required
                         style={{
                           borderRadius: '8px',
-                          border: '1px solid var(--border-color)',
+                          border: `1px solid ${validationErrors.modalidad ? '#dc3545' : 'var(--border-color)'}`,
                           padding: '0.6rem',
-                          fontSize: '0.9rem'
+                          fontSize: '0.9rem',
+                          boxShadow: validationErrors.modalidad ? '0 0 0 0.2rem rgba(220, 53, 69, 0.25)' : 'none'
                         }}
                       >
                         <option value="remoto">🌐 Remoto</option>
