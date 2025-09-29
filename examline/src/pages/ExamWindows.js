@@ -423,31 +423,77 @@ export default function ExamWindowsPage() {
 
       {/* Modal para crear/editar ventana */}
       {showCreateModal && (
-        <div className="modal-backdrop-fade" onClick={() => setShowCreateModal(false)}>
+        <div 
+          className="modal-backdrop-fade" 
+          onClick={() => setShowCreateModal(false)}
+        >
           <div className="modal show" style={{ display: 'block' }}>
-            <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
-              <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">
+            <div 
+              className="modal-dialog" 
+              onClick={(e) => e.stopPropagation()}
+              style={{ margin: '2rem auto', maxWidth: '600px' }}
+            >
+              <div 
+                className="modern-card" 
+                style={{ border: 'none', borderRadius: '16px' }}
+                onClick={(e) => e.stopPropagation()}
+              >
+              <div className="modern-card-header" style={{ 
+                background: 'linear-gradient(135deg, var(--primary-color), var(--secondary-color))',
+                borderRadius: '16px 16px 0 0',
+                color: 'white',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <h5 className="modern-card-title" style={{ color: 'white', margin: 0 }}>
+                  <i className="fas fa-calendar-plus me-2"></i>
                   {editingWindow ? 'Editar Ventana' : 'Nueva Ventana de Examen'}
                 </h5>
                 <button 
                   type="button" 
-                  className="btn-close" 
+                  className="modern-btn"
+                  style={{ 
+                    background: 'rgba(255, 255, 255, 0.2)',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    color: 'white',
+                    padding: '0.5rem',
+                    borderRadius: '8px',
+                    width: '36px',
+                    height: '36px'
+                  }}
                   onClick={() => setShowCreateModal(false)}
-                ></button>
+                >
+                  <i className="fas fa-times"></i>
+                </button>
               </div>
-              <form onSubmit={handleSaveWindow}>
-                <div className="modal-body">
-                  <div className="mb-3">
-                    <label className="form-label">Examen *</label>
+              <form onSubmit={handleSaveWindow} onClick={(e) => e.stopPropagation()}>
+                <div className="modern-card-body" style={{ padding: '2rem' }}>
+                  <div className="mb-4">
+                    <label className="form-label" style={{ 
+                      fontWeight: '600', 
+                      color: 'var(--text-color-2)', 
+                      marginBottom: '0.5rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem'
+                    }}>
+                      <i className="fas fa-file-alt text-primary"></i>
+                      Examen *
+                    </label>
                     <select 
-                      className="form-select" 
+                      className="form-select modern-input" 
                       name="examId" 
                       value={formData.examId}
                       onChange={handleInputChange}
                       required
                       disabled={editingWindow} // No permitir cambiar examen al editar
+                      style={{
+                        borderRadius: '8px',
+                        border: '1px solid var(--border-color)',
+                        padding: '0.75rem',
+                        fontSize: '0.95rem'
+                      }}
                     >
                       <option value="">Selecciona un examen</option>
                       {exams.map(exam => (
@@ -456,80 +502,176 @@ export default function ExamWindowsPage() {
                     </select>
                   </div>
 
-                  <div className="mb-3">
-                    <label className="form-label">Fecha y Hora de Inicio *</label>
+                  <div className="mb-4">
+                    <label className="form-label" style={{ 
+                      fontWeight: '600', 
+                      color: 'var(--text-color-2)', 
+                      marginBottom: '0.5rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem'
+                    }}>
+                      <i className="fas fa-calendar-day text-primary"></i>
+                      Fecha y Hora de Inicio *
+                    </label>
                     <input 
                       type="datetime-local" 
-                      className="form-control"
+                      className="form-control modern-input"
                       name="fechaInicio"
                       value={formData.fechaInicio}
                       onChange={handleInputChange}
                       required
+                      style={{
+                        borderRadius: '8px',
+                        border: '1px solid var(--border-color)',
+                        padding: '0.75rem',
+                        fontSize: '0.95rem'
+                      }}
                     />
                   </div>
 
-                  <div className="row mb-3">
+                  <div className="row mb-4">
                     <div className="col-md-6">
-                      <label className="form-label">Duración (minutos) *</label>
+                      <label className="form-label" style={{ 
+                        fontWeight: '600', 
+                        color: 'var(--text-color-2)', 
+                        marginBottom: '0.5rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                      }}>
+                        <i className="fas fa-clock text-primary"></i>
+                        Duración (minutos) *
+                      </label>
                       <input 
                         type="number" 
-                        className="form-control"
+                        className="form-control modern-input"
                         name="duracion"
                         value={formData.duracion}
                         onChange={handleInputChange}
                         min="1"
                         required
+                        style={{
+                          borderRadius: '8px',
+                          border: '1px solid var(--border-color)',
+                          padding: '0.75rem',
+                          fontSize: '0.95rem'
+                        }}
                       />
                     </div>
                     <div className="col-md-6">
-                      <label className="form-label">Cupo Máximo *</label>
+                      <label className="form-label" style={{ 
+                        fontWeight: '600', 
+                        color: 'var(--text-color-2)', 
+                        marginBottom: '0.5rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                      }}>
+                        <i className="fas fa-users text-primary"></i>
+                        Cupo Máximo *
+                      </label>
                       <input 
                         type="number" 
-                        className="form-control"
+                        className="form-control modern-input"
                         name="cupoMaximo"
                         value={formData.cupoMaximo}
                         onChange={handleInputChange}
                         min="1"
                         required
+                        style={{
+                          borderRadius: '8px',
+                          border: '1px solid var(--border-color)',
+                          padding: '0.75rem',
+                          fontSize: '0.95rem'
+                        }}
                       />
                     </div>
                   </div>
 
-                  <div className="mb-3">
-                    <label className="form-label">Modalidad *</label>
+                  <div className="mb-4">
+                    <label className="form-label" style={{ 
+                      fontWeight: '600', 
+                      color: 'var(--text-color-2)', 
+                      marginBottom: '0.5rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem'
+                    }}>
+                      <i className="fas fa-laptop text-primary"></i>
+                      Modalidad *
+                    </label>
                     <select 
-                      className="form-select" 
+                      className="form-select modern-input" 
                       name="modalidad" 
                       value={formData.modalidad}
                       onChange={handleInputChange}
                       required
+                      style={{
+                        borderRadius: '8px',
+                        border: '1px solid var(--border-color)',
+                        padding: '0.75rem',
+                        fontSize: '0.95rem'
+                      }}
                     >
-                      <option value="remoto">Remoto</option>
-                      <option value="presencial">Presencial</option>
+                      <option value="remoto">🌐 Remoto</option>
+                      <option value="presencial">🏢 Presencial</option>
                     </select>
                   </div>
 
-                  <div className="mb-3">
-                    <label className="form-label">Notas/Instrucciones</label>
+                  <div className="mb-4">
+                    <label className="form-label" style={{ 
+                      fontWeight: '600', 
+                      color: 'var(--text-color-2)', 
+                      marginBottom: '0.5rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem'
+                    }}>
+                      <i className="fas fa-sticky-note text-primary"></i>
+                      Notas/Instrucciones
+                    </label>
                     <textarea 
-                      className="form-control"
+                      className="form-control modern-input"
                       name="notas"
                       value={formData.notas}
                       onChange={handleInputChange}
-                      rows="3"
-                      placeholder="Instrucciones adicionales para los estudiantes"
+                      rows="4"
+                      placeholder="Instrucciones adicionales para los estudiantes..."
+                      style={{
+                        borderRadius: '8px',
+                        border: '1px solid var(--border-color)',
+                        padding: '0.75rem',
+                        fontSize: '0.95rem',
+                        resize: 'vertical'
+                      }}
                     />
                   </div>
                 </div>
-                <div className="modal-footer">
+                <div className="modern-card-footer" style={{ 
+                  padding: '1.5rem 2rem',
+                  borderTop: '1px solid var(--border-color)',
+                  background: '#fafbfc',
+                  borderRadius: '0 0 16px 16px',
+                  display: 'flex',
+                  gap: '1rem',
+                  justifyContent: 'flex-end'
+                }}>
                   <button 
                     type="button" 
-                    className="btn btn-secondary"
+                    className="modern-btn modern-btn-secondary"
                     onClick={() => setShowCreateModal(false)}
+                    style={{ minWidth: '120px' }}
                   >
+                    <i className="fas fa-times me-2"></i>
                     Cancelar
                   </button>
-                  <button type="submit" className="btn btn-primary">
+                  <button 
+                    type="submit" 
+                    className="modern-btn modern-btn-primary"
+                    style={{ minWidth: '120px' }}
+                  >
+                    <i className={`fas ${editingWindow ? 'fa-edit' : 'fa-plus'} me-2`}></i>
                     {editingWindow ? 'Actualizar' : 'Crear'} Ventana
                   </button>
                 </div>

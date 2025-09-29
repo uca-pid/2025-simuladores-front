@@ -810,3 +810,43 @@ body {
     transform: scale(1);
   }
 }
+
+/* Modern inputs inside modal */
+.modern-input {
+  background-color: #f8fafc !important;
+  transition: all 0.2s ease;
+}
+
+.modern-input:focus {
+  background-color: #ffffff !important;
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1) !important;
+  outline: none !important;
+}
+
+.modern-input:disabled {
+  background-color: #f1f5f9 !important;
+  color: #64748b !important;
+  cursor: not-allowed;
+}
+
+/* Modal dialog improvements */
+.modal-backdrop-fade .modal-dialog {
+  max-width: 600px;
+  margin: 2rem auto;
+  pointer-events: auto;
+}
+
+/* Ensure form elements are clickable */
+.modal-backdrop-fade input,
+.modal-backdrop-fade select,
+.modal-backdrop-fade textarea,
+.modal-backdrop-fade button {
+  pointer-events: auto !important;
+}
+
+.modal-backdrop-fade .modern-card,
+.modal-backdrop-fade .modern-card-body,
+.modal-backdrop-fade form {
+  pointer-events: auto;
+}
