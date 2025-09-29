@@ -423,9 +423,10 @@ export default function ExamWindowsPage() {
 
       {/* Modal para crear/editar ventana */}
       {showCreateModal && (
-        <div className="modal show" style={{ display: 'block' }}>
-          <div className="modal-dialog">
-            <div className="modal-content">
+        <div className="modal-backdrop-fade" onClick={() => setShowCreateModal(false)}>
+          <div className="modal show" style={{ display: 'block' }}>
+            <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">
                   {editingWindow ? 'Editar Ventana' : 'Nueva Ventana de Examen'}
@@ -535,6 +536,7 @@ export default function ExamWindowsPage() {
               </form>
             </div>
           </div>
+        </div>
         </div>
       )}
 
