@@ -343,24 +343,29 @@ export default function ExamWindowsPage() {
       {/* Header */}
       <div className="modern-card mb-4">
         <div className="modern-card-header">
-          <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
-            <div className="flex-grow-1">
+          <div className="row align-items-center">
+            <div className="col-12 col-lg-8 mb-3 mb-lg-0">
               <h1 className="page-title mb-1">
                 <i className="fas fa-calendar-alt me-2" style={{ color: 'var(--primary-color)' }}></i>
                 Ventanas de Examen
               </h1>
               <p className="page-subtitle mb-0">Gestiona los horarios y modalidades de tus exámenes</p>
             </div>
-            <div className="d-flex flex-column flex-sm-row gap-2 w-100 w-md-auto">
-              <button 
-                className="modern-btn modern-btn-primary" 
-                onClick={handleCreateWindow}
-                disabled={exams.length === 0}
-              >
-                <i className="fas fa-plus me-2"></i>
-                Nueva Ventana
-              </button>
-              <BackToMainButton />
+            <div className="col-12 col-lg-4">
+              <div className="d-flex flex-column flex-sm-row gap-2 justify-content-lg-end">
+                <button 
+                  className="modern-btn modern-btn-primary flex-fill flex-sm-grow-0" 
+                  onClick={handleCreateWindow}
+                  disabled={exams.length === 0}
+                  style={{ minWidth: '140px' }}
+                >
+                  <i className="fas fa-plus me-2"></i>
+                  Nueva Ventana
+                </button>
+                <div className="flex-fill flex-sm-grow-0">
+                  <BackToMainButton />
+                </div>
+              </div>
             </div>
           </div>
         </div>
