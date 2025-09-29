@@ -39,56 +39,100 @@ const Principal = () => {
   return (
     <div className="container py-5">
       <UserHeader />
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2 className="mb-0">Panel de Profesor</h2>
-        <div className="d-flex gap-2">
-          <button 
-            className="btn btn-info" 
-            onClick={() => navigate("/exam-windows")}
-          >
-            Ventanas de Examen
-          </button>
-          <button className="btn btn-success" onClick={handleCrearExamen}>
-            Crear Examen
-          </button>
+      <div className="modern-card mb-4">
+        <div className="modern-card-header">
+          <div className="d-flex justify-content-between align-items-center">
+            <h1 className="page-title mb-0">Panel de Profesor</h1>
+            <div className="d-flex gap-2">
+              <button 
+                className="modern-btn modern-btn-secondary" 
+                onClick={() => navigate("/exam-windows")}
+              >
+                <i className="fas fa-calendar-alt"></i>
+                Ventanas de Examen
+              </button>
+              <button 
+                className="modern-btn modern-btn-primary" 
+                onClick={handleCrearExamen}
+              >
+                <i className="fas fa-plus"></i>
+                Crear Examen
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
-      <h3 className="mb-3">Exámenes creados</h3>
-      
-      {loading ? (
-        <div className="d-flex justify-content-center">
-          <div className="spinner-border text-primary" role="status">
-            <span className="visually-hidden">Cargando...</span>
-          </div>
+      <div className="modern-card">
+        <div className="modern-card-header">
+          <h3 className="modern-card-title">Exámenes Creados</h3>
         </div>
-      ) : error ? (
-        <div className="alert alert-danger" role="alert">
-          {error}
-        </div>
-      ) : exams.length === 0 ? (
-        <p className="text-muted">No hay exámenes creados.</p>
-      ) : (
-        <div className="row g-3">
-          {(Array.isArray(exams) ? exams : []).map(exam => (
-            <div key={exam.id} className="col-md-4">
-              <div className="card h-100 shadow-sm">
-                <div className="card-body d-flex flex-column">
-                  <h5 className="card-title">{exam.titulo}</h5>
-                  <p className="card-text mb-1"><strong>Código de examen:</strong> {exam.id}</p>
-                  <p className="card-text">Preguntas: {exam.preguntas?.length || 0}</p>
-                  <button
-                    className="btn btn-primary mt-auto"
-                    onClick={() => handleVerExamen(exam.id)}
-                  >
-                    Ver preguntas
-                  </button>
-                </div>
-              </div>
+        <div className="modern-card-body">
+          {loading ? (
+            <div className="loading-container">
+              <div className="modern-spinner"></div>
+              <p>Cargando exámenes...</p>
             </div>
-          ))}
+          ) : error ? (
+            <div className="error-message">
+              <i className="fas fa-exclamation-triangle"></i>
+              {error}
+            </div>
+          ) : exams.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-icon">
+                <i className="fas fa-file-alt"></i>
+              </div>
+              <h4 className="empty-title">No hay exámenes creados</h4>
+              <p className="empty-subtitle">
+                Comienza creando tu primer examen para gestionar evaluaciones
+              </p>
+              <button 
+                className="modern-btn modern-btn-primary"
+                onClick={handleCrearExamen}
+              >
+                <i className="fas fa-plus"></i>
+                Crear mi primer examen
+              </button>
+            </div>
+          ) : (
+            <div className="row g-4">
+              {(Array.isArray(exams) ? exams : []).map((exam, index) => (
+                <div key={exam.id} className="col-lg-6 col-xl-4">
+                  <div className={`exam-card fade-in-up`} style={{animationDelay: `${index * 0.1}s`}}>
+                    <div className="exam-card-header">
+                      <h5 className="exam-title">{exam.titulo}</h5>
+                      <span className="exam-badge">
+                        <i className="fas fa-check-circle"></i>
+                        Activo
+                      </span>
+                    </div>
+                    <div className="exam-card-body">
+                      <div className="exam-info">
+                        <div className="exam-info-item">
+                          <i className="fas fa-hashtag"></i>
+                          <span>Código: {exam.id}</span>
+                        </div>
+                        <div className="exam-info-item">
+                          <i className="fas fa-question-circle"></i>
+                          <span>Preguntas: {exam.preguntas?.length || 0}</span>
+                        </div>
+                      </div>
+                      <button
+                        className="modern-btn modern-btn-primary w-100"
+                        onClick={() => handleVerExamen(exam.id)}
+                      >
+                        <i className="fas fa-eye"></i>
+                        Ver preguntas
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 };
