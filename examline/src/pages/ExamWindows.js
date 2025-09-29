@@ -416,8 +416,8 @@ export default function ExamWindowsPage() {
                             navigate(`/exam-windows/${window.id}/inscriptions`);
                           }}
                         >
-                          <i className="fas fa-users"></i>
-                          Inscripciones ({window.inscripciones.length})
+                          <i className="fas fa-info-circle"></i>
+                          Más información
                         </button>
                       </div>
                       
