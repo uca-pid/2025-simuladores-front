@@ -11,6 +11,7 @@ import StudentExamPage from "./pages/StudentExamPage"; // 👈 NUEVO
 import ExamWindows from "./pages/ExamWindows";
 import StudentInscriptions from "./pages/StudentInscriptions";
 import WindowInscriptions from "./pages/WindowInscriptions";
+import "./modern-examline.css";
 
 function App() {
   return (
