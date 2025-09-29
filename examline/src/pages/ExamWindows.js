@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import BackToMainButton from '../components/BackToMainButton';
@@ -31,16 +31,17 @@ export default function ExamWindowsPage() {
     showCancel: false
   });
 
-  // Verificar que es profesor
-  useEffect(() => {
-    if (!user || user.rol !== 'professor') {
-      navigate('/');
-      return;
-    }
-    loadData();
-  }, [user, navigate]);
+  // Función para ajustar altura del textarea
+  const adjustTextareaHeight = (textarea) => {
+    if (!textarea) return;
+    const maxHeight = 200;
+    textarea.style.height = 'auto';
+    const newHeight = Math.max(60, Math.min(maxHeight, textarea.scrollHeight));
+    textarea.style.height = newHeight + 'px';
+    textarea.style.overflowY = textarea.scrollHeight > maxHeight ? 'auto' : 'hidden';
+  };
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -97,7 +98,28 @@ export default function ExamWindowsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, navigate]);
+
+  // Verificar que es profesor
+  useEffect(() => {
+    if (!user || user.rol !== 'professor') {
+      navigate('/');
+      return;
+    }
+    loadData();
+  }, [user, navigate, loadData]);
+
+  // Ajustar textarea cuando se abre modal de edición
+  useEffect(() => {
+    if (showCreateModal && editingWindow) {
+      // Usar setTimeout para asegurar que el DOM esté renderizado
+      setTimeout(() => {
+        const textarea = document.querySelector('textarea[name="notas"]');
+        adjustTextareaHeight(textarea);
+      }, 100);
+    }
+  }, [showCreateModal, editingWindow]);
+
 
   const showModal = (type, title, message, onConfirm = null, showCancel = false) => {
     setModal({ show: true, type, title, message, onConfirm, showCancel });
@@ -646,12 +668,7 @@ export default function ExamWindowsPage() {
                       value={formData.notas}
                       onChange={(e) => {
                         handleInputChange(e);
-                        // Auto-resize del textarea hasta el máximo, luego scroll
-                        const maxHeight = 200;
-                        e.target.style.height = 'auto';
-                        const newHeight = Math.max(60, Math.min(maxHeight, e.target.scrollHeight));
-                        e.target.style.height = newHeight + 'px';
-                        e.target.style.overflowY = e.target.scrollHeight > maxHeight ? 'auto' : 'hidden';
+                        adjustTextareaHeight(e.target);
                       }}
                       rows="2"
                       placeholder="Instrucciones adicionales para los estudiantes..."
