@@ -284,15 +284,15 @@ export default function ExamWindowsPage() {
       {/* Header */}
       <div className="modern-card mb-4">
         <div className="modern-card-header">
-          <div className="d-flex justify-content-between align-items-center">
-            <div>
+          <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+            <div className="flex-grow-1">
               <h1 className="page-title mb-1">
                 <i className="fas fa-calendar-alt me-2" style={{ color: 'var(--primary-color)' }}></i>
                 Ventanas de Examen
               </h1>
               <p className="page-subtitle mb-0">Gestiona los horarios y modalidades de tus exámenes</p>
             </div>
-            <div className="d-flex gap-2">
+            <div className="d-flex flex-column flex-sm-row gap-2 w-100 w-md-auto">
               <button 
                 className="modern-btn modern-btn-primary" 
                 onClick={handleCreateWindow}
@@ -342,16 +342,25 @@ export default function ExamWindowsPage() {
               )}
             </div>
           ) : (
-            <div className="row g-4">
+            <div className="row g-4" style={{ alignItems: 'stretch' }}>
               {examWindows.map((window, index) => (
-                <div key={window.id} className="col-lg-6 col-xl-4">
-                  <div className={`exam-card fade-in-up`} style={{animationDelay: `${index * 0.1}s`}}>
+                <div key={window.id} className="col-12 col-md-6 col-lg-6 col-xl-4 d-flex">
+                  <div 
+                    className={`exam-card fade-in-up w-100`} 
+                    style={{
+                      animationDelay: `${index * 0.1}s`,
+                      minHeight: '520px',
+                      height: 'auto',
+                      display: 'flex',
+                      flexDirection: 'column'
+                    }}
+                  >
                     <div className="exam-card-header">
                       <h5 className="exam-title">{window.exam.titulo}</h5>
                       {getStatusBadge(window.estado)}
                     </div>
-                    <div className="exam-card-body">
-                      <div className="exam-info">
+                    <div className="exam-card-body" style={{ flex: '1', display: 'flex', flexDirection: 'column' }}>
+                      <div className="exam-info" style={{ flex: '1' }}>
                         <div className="exam-info-item">
                           <i className="fas fa-calendar"></i>
                           <span>{new Date(window.fechaInicio).toLocaleDateString()}</span>
@@ -368,24 +377,24 @@ export default function ExamWindowsPage() {
                           <i className="fas fa-users"></i>
                           <span>{window.inscripciones.length}/{window.cupoMaximo} inscritos</span>
                         </div>
-                        {window.notas && (
-                          <div className="exam-info-item">
-                            <i className="fas fa-sticky-note"></i>
-                            <span 
-                              style={{
-                                display: '-webkit-box',
-                                WebkitLineClamp: 4,
-                                WebkitBoxOrient: 'vertical',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                maxHeight: '5em',
-                                lineHeight: '1.25em'
-                              }}
-                            >
-                              {window.notas}
-                            </span>
-                          </div>
-                        )}
+                        <div className="exam-info-item">
+                          <i className="fas fa-sticky-note"></i>
+                          <span 
+                            style={{
+                              display: '-webkit-box',
+                              WebkitLineClamp: 4,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              maxHeight: '5em',
+                              lineHeight: '1.25em',
+                              fontStyle: !window.notas ? 'italic' : 'normal',
+                              color: !window.notas ? '#888' : 'inherit'
+                            }}
+                          >
+                            {window.notas || 'No hay notas'}
+                          </span>
+                        </div>
                       </div>
                       
                       <div className="d-flex align-items-center justify-content-between mb-3 p-2" style={{ 
