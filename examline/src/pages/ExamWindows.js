@@ -431,7 +431,7 @@ export default function ExamWindowsPage() {
             <div 
               className="modal-dialog" 
               onClick={(e) => e.stopPropagation()}
-              style={{ margin: '2rem auto', maxWidth: '600px' }}
+              style={{ margin: '1rem auto', maxWidth: '900px', width: '90vw' }}
             >
               <div 
                 className="modern-card" 
@@ -468,80 +468,86 @@ export default function ExamWindowsPage() {
                 </button>
               </div>
               <form onSubmit={handleSaveWindow} onClick={(e) => e.stopPropagation()}>
-                <div className="modern-card-body" style={{ padding: '2rem' }}>
-                  <div className="mb-4">
-                    <label className="form-label" style={{ 
-                      fontWeight: '600', 
-                      color: 'var(--text-color-2)', 
-                      marginBottom: '0.5rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem'
-                    }}>
-                      <i className="fas fa-file-alt text-primary"></i>
-                      Examen *
-                    </label>
-                    <select 
-                      className="form-select modern-input" 
-                      name="examId" 
-                      value={formData.examId}
-                      onChange={handleInputChange}
-                      required
-                      disabled={editingWindow} // No permitir cambiar examen al editar
-                      style={{
-                        borderRadius: '8px',
-                        border: '1px solid var(--border-color)',
-                        padding: '0.75rem',
-                        fontSize: '0.95rem'
-                      }}
-                    >
-                      <option value="">Selecciona un examen</option>
-                      {exams.map(exam => (
-                        <option key={exam.id} value={exam.id}>{exam.titulo}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="mb-4">
-                    <label className="form-label" style={{ 
-                      fontWeight: '600', 
-                      color: 'var(--text-color-2)', 
-                      marginBottom: '0.5rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem'
-                    }}>
-                      <i className="fas fa-calendar-day text-primary"></i>
-                      Fecha y Hora de Inicio *
-                    </label>
-                    <input 
-                      type="datetime-local" 
-                      className="form-control modern-input"
-                      name="fechaInicio"
-                      value={formData.fechaInicio}
-                      onChange={handleInputChange}
-                      required
-                      style={{
-                        borderRadius: '8px',
-                        border: '1px solid var(--border-color)',
-                        padding: '0.75rem',
-                        fontSize: '0.95rem'
-                      }}
-                    />
-                  </div>
-
-                  <div className="row mb-4">
+                <div className="modern-card-body" style={{ padding: '1.5rem' }}>
+                  {/* Primera fila: Examen y Fecha */}
+                  <div className="row mb-3">
                     <div className="col-md-6">
                       <label className="form-label" style={{ 
                         fontWeight: '600', 
                         color: 'var(--text-color-2)', 
-                        marginBottom: '0.5rem',
+                        marginBottom: '0.4rem',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '0.5rem'
+                        gap: '0.5rem',
+                        fontSize: '0.9rem'
+                      }}>
+                        <i className="fas fa-file-alt text-primary"></i>
+                        Examen *
+                      </label>
+                      <select 
+                        className="form-select modern-input" 
+                        name="examId" 
+                        value={formData.examId}
+                        onChange={handleInputChange}
+                        required
+                        disabled={editingWindow}
+                        style={{
+                          borderRadius: '8px',
+                          border: '1px solid var(--border-color)',
+                          padding: '0.6rem',
+                          fontSize: '0.9rem'
+                        }}
+                      >
+                        <option value="">Selecciona un examen</option>
+                        {exams.map(exam => (
+                          <option key={exam.id} value={exam.id}>{exam.titulo}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label" style={{ 
+                        fontWeight: '600', 
+                        color: 'var(--text-color-2)', 
+                        marginBottom: '0.4rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        fontSize: '0.9rem'
+                      }}>
+                        <i className="fas fa-calendar-day text-primary"></i>
+                        Fecha y Hora de Inicio *
+                      </label>
+                      <input 
+                        type="datetime-local" 
+                        className="form-control modern-input"
+                        name="fechaInicio"
+                        value={formData.fechaInicio}
+                        onChange={handleInputChange}
+                        required
+                        style={{
+                          borderRadius: '8px',
+                          border: '1px solid var(--border-color)',
+                          padding: '0.6rem',
+                          fontSize: '0.9rem'
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Segunda fila: Duración, Cupo y Modalidad */}
+                  <div className="row mb-3">
+                    <div className="col-md-4">
+                      <label className="form-label" style={{ 
+                        fontWeight: '600', 
+                        color: 'var(--text-color-2)', 
+                        marginBottom: '0.4rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        fontSize: '0.9rem'
                       }}>
                         <i className="fas fa-clock text-primary"></i>
-                        Duración (minutos) *
+                        Duración (min) *
                       </label>
                       <input 
                         type="number" 
@@ -554,19 +560,20 @@ export default function ExamWindowsPage() {
                         style={{
                           borderRadius: '8px',
                           border: '1px solid var(--border-color)',
-                          padding: '0.75rem',
-                          fontSize: '0.95rem'
+                          padding: '0.6rem',
+                          fontSize: '0.9rem'
                         }}
                       />
                     </div>
-                    <div className="col-md-6">
+                    <div className="col-md-4">
                       <label className="form-label" style={{ 
                         fontWeight: '600', 
                         color: 'var(--text-color-2)', 
-                        marginBottom: '0.5rem',
+                        marginBottom: '0.4rem',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '0.5rem'
+                        gap: '0.5rem',
+                        fontSize: '0.9rem'
                       }}>
                         <i className="fas fa-users text-primary"></i>
                         Cupo Máximo *
@@ -582,51 +589,53 @@ export default function ExamWindowsPage() {
                         style={{
                           borderRadius: '8px',
                           border: '1px solid var(--border-color)',
-                          padding: '0.75rem',
-                          fontSize: '0.95rem'
+                          padding: '0.6rem',
+                          fontSize: '0.9rem'
                         }}
                       />
                     </div>
+                    <div className="col-md-4">
+                      <label className="form-label" style={{ 
+                        fontWeight: '600', 
+                        color: 'var(--text-color-2)', 
+                        marginBottom: '0.4rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        fontSize: '0.9rem'
+                      }}>
+                        <i className="fas fa-laptop text-primary"></i>
+                        Modalidad *
+                      </label>
+                      <select 
+                        className="form-select modern-input" 
+                        name="modalidad" 
+                        value={formData.modalidad}
+                        onChange={handleInputChange}
+                        required
+                        style={{
+                          borderRadius: '8px',
+                          border: '1px solid var(--border-color)',
+                          padding: '0.6rem',
+                          fontSize: '0.9rem'
+                        }}
+                      >
+                        <option value="remoto">🌐 Remoto</option>
+                        <option value="presencial">🏢 Presencial</option>
+                      </select>
+                    </div>
                   </div>
 
-                  <div className="mb-4">
+                  {/* Tercera fila: Notas */}
+                  <div className="mb-3">
                     <label className="form-label" style={{ 
                       fontWeight: '600', 
                       color: 'var(--text-color-2)', 
-                      marginBottom: '0.5rem',
+                      marginBottom: '0.4rem',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '0.5rem'
-                    }}>
-                      <i className="fas fa-laptop text-primary"></i>
-                      Modalidad *
-                    </label>
-                    <select 
-                      className="form-select modern-input" 
-                      name="modalidad" 
-                      value={formData.modalidad}
-                      onChange={handleInputChange}
-                      required
-                      style={{
-                        borderRadius: '8px',
-                        border: '1px solid var(--border-color)',
-                        padding: '0.75rem',
-                        fontSize: '0.95rem'
-                      }}
-                    >
-                      <option value="remoto">🌐 Remoto</option>
-                      <option value="presencial">🏢 Presencial</option>
-                    </select>
-                  </div>
-
-                  <div className="mb-4">
-                    <label className="form-label" style={{ 
-                      fontWeight: '600', 
-                      color: 'var(--text-color-2)', 
-                      marginBottom: '0.5rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem'
+                      gap: '0.5rem',
+                      fontSize: '0.9rem'
                     }}>
                       <i className="fas fa-sticky-note text-primary"></i>
                       Notas/Instrucciones
@@ -635,26 +644,37 @@ export default function ExamWindowsPage() {
                       className="form-control modern-input"
                       name="notas"
                       value={formData.notas}
-                      onChange={handleInputChange}
-                      rows="4"
+                      onChange={(e) => {
+                        handleInputChange(e);
+                        // Auto-resize del textarea hasta el máximo, luego scroll
+                        const maxHeight = 200;
+                        e.target.style.height = 'auto';
+                        const newHeight = Math.max(60, Math.min(maxHeight, e.target.scrollHeight));
+                        e.target.style.height = newHeight + 'px';
+                        e.target.style.overflowY = e.target.scrollHeight > maxHeight ? 'auto' : 'hidden';
+                      }}
+                      rows="2"
                       placeholder="Instrucciones adicionales para los estudiantes..."
                       style={{
                         borderRadius: '8px',
                         border: '1px solid var(--border-color)',
-                        padding: '0.75rem',
-                        fontSize: '0.95rem',
-                        resize: 'vertical'
+                        padding: '0.6rem',
+                        fontSize: '0.9rem',
+                        resize: 'none',
+                        minHeight: '60px',
+                        maxHeight: '200px',
+                        overflowY: 'hidden'
                       }}
                     />
                   </div>
                 </div>
                 <div className="modern-card-footer" style={{ 
-                  padding: '1.5rem 2rem',
+                  padding: '1rem 1.5rem',
                   borderTop: '1px solid var(--border-color)',
                   background: '#fafbfc',
                   borderRadius: '0 0 16px 16px',
                   display: 'flex',
-                  gap: '1rem',
+                  gap: '0.75rem',
                   justifyContent: 'flex-end'
                 }}>
                   <button 
