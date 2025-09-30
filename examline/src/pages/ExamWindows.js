@@ -545,6 +545,30 @@ export default function ExamWindowsPage() {
         payload.fechaInicio = new Date(editingWindow.fechaInicio).toISOString().slice(0, 16);
       }
 
+      // Si se está editando y el nuevo cupo es exactamente igual a los inscriptos activos actuales,
+      // cerrar inscripciones automáticamente (estado = cerrada_inscripciones)
+      if (editingWindow && !isEditingEnCurso) {
+        const currentActive = typeof editingWindow?.inscritosCount === 'number'
+          ? editingWindow.inscritosCount
+          : (Array.isArray(editingWindow?.inscripciones)
+              ? editingWindow.inscripciones.filter(i => i && (i.cancelledAt == null && i.canceledAt == null)).length
+              : 0);
+        const desiredCupo = typeof payload.cupoMaximo === 'number' ? payload.cupoMaximo : parseInt(payload.cupoMaximo, 10);
+        const startsAt = new Date(payload.fechaInicio);
+        const now = new Date();
+        if (!Number.isNaN(desiredCupo) && desiredCupo === currentActive) {
+          payload.estado = 'cerrada_inscripciones';
+        } else if (
+          !Number.isNaN(desiredCupo) &&
+          desiredCupo > currentActive &&
+          editingWindow.estado === 'cerrada_inscripciones' &&
+          now < startsAt
+        ) {
+          // Reabrir inscripciones si había estado cerrada, ampliaste cupo y aún no comenzó
+          payload.estado = 'programada';
+        }
+      }
+
       const response = await fetch(url, {
         method,
         headers: {
