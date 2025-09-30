@@ -32,13 +32,13 @@ export default function ExamWindowsPage() {
     onConfirm: null,
     showCancel: false
   });
-  const [isAutoUpdating, setIsAutoUpdating] = useState(false);
+  const [, setIsAutoUpdating] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(null);
 
   // Función para mostrar modal
-  const showModal = (type, title, message, onConfirm = null, showCancel = false) => {
+  const showModal = useCallback((type, title, message, onConfirm = null, showCancel = false) => {
     setModal({ show: true, type, title, message, onConfirm, showCancel });
-  };
+  }, []);
 
   // Función para comparar estados y detectar cambios
   const checkForStatusChanges = useCallback((oldWindows, newWindows) => {
@@ -68,7 +68,7 @@ export default function ExamWindowsPage() {
         false
       );
     }
-  }, []);
+  }, [showModal]);
 
   // Función para ajustar altura del textarea
   const adjustTextareaHeight = (textarea) => {
@@ -160,7 +160,7 @@ export default function ExamWindowsPage() {
         setIsAutoUpdating(false);
       }
     }
-  }, [token, navigate, checkForStatusChanges]);
+  }, [token, navigate, checkForStatusChanges, showModal]);
 
   // Verificar que es profesor y cargar datos iniciales
   useEffect(() => {
@@ -555,6 +555,99 @@ export default function ExamWindowsPage() {
     );
   };
 
+  // Tarjeta reutilizable para una ventana
+  const renderWindowCard = (window, index) => (
+    <div key={window.id} className="col-12 col-md-6 col-lg-6 col-xl-4 d-flex">
+      <div 
+        className={`exam-card fade-in-up w-100`} 
+        style={{
+          animationDelay: `${index * 0.1}s`,
+          minHeight: '520px',
+          height: 'auto',
+          display: 'flex',
+          flexDirection: 'column'
+        }}
+      >
+        <div className="exam-card-header">
+          <h5 className="exam-title">{window.exam.titulo}</h5>
+          {getStatusBadge(window.estado)}
+        </div>
+        <div className="exam-card-body" style={{ flex: '1', display: 'flex', flexDirection: 'column' }}>
+          <div className="exam-info" style={{ flex: '1' }}>
+            <div className="exam-info-item">
+              <i className="fas fa-calendar"></i>
+              <span>{new Date(window.fechaInicio).toLocaleDateString()}</span>
+            </div>
+            <div className="exam-info-item">
+              <i className="fas fa-clock"></i>
+              <span>{new Date(window.fechaInicio).toLocaleTimeString()} - {window.duracion} min</span>
+            </div>
+            <div className="exam-info-item">
+              <i className="fas fa-laptop"></i>
+              <span>{window.modalidad}</span>
+            </div>
+            <div className="exam-info-item">
+              <i className="fas fa-users"></i>
+              <span>{window.inscripciones.length}/{window.cupoMaximo} inscritos</span>
+            </div>
+            <div className="exam-info-item">
+              <i className="fas fa-sticky-note"></i>
+              <span 
+                style={{
+                  display: '-webkit-box',
+                  WebkitLineClamp: 4,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  maxHeight: '5em',
+                  lineHeight: '1.25em',
+                  fontStyle: !window.notas ? 'italic' : 'normal',
+                  color: !window.notas ? '#888' : 'inherit'
+                }}
+              >
+                {window.notas || 'No hay notas'}
+              </span>
+            </div>
+          </div>
+          <div className="exam-actions">
+            <button 
+              className="modern-btn modern-btn-secondary modern-btn-sm"
+              onClick={() => handleEditWindow(window)}
+            >
+              <i className="fas fa-edit"></i>
+              Editar
+            </button>
+            <button 
+              className="modern-btn modern-btn-secondary modern-btn-sm"
+              onClick={() => {
+                console.log('Navegando a inscripciones, windowId:', window.id);
+                console.log('Usuario actual:', user);
+                console.log('Token actual:', token ? 'exists' : 'missing');
+                navigate(`/exam-windows/${window.id}/inscriptions`);
+              }}
+            >
+              <i className="fas fa-info-circle"></i>
+              Información y Lista de Inscriptos
+            </button>
+          </div>
+          <button 
+            className="modern-btn modern-btn-secondary modern-btn-sm w-100 mt-2"
+            onClick={() => handleDeleteWindow(window)}
+            disabled={window.inscripciones.length > 0}
+            style={{ 
+              color: 'var(--danger-color)', 
+              borderColor: 'var(--danger-color)',
+              opacity: window.inscripciones.length > 0 ? 0.5 : 1
+            }}
+          >
+            <i className="fas fa-trash"></i>
+            Eliminar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
 
 
   if (loading) {
@@ -608,13 +701,6 @@ export default function ExamWindowsPage() {
         </div>
       </div>
 
-      {exams.length === 0 && (
-        <div className="error-message mb-4">
-          <i className="fas fa-info-circle"></i>
-          Necesitas crear al menos un examen antes de poder programar ventanas.
-        </div>
-      )}
-
       {/* Panel informativo de estados */}
       <div className="modern-card mb-4">
         <div className="modern-card-body" style={{ padding: '1rem' }}>
@@ -648,140 +734,111 @@ export default function ExamWindowsPage() {
               </div>
             </div>
           </div>
-
         </div>
       </div>
 
-      <div className="modern-card">
-        <div className="modern-card-header">
-          <h3 className="modern-card-title">
-            <i className="fas fa-window-restore me-2"></i>
-            Ventanas Programadas ({examWindows.length})
-          </h3>
-        </div>
-        <div className="modern-card-body">
-          {examWindows.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-icon">
-                <i className="fas fa-calendar-plus"></i>
+      {/* Secciones agrupadas */}
+      {(() => {
+        const enCurso = examWindows.filter(w => w.estado === 'en_curso');
+        const programadasYCerradas = examWindows.filter(w => w.estado === 'programada' || w.estado === 'cerrada_inscripciones');
+        const finalizadas = examWindows.filter(w => w.estado === 'finalizada');
+
+        const total = examWindows.length;
+
+        if (total === 0) {
+          return (
+            <div className="modern-card">
+              <div className="modern-card-header">
+                <h3 className="modern-card-title">
+                  <i className="fas fa-window-restore me-2"></i>
+                  Ventanas
+                </h3>
               </div>
-              <h4 className="empty-title">No hay ventanas programadas</h4>
-              <p className="empty-subtitle">
-                Crea tu primera ventana de examen para comenzar
-              </p>
-              {exams.length > 0 && (
-                <button 
-                  className="modern-btn modern-btn-primary"
-                  onClick={handleCreateWindow}
-                >
-                  <i className="fas fa-plus me-2"></i>
-                  Crear primera ventana
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="row g-4" style={{ alignItems: 'stretch' }}>
-              {examWindows.map((window, index) => (
-                <div key={window.id} className="col-12 col-md-6 col-lg-6 col-xl-4 d-flex">
-                  <div 
-                    className={`exam-card fade-in-up w-100`} 
-                    style={{
-                      animationDelay: `${index * 0.1}s`,
-                      minHeight: '520px',
-                      height: 'auto',
-                      display: 'flex',
-                      flexDirection: 'column'
-                    }}
-                  >
-                    <div className="exam-card-header">
-                      <h5 className="exam-title">{window.exam.titulo}</h5>
-                      {getStatusBadge(window.estado)}
-                    </div>
-                    <div className="exam-card-body" style={{ flex: '1', display: 'flex', flexDirection: 'column' }}>
-                      <div className="exam-info" style={{ flex: '1' }}>
-                        <div className="exam-info-item">
-                          <i className="fas fa-calendar"></i>
-                          <span>{new Date(window.fechaInicio).toLocaleDateString()}</span>
-                        </div>
-                        <div className="exam-info-item">
-                          <i className="fas fa-clock"></i>
-                          <span>{new Date(window.fechaInicio).toLocaleTimeString()} - {window.duracion} min</span>
-                        </div>
-                        <div className="exam-info-item">
-                          <i className="fas fa-laptop"></i>
-                          <span>{window.modalidad}</span>
-                        </div>
-                        <div className="exam-info-item">
-                          <i className="fas fa-users"></i>
-                          <span>{window.inscripciones.length}/{window.cupoMaximo} inscritos</span>
-                        </div>
-                        <div className="exam-info-item">
-                          <i className="fas fa-sticky-note"></i>
-                          <span 
-                            style={{
-                              display: '-webkit-box',
-                              WebkitLineClamp: 4,
-                              WebkitBoxOrient: 'vertical',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              maxHeight: '5em',
-                              lineHeight: '1.25em',
-                              fontStyle: !window.notas ? 'italic' : 'normal',
-                              color: !window.notas ? '#888' : 'inherit'
-                            }}
-                          >
-                            {window.notas || 'No hay notas'}
-                          </span>
-                        </div>
-                      </div>
-                      
-
-                      
-                      <div className="exam-actions">
-
-                        
-                        <button 
-                          className="modern-btn modern-btn-secondary modern-btn-sm"
-                          onClick={() => handleEditWindow(window)}
-                        >
-                          <i className="fas fa-edit"></i>
-                          Editar
-                        </button>
-                        <button 
-                          className="modern-btn modern-btn-secondary modern-btn-sm"
-                          onClick={() => {
-                            console.log('Navegando a inscripciones, windowId:', window.id);
-                            console.log('Usuario actual:', user);
-                            console.log('Token actual:', token ? 'exists' : 'missing');
-                            navigate(`/exam-windows/${window.id}/inscriptions`);
-                          }}
-                        >
-                          <i className="fas fa-info-circle"></i>
-                          Información y Lista de Inscriptos
-                        </button>
-                      </div>
-                      
-                      <button 
-                        className="modern-btn modern-btn-secondary modern-btn-sm w-100 mt-2"
-                        onClick={() => handleDeleteWindow(window)}
-                        disabled={window.inscripciones.length > 0}
-                        style={{ 
-                          color: 'var(--danger-color)', 
-                          borderColor: 'var(--danger-color)',
-                          opacity: window.inscripciones.length > 0 ? 0.5 : 1
-                        }}
-                      >
-                        <i className="fas fa-trash"></i>
-                        Eliminar
-                      </button>
-                    </div>
+              <div className="modern-card-body">
+                <div className="empty-state">
+                  <div className="empty-icon">
+                    <i className="fas fa-calendar-plus"></i>
                   </div>
+                  <h4 className="empty-title">No hay ventanas</h4>
+                  <p className="empty-subtitle">
+                    Crea tu primera ventana de examen para comenzar
+                  </p>
+                  {exams.length > 0 && (
+                    <button 
+                      className="modern-btn modern-btn-primary"
+                      onClick={handleCreateWindow}
+                    >
+                      <i className="fas fa-plus me-2"></i>
+                      Crear primera ventana
+                    </button>
+                  )}
                 </div>
-              ))}
+              </div>
             </div>
-          )}
-        </div>
-      </div>
+          );
+        }
+
+        return (
+          <>
+            {/* En curso */}
+            <div className="modern-card mb-4">
+              <div className="modern-card-header">
+                <h3 className="modern-card-title">
+                  <i className="fas fa-play-circle me-2" style={{ color: 'var(--success-color)' }}></i>
+                  En curso ({enCurso.length})
+                </h3>
+              </div>
+              <div className="modern-card-body">
+                {enCurso.length === 0 ? (
+                  <p className="text-muted mb-0">No hay ventanas en curso.</p>
+                ) : (
+                  <div className="row g-4" style={{ alignItems: 'stretch' }}>
+                    {enCurso.map((w, idx) => renderWindowCard(w, idx))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Programadas y cerradas */}
+            <div className="modern-card mb-4">
+              <div className="modern-card-header">
+                <h3 className="modern-card-title">
+                  <i className="fas fa-calendar-check me-2" style={{ color: 'var(--primary-color)' }}></i>
+                  Programadas y cerradas ({programadasYCerradas.length})
+                </h3>
+              </div>
+              <div className="modern-card-body">
+                {programadasYCerradas.length === 0 ? (
+                  <p className="text-muted mb-0">No hay ventanas programadas o cerradas.</p>
+                ) : (
+                  <div className="row g-4" style={{ alignItems: 'stretch' }}>
+                    {programadasYCerradas.map((w, idx) => renderWindowCard(w, idx))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Finalizadas */}
+            <div className="modern-card">
+              <div className="modern-card-header">
+                <h3 className="modern-card-title">
+                  <i className="fas fa-flag-checkered me-2" style={{ color: 'var(--text-color-3)' }}></i>
+                  Finalizadas ({finalizadas.length})
+                </h3>
+              </div>
+              <div className="modern-card-body">
+                {finalizadas.length === 0 ? (
+                  <p className="text-muted mb-0">No hay ventanas finalizadas.</p>
+                ) : (
+                  <div className="row g-4" style={{ alignItems: 'stretch' }}>
+                    {finalizadas.map((w, idx) => renderWindowCard(w, idx))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        );
+      })()}
 
       {/* Modal para crear/editar ventana */}
       {showCreateModal && (
