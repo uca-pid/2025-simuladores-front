@@ -171,6 +171,109 @@ export default function ExamWindowsPage() {
     loadData(false);
   }, [user, navigate, loadData]);
 
+  // WebSocket para actualizaciones instantáneas en tiempo real
+  useEffect(() => {
+    if (!user || user.rol !== 'professor' || !token) {
+      return;
+    }
+
+    let socket = null;
+    let fallbackInterval = null;
+
+    const initWebSocket = async () => {
+      try {
+        // Intentar importar socket.io-client dinámicamente
+        const { io } = await import('socket.io-client');
+        
+        socket = io(API_BASE_URL, {
+          auth: {
+            token: token
+          },
+          transports: ['websocket', 'polling']
+        });
+
+        socket.on('connect', () => {
+          console.log('🟢 Conectado a WebSocket para tiempo real');
+          setIsAutoUpdating(false);
+          
+          // Unirse a la sala del profesor
+          socket.emit('join_professor_room');
+        });
+
+        socket.on('disconnect', () => {
+          console.log('🔴 Desconectado de WebSocket');
+        });
+
+        socket.on('statusUpdate', (data) => {
+          console.log('⚡ CAMBIO INSTANTÁNEO recibido:', data);
+          
+          if (data.type === 'status_change' && data.changes.length > 0) {
+            // Actualizar estados localmente de forma instantánea
+            setExamWindows(prevWindows => {
+              const updatedWindows = prevWindows.map(window => {
+                const change = data.changes.find(c => c.id === window.id);
+                if (change) {
+                  console.log(`🔄 Actualizando ventana ${window.id}: ${change.estadoAnterior} → ${change.estadoNuevo}`);
+                  return { ...window, estado: change.estadoNuevo };
+                }
+                return window;
+              });
+              return updatedWindows;
+            });
+
+            // Mostrar notificación
+            const changeDetails = data.changes.map(c => 
+              `• ${c.titulo}: ${c.estadoAnterior} → ${c.estadoNuevo}`
+            ).join('\n');
+            
+            showModal(
+              'success',
+              '⚡ Estado Actualizado Instantáneamente',
+              `Cambio automático en tiempo real:\n\n${changeDetails}`,
+              null,
+              false
+            );
+            
+            setLastUpdate(new Date());
+          }
+        });
+
+        socket.on('connect_error', (error) => {
+          console.error('❌ Error WebSocket:', error);
+          startFallback();
+        });
+
+      } catch (error) {
+        console.warn('⚠️ Socket.io-client no disponible, usando fallback');
+        startFallback();
+      }
+    };
+
+    const startFallback = () => {
+      console.log('🔄 Iniciando modo fallback (polling cada 2 minutos)');
+      setIsAutoUpdating(true);
+      
+      fallbackInterval = setInterval(() => {
+        console.log('🔄 Fallback: verificando cambios...');
+        loadData(true);
+      }, 120000); // 2 minutos
+    };
+
+    // Inicializar WebSocket
+    initWebSocket();
+
+    // Cleanup
+    return () => {
+      if (socket) {
+        console.log('🔌 Cerrando conexión WebSocket');
+        socket.disconnect();
+      }
+      if (fallbackInterval) {
+        clearInterval(fallbackInterval);
+      }
+    };
+  }, [user, token, loadData, showModal]);
+
   // Auto-actualización cada 30 segundos
   useEffect(() => {
     if (!user || user.rol !== 'professor' || !token) {
@@ -439,19 +542,24 @@ export default function ExamWindowsPage() {
               <h1 className="page-title mb-1">
                 <i className="fas fa-calendar-alt me-2" style={{ color: 'var(--primary-color)' }}></i>
                 Ventanas de Examen
-                {isAutoUpdating && (
+                {isAutoUpdating ? (
                   <span className="ms-2" style={{ fontSize: '0.6em' }}>
-                    <i className="fas fa-sync-alt fa-spin text-primary" title="Sincronizando datos..."></i>
+                    <i className="fas fa-exclamation-triangle text-warning" title="Modo fallback - Polling cada 2 min"></i>
+                  </span>
+                ) : (
+                  <span className="ms-2" style={{ fontSize: '0.6em' }}>
+                    <i className="fas fa-bolt text-success" title="⚡ Tiempo Real WebSocket"></i>
                   </span>
                 )}
               </h1>
               <p className="page-subtitle mb-0">
                 Gestiona los horarios y modalidades de tus exámenes
-                {lastUpdate && (
-                  <span className="ms-2 text-muted" style={{ fontSize: '0.85em' }}>
-                    • Última actualización: {lastUpdate.toLocaleTimeString()}
-                  </span>
-                )}
+                <span className="ms-2 text-muted" style={{ fontSize: '0.85em' }}>
+                  • {isAutoUpdating ? '🔄 Modo Fallback (Polling)' : '⚡ Tiempo Real Instantáneo'}
+                  {lastUpdate && (
+                    <span> • Última actualización: {lastUpdate.toLocaleTimeString()}</span>
+                  )}
+                </span>
               </p>
             </div>
             <div className="col-12 col-lg-4">
@@ -524,7 +632,7 @@ export default function ExamWindowsPage() {
             <strong>Controles:</strong> Usa "Abrir/Cerrar" para controlar inscripciones manualmente.
             <br />
             <i className="fas fa-sync-alt me-2" style={{ color: 'var(--success-color)' }}></i>
-            <strong>Actualización automática:</strong> Los estados se actualizan automáticamente según fechas y horarios cada 30 segundos. Recibirás notificaciones cuando haya cambios.
+            <strong>⚡ Tiempo Real:</strong> Los estados se actualizan instantáneamente via WebSocket cuando llegan a su fecha/hora programada. Sin esperas ni recargas manuales.
           </div>
         </div>
       </div>
