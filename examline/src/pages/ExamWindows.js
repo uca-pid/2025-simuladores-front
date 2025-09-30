@@ -451,8 +451,9 @@ export default function ExamWindowsPage() {
     if (formData.fechaInicio) {
       const fechaInicio = new Date(formData.fechaInicio);
       const ahora = new Date();
-      
-      if (fechaInicio <= ahora) {
+      // Permitir fecha pasada cuando se está editando una ventana EN CURSO
+      const isEditingEnCurso = !!editingWindow && editingWindow.estado === 'en_curso';
+      if (!isEditingEnCurso && fechaInicio <= ahora) {
         errors.push('La fecha y hora de inicio debe ser en el futuro');
         fieldErrors.fechaInicio = true;
       }
@@ -478,14 +479,23 @@ export default function ExamWindowsPage() {
         : `${API_BASE_URL}/exam-windows`;
       
       const method = editingWindow ? 'PUT' : 'POST';
-      
+      // Blindaje: si está en curso, no permitir modificar modalidad, cupo, hora de inicio
+      const isEditingEnCurso = !!editingWindow && editingWindow.estado === 'en_curso';
+      const payload = { ...formData };
+      if (isEditingEnCurso) {
+        payload.modalidad = editingWindow.modalidad;
+        payload.cupoMaximo = editingWindow.cupoMaximo;
+        // Mantener el mismo formato que el input (YYYY-MM-DDTHH:mm)
+        payload.fechaInicio = new Date(editingWindow.fechaInicio).toISOString().slice(0, 16);
+      }
+
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(payload)
       });
 
       if (response.ok) {
@@ -967,6 +977,7 @@ export default function ExamWindowsPage() {
                         value={formData.fechaInicio}
                         onChange={handleInputChange}
                         required
+                        disabled={!!editingWindow && editingWindow.estado === 'en_curso'}
                         style={{
                           borderRadius: '8px',
                           border: `1px solid ${validationErrors.fechaInicio ? '#dc3545' : 'var(--border-color)'}`,
@@ -1031,6 +1042,7 @@ export default function ExamWindowsPage() {
                         onChange={handleInputChange}
                         min="1"
                         required
+                        disabled={!!editingWindow && editingWindow.estado === 'en_curso'}
                         style={{
                           borderRadius: '8px',
                           border: `1px solid ${validationErrors.cupoMaximo ? '#dc3545' : 'var(--border-color)'}`,
@@ -1059,6 +1071,7 @@ export default function ExamWindowsPage() {
                         value={formData.modalidad}
                         onChange={handleInputChange}
                         required
+                        disabled={!!editingWindow && editingWindow.estado === 'en_curso'}
                         style={{
                           borderRadius: '8px',
                           border: `1px solid ${validationErrors.modalidad ? '#dc3545' : 'var(--border-color)'}`,
