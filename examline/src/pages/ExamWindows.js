@@ -583,37 +583,42 @@ export default function ExamWindowsPage() {
           <div className="exam-info" style={{ flex: '1' }}>
             <div className="exam-info-item">
               <i className="fas fa-calendar"></i>
-              <span>{new Date(window.fechaInicio).toLocaleDateString()}</span>
+                <span><strong>Fecha:</strong> {new Date(window.fechaInicio).toLocaleDateString()}</span>
             </div>
             <div className="exam-info-item">
               <i className="fas fa-clock"></i>
-              <span>{new Date(window.fechaInicio).toLocaleTimeString()} - {window.duracion} min</span>
+                <span><strong>Hora de inicio:</strong> {new Date(window.fechaInicio).toLocaleTimeString()}</span>
+            </div>
+            <div className="exam-info-item">
+              <i className="fas fa-hourglass-half"></i>
+                <span><strong>Duración:</strong> {window.duracion} min</span>
             </div>
             <div className="exam-info-item">
               <i className="fas fa-laptop"></i>
-              <span>{window.modalidad}</span>
+                <span><strong>Modalidad:</strong> {window.modalidad ? window.modalidad.charAt(0).toUpperCase() + window.modalidad.slice(1) : ''}</span>
             </div>
             <div className="exam-info-item">
               <i className="fas fa-users"></i>
-              <span>{window.inscripciones.length}/{window.cupoMaximo} inscritos</span>
+                <span><strong>Inscritos:</strong> {window.inscripciones.length}/{window.cupoMaximo}</span>
             </div>
             <div className="exam-info-item">
               <i className="fas fa-sticky-note"></i>
-              <span 
-                style={{
-                  display: '-webkit-box',
-                  WebkitLineClamp: 4,
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  maxHeight: '5em',
-                  lineHeight: '1.25em',
-                  fontStyle: !window.notas ? 'italic' : 'normal',
-                  color: !window.notas ? '#888' : 'inherit'
-                }}
-              >
-                {window.notas || 'No hay notas'}
-              </span>
+                <span className="me-2"><strong>Notas:</strong></span>
+                <span 
+                  style={{
+                    display: '-webkit-box',
+                    WebkitLineClamp: 4,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    maxHeight: '5em',
+                    lineHeight: '1.25em',
+                    fontStyle: !window.notas ? 'italic' : 'normal',
+                    color: !window.notas ? '#888' : 'inherit'
+                  }}
+                >
+                  {window.notas || 'No hay notas'}
+                </span>
             </div>
           </div>
           <div className="exam-actions" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
