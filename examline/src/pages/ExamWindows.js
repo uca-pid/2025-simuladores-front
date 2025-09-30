@@ -265,6 +265,7 @@ export default function ExamWindowsPage() {
         // Mantener compatibilidad con formato anterior también
         socket.on('statusUpdate', (data) => {
           const receiveTime = Date.now();
+          const latency = receiveTime - (data.ts || receiveTime); // Calcular latencia para formato legacy
           console.log('⚡ CAMBIO recibido (formato legacy):', data);
           
           if (data.type === 'status_change' && data.changes.length > 0) {
@@ -503,24 +504,6 @@ export default function ExamWindowsPage() {
     }
   };
 
-  const handleToggleWindow = async (windowId, currentActive) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/exam-windows/${windowId}/toggle`, {
-        method: 'PATCH',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        loadData();
-      } else {
-        showModal('error', 'Error', 'Error al cambiar el estado de la ventana');
-      }
-    } catch (error) {
-      console.error('Error en toggle:', error);
-      showModal('error', 'Error', 'Error de conexión');
-    }
-  };
-
   const handleDeleteWindow = (window) => {
     showModal(
       'confirm',
@@ -572,27 +555,7 @@ export default function ExamWindowsPage() {
     );
   };
 
-  // Función para alternar inscripciones (abrir/cerrar)
-  const handleToggleInscripciones = async (windowId, currentEstado) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/exam-windows/${windowId}/toggle-inscripciones`, {
-        method: 'PATCH',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
 
-      if (response.ok) {
-        const result = await response.json();
-        showModal('success', '¡Éxito!', result.message);
-        loadData(); // Recargar datos
-      } else {
-        const errorData = await response.json();
-        showModal('error', 'Error', errorData.error || 'Error al cambiar el estado de inscripciones');
-      }
-    } catch (error) {
-      console.error('Error en toggle inscripciones:', error);
-      showModal('error', 'Error', 'Error de conexión');
-    }
-  };
 
   if (loading) {
     return (
@@ -615,24 +578,14 @@ export default function ExamWindowsPage() {
               <h1 className="page-title mb-1">
                 <i className="fas fa-calendar-alt me-2" style={{ color: 'var(--primary-color)' }}></i>
                 Ventanas de Examen
-                {isAutoUpdating ? (
-                  <span className="ms-2" style={{ fontSize: '0.6em' }}>
-                    <i className="fas fa-exclamation-triangle text-warning" title="Modo fallback - Polling cada 2 min"></i>
-                  </span>
-                ) : (
-                  <span className="ms-2" style={{ fontSize: '0.6em' }}>
-                    <i className="fas fa-bolt text-success" title="⚡ Tiempo Real WebSocket"></i>
-                  </span>
-                )}
               </h1>
               <p className="page-subtitle mb-0">
                 Gestiona los horarios y modalidades de tus exámenes
-                <span className="ms-2 text-muted" style={{ fontSize: '0.85em' }}>
-                  • {isAutoUpdating ? '🔄 Modo Fallback (Polling)' : '🚀 MILISEGUNDOS (< 10ms latencia)'}
-                  {lastUpdate && (
-                    <span> • Última actualización: {lastUpdate.toLocaleTimeString()}</span>
-                  )}
-                </span>
+                {lastUpdate && (
+                  <span className="ms-2 text-muted" style={{ fontSize: '0.85em' }}>
+                    • Última actualización: {lastUpdate.toLocaleTimeString()}
+                  </span>
+                )}
               </p>
             </div>
             <div className="col-12 col-lg-4">
@@ -679,7 +632,7 @@ export default function ExamWindowsPage() {
             <div className="col-6 col-md-3">
               <div className="d-flex align-items-center">
                 <span className="badge bg-warning text-dark me-2">🔒 Cerrada</span>
-                <small className="text-muted">Sin nuevas inscripciones</small>
+                <small className="text-muted">Cerrada a inscripciones</small>
               </div>
             </div>
             <div className="col-6 col-md-3">
@@ -695,18 +648,7 @@ export default function ExamWindowsPage() {
               </div>
             </div>
           </div>
-          <div className="alert alert-light mt-3 mb-0" style={{ 
-            fontSize: '0.85rem', 
-            backgroundColor: 'rgba(13, 202, 240, 0.05)',
-            border: '1px solid rgba(13, 202, 240, 0.1)',
-            color: 'var(--text-color-2)'
-          }}>
-            <i className="fas fa-lightbulb me-2" style={{ color: 'var(--primary-color)' }}></i>
-            <strong>Controles:</strong> Usa "Abrir/Cerrar" para controlar inscripciones manualmente.
-            <br />
-            <i className="fas fa-sync-alt me-2" style={{ color: 'var(--success-color)' }}></i>
-            <strong>⚡ Tiempo Real:</strong> Los estados se actualizan instantáneamente via WebSocket cuando llegan a su fecha/hora programada. Sin esperas ni recargas manuales.
-          </div>
+
         </div>
       </div>
 
@@ -793,53 +735,10 @@ export default function ExamWindowsPage() {
                         </div>
                       </div>
                       
-                      <div className="d-flex align-items-center justify-content-between mb-3 p-2" style={{ 
-                        background: window.activa ? 'rgba(16, 185, 129, 0.1)' : 'rgba(156, 163, 175, 0.1)', 
-                        border: '1px solid ' + (window.activa ? 'rgba(16, 185, 129, 0.2)' : 'rgba(156, 163, 175, 0.2)'),
-                        borderRadius: '6px'
-                      }}>
-                        <div className="d-flex align-items-center gap-2">
-                          <i className={window.activa ? "fas fa-toggle-on text-success" : "fas fa-toggle-off text-muted"}></i>
-                          <span style={{ fontSize: '0.9rem', fontWeight: '500' }}>
-                            {window.activa ? "Ventana Activa" : "Ventana Inactiva"}
-                          </span>
-                        </div>
-                        <div className="form-check form-switch">
-                          <input
-                            className="form-check-input"
-                            type="checkbox"
-                            checked={window.activa}
-                            onChange={() => handleToggleWindow(window.id, window.activa)}
-                            id={`active-${window.id}`}
-                            style={{ transform: 'scale(1.1)' }}
-                          />
-                        </div>
-                      </div>
+
                       
                       <div className="exam-actions">
-                        {/* Botón para abrir/cerrar inscripciones - solo para estados programada/cerrada_inscripciones */}
-                        {(['programada', 'cerrada_inscripciones'].includes(window.estado)) && (
-                          <button 
-                            className={`modern-btn modern-btn-sm ${
-                              window.estado === 'programada' 
-                                ? 'modern-btn-warning' 
-                                : 'modern-btn-success'
-                            }`}
-                            onClick={() => handleToggleInscripciones(window.id, window.estado)}
-                            title={
-                              window.estado === 'programada' 
-                                ? 'Cerrar inscripciones' 
-                                : 'Abrir inscripciones'
-                            }
-                          >
-                            <i className={`fas ${
-                              window.estado === 'programada' 
-                                ? 'fa-lock' 
-                                : 'fa-unlock'
-                            }`}></i>
-                            {window.estado === 'programada' ? 'Cerrar' : 'Abrir'}
-                          </button>
-                        )}
+
                         
                         <button 
                           className="modern-btn modern-btn-secondary modern-btn-sm"
