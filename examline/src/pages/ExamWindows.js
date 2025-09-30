@@ -687,7 +687,18 @@ export default function ExamWindowsPage() {
                   className="modern-btn modern-btn-primary flex-fill flex-sm-grow-0" 
                   onClick={handleCreateWindow}
                   disabled={exams.length === 0}
-                  style={{ minWidth: '140px' }}
+                  style={
+                    exams.length === 0
+                      ? {
+                          minWidth: '140px',
+                          background: '#d1d5db',
+                          borderColor: '#d1d5db',
+                          color: '#6b7280',
+                          cursor: 'not-allowed',
+                          boxShadow: 'none',
+                        }
+                      : { minWidth: '140px' }
+                  }
                 >
                   <i className="fas fa-plus me-2"></i>
                   Nueva Ventana
@@ -700,6 +711,14 @@ export default function ExamWindowsPage() {
           </div>
         </div>
       </div>
+
+      {/* Aviso cuando no hay exámenes creados */}
+      {exams.length === 0 && (
+        <div className="error-message mb-4">
+          <i className="fas fa-info-circle"></i>
+          Necesitas crear al menos un examen antes de poder programar ventanas.
+        </div>
+      )}
 
       {/* Panel informativo de estados */}
       <div className="modern-card mb-4">
