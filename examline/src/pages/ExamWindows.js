@@ -609,7 +609,13 @@ export default function ExamWindowsPage() {
             </div>
             <div className="exam-info-item">
               <i className="fas fa-users"></i>
-                <span><strong>Inscritos:</strong> {window.inscripciones.length}/{window.cupoMaximo}</span>
+                <span>
+                  <strong>Inscritos:</strong> {
+                    Array.isArray(window.inscripciones)
+                      ? window.inscripciones.filter(i => i && (i.cancelledAt == null && i.canceledAt == null)).length
+                      : 0
+                  }/{window.cupoMaximo}
+                </span>
             </div>
             <div className="exam-info-item">
               <i className="fas fa-sticky-note"></i>
