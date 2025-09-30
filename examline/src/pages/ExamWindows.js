@@ -504,34 +504,7 @@ export default function ExamWindowsPage() {
     }
   };
 
-  const handleDeleteWindow = (window) => {
-    showModal(
-      'confirm',
-      'Confirmar eliminación',
-      `¿Seguro que deseas eliminar la ventana del ${new Date(window.fechaInicio).toLocaleString()}?`,
-      async () => {
-        try {
-          const response = await fetch(`${API_BASE_URL}/exam-windows/${window.id}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-
-          if (response.ok) {
-            showModal('success', '¡Éxito!', 'Ventana eliminada correctamente');
-            loadData();
-          } else {
-            const errorData = await response.json();
-            showModal('error', 'Error', errorData.error || 'Error al eliminar la ventana');
-          }
-        } catch (error) {
-          console.error('Error eliminando ventana:', error);
-          showModal('error', 'Error', 'Error de conexión');
-        }
-        closeModal();
-      },
-      true
-    );
-  };
+  // Eliminado: handleDeleteWindow (se quitó el botón Eliminar de las cards)
 
   const getStatusBadge = (estado) => {
     const badges = {
@@ -643,16 +616,18 @@ export default function ExamWindowsPage() {
               </span>
             </div>
           </div>
-          <div className="exam-actions">
+          <div className="exam-actions" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {window.estado !== 'finalizada' && (
+              <button 
+                className="modern-btn modern-btn-secondary modern-btn-sm w-100"
+                onClick={() => handleEditWindow(window)}
+              >
+                <i className="fas fa-edit"></i>
+                Editar
+              </button>
+            )}
             <button 
-              className="modern-btn modern-btn-secondary modern-btn-sm"
-              onClick={() => handleEditWindow(window)}
-            >
-              <i className="fas fa-edit"></i>
-              Editar
-            </button>
-            <button 
-              className="modern-btn modern-btn-secondary modern-btn-sm"
+              className="modern-btn modern-btn-secondary modern-btn-sm w-100"
               onClick={() => {
                 console.log('Navegando a inscripciones, windowId:', window.id);
                 console.log('Usuario actual:', user);
@@ -664,19 +639,7 @@ export default function ExamWindowsPage() {
               Información y Lista de Inscriptos
             </button>
           </div>
-          <button 
-            className="modern-btn modern-btn-secondary modern-btn-sm w-100 mt-2"
-            onClick={() => handleDeleteWindow(window)}
-            disabled={window.inscripciones.length > 0}
-            style={{ 
-              color: 'var(--danger-color)', 
-              borderColor: 'var(--danger-color)',
-              opacity: window.inscripciones.length > 0 ? 0.5 : 1
-            }}
-          >
-            <i className="fas fa-trash"></i>
-            Eliminar
-          </button>
+          {/* Botón Eliminar removido según solicitud */}
             </div>
           </div>
         );
@@ -1185,7 +1148,7 @@ export default function ExamWindowsPage() {
         message={modal.message}
         type={modal.type}
         showCancel={modal.showCancel}
-        confirmText={modal.type === 'confirm' ? 'Eliminar' : 'Aceptar'}
+  confirmText={'Aceptar'}
         cancelText="Cancelar"
       />
     </div>
