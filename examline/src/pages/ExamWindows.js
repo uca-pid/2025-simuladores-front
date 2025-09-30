@@ -558,20 +558,54 @@ export default function ExamWindowsPage() {
   // Tarjeta reutilizable para una ventana
   const renderWindowCard = (window, index) => (
     <div key={window.id} className="col-12 col-md-6 col-lg-6 col-xl-4 d-flex">
-      <div 
-        className={`exam-card fade-in-up w-100`} 
-        style={{
-          animationDelay: `${index * 0.1}s`,
-          minHeight: '520px',
-          height: 'auto',
-          display: 'flex',
-          flexDirection: 'column'
-        }}
-      >
-        <div className="exam-card-header">
-          <h5 className="exam-title">{window.exam.titulo}</h5>
+      {(() => {
+        const statusStyles = {
+          programada: {
+            solid: 'var(--primary-color)',
+            a: 'rgba(99, 102, 241, 0.12)',
+            b: 'rgba(139, 92, 246, 0.18)'
+          },
+          cerrada_inscripciones: {
+            solid: 'var(--warning-color)',
+            a: 'rgba(245, 158, 11, 0.12)',
+            b: 'rgba(245, 158, 11, 0.20)'
+          },
+          en_curso: {
+            solid: 'var(--success-color)',
+            a: 'rgba(16, 185, 129, 0.12)',
+            b: 'rgba(16, 185, 129, 0.20)'
+          },
+          finalizada: {
+            solid: '#cbd5e1',
+            a: 'rgba(148, 163, 184, 0.10)',
+            b: 'rgba(148, 163, 184, 0.18)'
+          }
+        };
+        const st = statusStyles[window.estado] || statusStyles.programada;
+        return (
+          <div 
+            className={`exam-card fade-in-up w-100`} 
+            style={{
+              animationDelay: `${index * 0.1}s`,
+              minHeight: '520px',
+              height: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              borderLeft: `4px solid ${st.solid}`
+            }}
+          >
+            <div 
+              className="exam-card-header"
+              style={{
+                background: `linear-gradient(135deg, ${st.a}, ${st.b})`
+              }}
+            >
+            <h5 className="exam-title">
+              {window.exam.titulo}
+              {window.estado === 'en_curso' && <span className="status-pulse" />}
+            </h5>
           {getStatusBadge(window.estado)}
-        </div>
+            </div>
         <div className="exam-card-body" style={{ flex: '1', display: 'flex', flexDirection: 'column' }}>
           <div className="exam-info" style={{ flex: '1' }}>
             <div className="exam-info-item">
@@ -643,8 +677,10 @@ export default function ExamWindowsPage() {
             <i className="fas fa-trash"></i>
             Eliminar
           </button>
-        </div>
-      </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 
