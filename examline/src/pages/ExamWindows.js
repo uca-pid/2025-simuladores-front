@@ -489,6 +489,20 @@ export default function ExamWindowsPage() {
       fieldErrors.cupoMaximo = true;
     }
     
+    // Si se está editando, el cupo no puede ser menor a los inscriptos activos actuales
+    if (editingWindow) {
+      const currentActive = typeof editingWindow?.inscritosCount === 'number'
+        ? editingWindow.inscritosCount
+        : (Array.isArray(editingWindow?.inscripciones)
+            ? editingWindow.inscripciones.filter(i => i && (i.cancelledAt == null && i.canceledAt == null)).length
+            : 0);
+      const desiredCupo = typeof formData.cupoMaximo === 'number' ? formData.cupoMaximo : parseInt(formData.cupoMaximo, 10);
+      if (!Number.isNaN(desiredCupo) && desiredCupo < currentActive) {
+        errors.push(`El cupo máximo no puede ser menor que los inscriptos actuales (${currentActive}).`);
+        fieldErrors.cupoMaximo = true;
+      }
+    }
+    
     // Validar que la fecha no sea en el pasado
     if (formData.fechaInicio) {
       const fechaInicio = new Date(formData.fechaInicio);
@@ -1091,7 +1105,13 @@ export default function ExamWindowsPage() {
                         name="cupoMaximo"
                         value={formData.cupoMaximo}
                         onChange={handleInputChange}
-                        min="1"
+                        min={editingWindow
+                          ? (typeof editingWindow?.inscritosCount === 'number'
+                              ? editingWindow.inscritosCount
+                              : (Array.isArray(editingWindow?.inscripciones)
+                                  ? editingWindow.inscripciones.filter(i => i && (i.cancelledAt == null && i.canceledAt == null)).length
+                                  : 1))
+                          : 1}
                         required
                         disabled={!!editingWindow && editingWindow.estado === 'en_curso'}
                         style={{
