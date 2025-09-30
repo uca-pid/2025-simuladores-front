@@ -32,6 +32,43 @@ export default function ExamWindowsPage() {
     onConfirm: null,
     showCancel: false
   });
+  const [isAutoUpdating, setIsAutoUpdating] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState(null);
+
+  // Función para mostrar modal
+  const showModal = (type, title, message, onConfirm = null, showCancel = false) => {
+    setModal({ show: true, type, title, message, onConfirm, showCancel });
+  };
+
+  // Función para comparar estados y detectar cambios
+  const checkForStatusChanges = useCallback((oldWindows, newWindows) => {
+    const changes = [];
+    
+    newWindows.forEach(newWindow => {
+      const oldWindow = oldWindows.find(w => w.id === newWindow.id);
+      if (oldWindow && oldWindow.estado !== newWindow.estado) {
+        changes.push({
+          titulo: newWindow.exam.titulo,
+          estadoAnterior: oldWindow.estado,
+          estadoNuevo: newWindow.estado
+        });
+      }
+    });
+    
+    if (changes.length > 0) {
+      const changeDetails = changes.map(c => 
+        `• ${c.titulo}: ${c.estadoAnterior} → ${c.estadoNuevo}`
+      ).join('\n');
+      
+      showModal(
+        'info',
+        '🔄 Estados Actualizados Automáticamente',
+        `Se detectaron cambios de estado:\n\n${changeDetails}`,
+        null,
+        false
+      );
+    }
+  }, []);
 
   // Función para ajustar altura del textarea
   const adjustTextareaHeight = (textarea) => {
@@ -43,9 +80,13 @@ export default function ExamWindowsPage() {
     textarea.style.overflowY = textarea.scrollHeight > maxHeight ? 'auto' : 'hidden';
   };
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (isBackgroundUpdate = false) => {
     try {
-      setLoading(true);
+      if (!isBackgroundUpdate) {
+        setLoading(true);
+      } else {
+        setIsAutoUpdating(true);
+      }
       
       if (!token) {
         console.error('No token available');
@@ -90,26 +131,58 @@ export default function ExamWindowsPage() {
       
       if (windowsRes.ok) {
         const windowsData = await windowsRes.json();
-        setExamWindows(windowsData);
+        
+        // Solo mostrar notificación de cambios si es una actualización en segundo plano
+        if (isBackgroundUpdate) {
+          setExamWindows(prevWindows => {
+            if (prevWindows.length > 0) {
+              checkForStatusChanges(prevWindows, windowsData);
+            }
+            return windowsData;
+          });
+        } else {
+          setExamWindows(windowsData);
+        }
+        
+        setLastUpdate(new Date());
       } else {
         console.error('Error cargando ventanas:', windowsRes.status, await windowsRes.text());
       }
     } catch (error) {
       console.error('Error cargando datos:', error);
-      showModal('error', 'Error', 'Error cargando los datos');
+      if (!isBackgroundUpdate) {
+        showModal('error', 'Error', 'Error cargando los datos');
+      }
     } finally {
-      setLoading(false);
+      if (!isBackgroundUpdate) {
+        setLoading(false);
+      } else {
+        setIsAutoUpdating(false);
+      }
     }
-  }, [token, navigate]);
+  }, [token, navigate, checkForStatusChanges]);
 
-  // Verificar que es profesor
+  // Verificar que es profesor y cargar datos iniciales
   useEffect(() => {
     if (!user || user.rol !== 'professor') {
       navigate('/');
       return;
     }
-    loadData();
+    loadData(false);
   }, [user, navigate, loadData]);
+
+  // Auto-actualización cada 30 segundos
+  useEffect(() => {
+    if (!user || user.rol !== 'professor' || !token) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      loadData(true); // Actualización en segundo plano
+    }, 30000); // 30 segundos
+
+    return () => clearInterval(interval);
+  }, [user, token, loadData]);
 
   // Ajustar textarea cuando se abre modal de edición
   useEffect(() => {
@@ -121,11 +194,6 @@ export default function ExamWindowsPage() {
       }, 100);
     }
   }, [showCreateModal, editingWindow]);
-
-
-  const showModal = (type, title, message, onConfirm = null, showCancel = false) => {
-    setModal({ show: true, type, title, message, onConfirm, showCancel });
-  };
 
   const closeModal = () => {
     setModal(prev => ({ ...prev, show: false }));
@@ -350,45 +418,6 @@ export default function ExamWindowsPage() {
     }
   };
 
-  // Función para actualizar estados automáticamente
-  const handleUpdateStatuses = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/exam-windows/update-statuses`, {
-        method: 'PATCH',
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        
-        if (result.updatedCount > 0) {
-          // Mostrar detalles de las ventanas actualizadas
-          const details = result.updatedWindows.map(w => 
-            `• ${w.titulo}: ${w.estadoAnterior} → ${w.estadoNuevo}`
-          ).join('\n');
-          
-          showModal(
-            'success', 
-            '¡Estados Actualizados!', 
-            `Se actualizaron ${result.updatedCount} ventana(s):\n\n${details}`
-          );
-          loadData(); // Recargar datos
-        } else {
-          showModal('info', 'Sin Cambios', 'Todos los estados están actualizados según sus horarios.');
-        }
-      } else {
-        const errorData = await response.json();
-        showModal('error', 'Error', errorData.error || 'Error al actualizar los estados');
-      }
-    } catch (error) {
-      console.error('Error actualizando estados:', error);
-      showModal('error', 'Error', 'Error de conexión al actualizar estados');
-    }
-  };
-
   if (loading) {
     return (
       <div className="container py-5">
@@ -410,21 +439,23 @@ export default function ExamWindowsPage() {
               <h1 className="page-title mb-1">
                 <i className="fas fa-calendar-alt me-2" style={{ color: 'var(--primary-color)' }}></i>
                 Ventanas de Examen
+                {isAutoUpdating && (
+                  <span className="ms-2" style={{ fontSize: '0.6em' }}>
+                    <i className="fas fa-sync-alt fa-spin text-primary" title="Sincronizando datos..."></i>
+                  </span>
+                )}
               </h1>
-              <p className="page-subtitle mb-0">Gestiona los horarios y modalidades de tus exámenes</p>
+              <p className="page-subtitle mb-0">
+                Gestiona los horarios y modalidades de tus exámenes
+                {lastUpdate && (
+                  <span className="ms-2 text-muted" style={{ fontSize: '0.85em' }}>
+                    • Última actualización: {lastUpdate.toLocaleTimeString()}
+                  </span>
+                )}
+              </p>
             </div>
             <div className="col-12 col-lg-4">
               <div className="d-flex flex-column flex-sm-row gap-2 justify-content-lg-end">
-                <button 
-                  className="modern-btn modern-btn-secondary flex-fill flex-sm-grow-0" 
-                  onClick={handleUpdateStatuses}
-                  disabled={examWindows.length === 0}
-                  style={{ minWidth: '160px' }}
-                  title="Actualizar estados automáticamente según fechas y horarios"
-                >
-                  <i className="fas fa-sync-alt me-2"></i>
-                  Actualizar Estados
-                </button>
                 <button 
                   className="modern-btn modern-btn-primary flex-fill flex-sm-grow-0" 
                   onClick={handleCreateWindow}
@@ -490,7 +521,10 @@ export default function ExamWindowsPage() {
             color: 'var(--text-color-2)'
           }}>
             <i className="fas fa-lightbulb me-2" style={{ color: 'var(--primary-color)' }}></i>
-            <strong>Controles:</strong> Usa "Abrir/Cerrar" para controlar inscripciones manualmente. El botón "Actualizar Estados" revisa automáticamente qué ventanas cambiaron según horarios.
+            <strong>Controles:</strong> Usa "Abrir/Cerrar" para controlar inscripciones manualmente.
+            <br />
+            <i className="fas fa-sync-alt me-2" style={{ color: 'var(--success-color)' }}></i>
+            <strong>Actualización automática:</strong> Los estados se actualizan automáticamente según fechas y horarios cada 30 segundos. Recibirás notificaciones cuando haya cambios.
           </div>
         </div>
       </div>
