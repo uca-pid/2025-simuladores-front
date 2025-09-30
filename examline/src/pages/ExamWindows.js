@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import BackToMainButton from '../components/BackToMainButton';
@@ -214,6 +214,14 @@ export default function ExamWindowsPage() {
         });
 
         // 🚀 Handler para payload optimizado (milisegundos)
+        const triggerSilentRefresh = () => {
+          // Pequeño guard para evitar muchas llamadas concurrentes
+          if (triggerSilentRefresh.lock) return;
+          triggerSilentRefresh.lock = true;
+          Promise.resolve(loadData(true)).finally(() => {
+            triggerSilentRefresh.lock = false;
+          });
+        };
         socket.on('su', (data) => { // 'su' = statusUpdate optimizado
           const receiveTime = Date.now();
           const latency = receiveTime - data.ts; // Calcular latencia real
@@ -259,6 +267,8 @@ export default function ExamWindowsPage() {
             );
             
             setLastUpdate(new Date());
+            // Refrescar en background para sincronizar conteos de inscripciones
+            triggerSilentRefresh();
           }
         });
 
@@ -298,8 +308,40 @@ export default function ExamWindowsPage() {
             );
             
             setLastUpdate(new Date());
+            // Refrescar en background para sincronizar conteos de inscripciones
+            triggerSilentRefresh();
           }
         });
+
+        // 📣 Actualizaciones de inscripciones/cancelaciones (varios nombres posibles)
+        const applyEnrollmentUpdate = (payload) => {
+          const windowId = payload.windowId || payload.window_id || payload.id || payload.i;
+          if (!windowId) return;
+          requestAnimationFrame(() => {
+            setExamWindows(prev => prev.map(w => {
+              if (w.id !== windowId) return w;
+              const updated = { ...w };
+              if (Array.isArray(payload.inscripciones)) {
+                updated.inscripciones = payload.inscripciones;
+              } else {
+                const count = payload.count ?? payload.inscritos ?? payload.inscritosCount ?? payload.enrolled;
+                if (typeof count === 'number') updated.inscritosCount = count;
+              }
+              if (payload.estado) updated.estado = payload.estado;
+              return updated;
+            }));
+          });
+          setLastUpdate(new Date());
+        };
+
+        socket.on('inscriptions_changed', applyEnrollmentUpdate);
+        socket.on('inscription_update', applyEnrollmentUpdate);
+        socket.on('inscriptions_update', applyEnrollmentUpdate);
+        socket.on('enrollment_update', applyEnrollmentUpdate);
+        socket.on('iu', applyEnrollmentUpdate);
+        socket.on('inscription_cancelled', applyEnrollmentUpdate);
+        socket.on('enrollment_cancelled', applyEnrollmentUpdate);
+        socket.on('ic', applyEnrollmentUpdate);
 
         // 🚀 Sistema de medición de latencia en tiempo real
         socket.on('latency_ping', (serverTime) => {
@@ -538,6 +580,15 @@ export default function ExamWindowsPage() {
     );
   };
 
+  // Conteo robusto de inscriptos: prioriza 'inscritosCount' del backend o filtra inscripciones activas
+  const getInscritosCount = (w) => {
+    if (typeof w?.inscritosCount === 'number') return w.inscritosCount;
+    if (Array.isArray(w?.inscripciones)) {
+      return w.inscripciones.filter((i) => i && (i.cancelledAt == null && i.canceledAt == null)).length;
+    }
+    return 0;
+  };
+
   // Tarjeta reutilizable para una ventana
   const renderWindowCard = (window, index) => (
     <div key={window.id} className="col-12 col-md-6 col-lg-6 col-xl-4 d-flex">
@@ -609,13 +660,7 @@ export default function ExamWindowsPage() {
             </div>
             <div className="exam-info-item">
               <i className="fas fa-users"></i>
-                <span>
-                  <strong>Inscritos:</strong> {
-                    Array.isArray(window.inscripciones)
-                      ? window.inscripciones.filter(i => i && (i.cancelledAt == null && i.canceledAt == null)).length
-                      : 0
-                  }/{window.cupoMaximo}
-                </span>
+                <span><strong>Inscritos:</strong> {getInscritosCount(window)}/{window.cupoMaximo}</span>
             </div>
             <div className="exam-info-item">
               <i className="fas fa-sticky-note"></i>
