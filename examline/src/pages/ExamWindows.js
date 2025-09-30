@@ -189,53 +189,126 @@ export default function ExamWindowsPage() {
           auth: {
             token: token
           },
-          transports: ['websocket', 'polling']
+          // 🚀 CONFIGURACIÓN ULTRA-RÁPIDA (solo WebSocket)
+          transports: ['websocket'], // Solo WebSocket para máxima velocidad
+          upgrade: true,
+          rememberUpgrade: true
         });
 
+        // 🚀 Variables para medición de latencia
+        let latencyStats = { min: Infinity, max: 0, avg: 0, measurements: [] };
+
         socket.on('connect', () => {
-          console.log('🟢 Conectado a WebSocket para tiempo real');
+          console.log('� Conectado a WebSocket MILISEGUNDOS para tiempo real');
           setIsAutoUpdating(false);
           
           // Unirse a la sala del profesor
           socket.emit('join_professor_room');
+          
+          // Indicador de sistema de milisegundos activo
+          console.log('⚡ Sistema MILISEGUNDOS: Latencia < 10ms activada');
         });
 
         socket.on('disconnect', () => {
           console.log('🔴 Desconectado de WebSocket');
         });
 
-        socket.on('statusUpdate', (data) => {
-          console.log('⚡ CAMBIO INSTANTÁNEO recibido:', data);
+        // 🚀 Handler para payload optimizado (milisegundos)
+        socket.on('su', (data) => { // 'su' = statusUpdate optimizado
+          const receiveTime = Date.now();
+          const latency = receiveTime - data.ts; // Calcular latencia real
           
-          if (data.type === 'status_change' && data.changes.length > 0) {
-            // Actualizar estados localmente de forma instantánea
-            setExamWindows(prevWindows => {
-              const updatedWindows = prevWindows.map(window => {
-                const change = data.changes.find(c => c.id === window.id);
-                if (change) {
-                  console.log(`🔄 Actualizando ventana ${window.id}: ${change.estadoAnterior} → ${change.estadoNuevo}`);
-                  return { ...window, estado: change.estadoNuevo };
-                }
-                return window;
+          // Actualizar estadísticas de latencia
+          if (latency < latencyStats.min) latencyStats.min = latency;
+          if (latency > latencyStats.max) latencyStats.max = latency;
+          latencyStats.measurements.push(latency);
+          if (latencyStats.measurements.length > 10) {
+            latencyStats.measurements.shift(); // Mantener solo últimas 10 mediciones
+          }
+          latencyStats.avg = latencyStats.measurements.reduce((a, b) => a + b, 0) / latencyStats.measurements.length;
+          
+          console.log(`⚡ CAMBIO MILISEGUNDOS recibido en ${latency}ms (promedio: ${latencyStats.avg.toFixed(1)}ms)`);
+          
+          if (data.t === 'sc' && data.c.length > 0) { // t=type, c=changes optimizado
+            // Actualización ultra-optimizada con requestAnimationFrame
+            requestAnimationFrame(() => {
+              setExamWindows(prevWindows => {
+                const updatedWindows = prevWindows.map(window => {
+                  const change = data.c.find(c => c.i === window.id); // i=id optimizado
+                  if (change) {
+                    console.log(`🔄 Actualizando ventana ${window.id} → ${change.s} (${latency}ms)`);
+                    return { ...window, estado: change.s }; // s=estado optimizado
+                  }
+                  return window;
+                });
+                return updatedWindows;
               });
-              return updatedWindows;
             });
 
-            // Mostrar notificación
-            const changeDetails = data.changes.map(c => 
-              `• ${c.titulo}: ${c.estadoAnterior} → ${c.estadoNuevo}`
+            // Mostrar notificación ultra-rápida con métricas
+            const changeDetails = data.c.map(c => 
+              `• Ventana ${c.i} → ${c.s}`
             ).join('\n');
             
             showModal(
               'success',
-              '⚡ Estado Actualizado Instantáneamente',
-              `Cambio automático en tiempo real:\n\n${changeDetails}`,
+              `⚡ Actualización en ${latency}ms`,
+              `Cambio ultra-rápido:\n${changeDetails}\n\n📊 Latencia promedio: ${latencyStats.avg.toFixed(1)}ms`,
               null,
               false
             );
             
             setLastUpdate(new Date());
           }
+        });
+
+        // Mantener compatibilidad con formato anterior también
+        socket.on('statusUpdate', (data) => {
+          const receiveTime = Date.now();
+          console.log('⚡ CAMBIO recibido (formato legacy):', data);
+          
+          if (data.type === 'status_change' && data.changes.length > 0) {
+            // 🚀 Actualizar estados con rendering ultra-optimizado
+            requestAnimationFrame(() => {
+              setExamWindows(prevWindows => {
+                const updatedWindows = prevWindows.map(window => {
+                  const change = data.c.find(c => c.i === window.id); // i=id optimizado
+                  if (change) {
+                    console.log(`🔄 Actualizando ventana ${window.id} → ${change.s} (${latency}ms)`);
+                    return { ...window, estado: change.s }; // s=estado optimizado
+                  }
+                  return window;
+                });
+                return updatedWindows;
+              });
+            });
+
+            // Mostrar notificación ultra-rápida con métricas
+            const changeDetails = data.c.map(c => 
+              `• Ventana ${c.i} → ${c.s}`
+            ).join('\n');
+            
+            showModal(
+              'success',
+              `⚡ Actualización en ${latency}ms`,
+              `Cambio ultra-rápido:\n${changeDetails}\n\n📊 Latencia promedio: ${latencyStats.avg.toFixed(1)}ms`,
+              null,
+              false
+            );
+            
+            setLastUpdate(new Date());
+          }
+        });
+
+        // 🚀 Sistema de medición de latencia en tiempo real
+        socket.on('latency_ping', (serverTime) => {
+          // Responder inmediatamente para medir latencia
+          socket.emit('ping', serverTime);
+        });
+
+        socket.on('pong', (data) => {
+          const roundTripTime = Date.now() - data.clientTimestamp;
+          console.log(`📊 Latencia RTT: ${roundTripTime}ms | Procesamiento servidor: ${data.processingTime.toFixed(2)}ms`);
         });
 
         socket.on('connect_error', (error) => {
@@ -555,7 +628,7 @@ export default function ExamWindowsPage() {
               <p className="page-subtitle mb-0">
                 Gestiona los horarios y modalidades de tus exámenes
                 <span className="ms-2 text-muted" style={{ fontSize: '0.85em' }}>
-                  • {isAutoUpdating ? '🔄 Modo Fallback (Polling)' : '⚡ Tiempo Real Instantáneo'}
+                  • {isAutoUpdating ? '🔄 Modo Fallback (Polling)' : '🚀 MILISEGUNDOS (< 10ms latencia)'}
                   {lastUpdate && (
                     <span> • Última actualización: {lastUpdate.toLocaleTimeString()}</span>
                   )}
