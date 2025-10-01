@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import '../modern-examline.css';
 import { getExamById } from "../services/api";
@@ -8,7 +8,9 @@ import Modal from "../components/Modal";
 const ExamAttempt = ({ examId: propExamId, onBack }) => {
   const { examId: routeExamId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const examId = propExamId || routeExamId;
+  const windowId = searchParams.get('windowId');
 
   const [exam, setExam] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -30,6 +32,24 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
   const closeModal = () => {
     setModal(prev => ({ ...prev, show: false }));
   };
+
+  // 🔒 Validación inicial de seguridad para estudiantes
+  useEffect(() => {
+    // Verificar que estudiantes tengan windowId
+    const token = localStorage.getItem('token');
+    if (token && !propExamId) { // Solo para acceso directo (no componente embebido)
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (payload.rol === 'student' && !windowId) {
+          setError('Acceso no autorizado: Debes acceder desde tus inscripciones');
+          setLoading(false);
+          return;
+        }
+      } catch (err) {
+        console.error('Error validando token:', err);
+      }
+    }
+  }, [windowId, propExamId]);
 
   // Handle back navigation for errors only
   const handleErrorBack = () => {
@@ -77,20 +97,36 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
     const fetchExam = async () => {
       try {
         setLoading(true);
-        const data = await getExamById(examId);
+        
+        // 🔒 Pasar windowId para validación de seguridad
+        const data = await getExamById(examId, windowId);
         setExam(data);
         setError(null);
       } catch (err) {
-        console.error(err);
+        console.error('Error obteniendo examen:', err);
         setExam(null);
-        setError(err.message);
+        
+        // 🔒 Manejar errores específicos de seguridad
+        if (err.code === 'WINDOW_ID_REQUIRED') {
+          setError('Acceso no autorizado: Se requiere inscripción válida');
+        } else if (err.code === 'NOT_ENROLLED') {
+          setError('No estás inscrito en esta ventana de examen');
+        } else if (err.code === 'NOT_ENABLED') {
+          setError('No estás habilitado para rendir este examen');
+        } else if (err.code === 'EXAM_NOT_AVAILABLE') {
+          setError('El examen no está disponible en este momento');
+        } else if (err.code === 'EXAM_MISMATCH') {
+          setError('La ventana no corresponde a este examen');
+        } else {
+          setError(err.message || 'Error de acceso al examen');
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchExam();
-  }, [examId]);
+  }, [examId, windowId]);
 
   // Add page leave confirmation for exam security
   useEffect(() => {

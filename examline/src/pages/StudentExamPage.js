@@ -73,39 +73,6 @@ const StudentExamPage = () => {
             </div>
           </div>
 
-          {/* Ingresar por código */}
-          <div className="modern-card mb-4">
-            <div className="modern-card-header">
-              <h3 className="modern-card-title">
-                <i className="fas fa-key me-2"></i>
-                Acceder por Código
-              </h3>
-            </div>
-            <div className="modern-card-body">
-              <form onSubmit={handleSubmit} className="d-flex gap-3">
-                <div className="flex-grow-1">
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Ingresa el ID del examen"
-                    value={examId}
-                    onChange={(e) => setExamId(e.target.value)}
-                    style={{
-                      padding: '0.75rem 1rem',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '8px',
-                      fontSize: '1rem'
-                    }}
-                  />
-                </div>
-                <button type="submit" className="modern-btn modern-btn-primary">
-                  <i className="fas fa-search me-2"></i>
-                  Buscar Examen
-                </button>
-              </form>
-            </div>
-          </div>
-
           {/* Historial */}
           <div className="modern-card">
             <div className="modern-card-header">
