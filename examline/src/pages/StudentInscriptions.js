@@ -7,7 +7,10 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import '../modern-examline.css';
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
 
-export default function StudentInscriptionsPage() {
+export default function StudentInscriptionsPage({ 
+  embedded = false, 
+  showHeader = true 
+}) {
   const { user, token } = useAuth();
   const navigate = useNavigate();
   const [availableWindows, setAvailableWindows] = useState([]);
@@ -219,16 +222,20 @@ export default function StudentInscriptionsPage() {
     );
   }
 
+  const containerClass = embedded ? "" : "container py-5";
+  
   return (
-    <div className="container py-5">
-      <div className="modern-card mb-4">
-        <div className="modern-card-header">
-          <div className="d-flex justify-content-between align-items-center">
-            <h1 className="page-title mb-0">Inscripciones a Exámenes</h1>
-            <BackToMainButton />
+    <div className={containerClass}>
+      {showHeader && !embedded && (
+        <div className="modern-card mb-4">
+          <div className="modern-card-header">
+            <div className="d-flex justify-content-between align-items-center">
+              <h1 className="page-title mb-0">Inscripciones a Exámenes</h1>
+              <BackToMainButton />
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Tabs */}
       <div className="modern-card mb-4">
