@@ -115,6 +115,32 @@ export default function StudentInscriptionsPage({
     localStorage.setItem('studentInscriptions_activeTab', activeTab);
   }, [activeTab]);
 
+  // Guardar la posición de scroll
+  useEffect(() => {
+    const handleScroll = () => {
+      sessionStorage.setItem('studentInscriptions_scrollPosition', window.scrollY.toString());
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
+  // Restaurar la posición de scroll después de cargar los datos
+  useEffect(() => {
+    if (!loading) {
+      const savedScrollPosition = sessionStorage.getItem('studentInscriptions_scrollPosition');
+      if (savedScrollPosition) {
+        // Usar requestAnimationFrame para asegurar que el DOM esté renderizado
+        requestAnimationFrame(() => {
+          window.scrollTo(0, parseInt(savedScrollPosition, 10));
+        });
+      }
+    }
+  }, [loading]);
+
   // Verificar que es estudiante
   useEffect(() => {
     if (!user || user.rol !== 'student') {
