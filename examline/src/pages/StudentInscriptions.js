@@ -372,7 +372,7 @@ export default function StudentInscriptionsPage() {
                           </div>
                           <div className="exam-info-item">
                             <i className="fas fa-users"></i>
-                            <span><strong>Cupos:</strong> {window.cupoDisponible}/{window.cupoMaximo}</span>
+                            <span><strong>Inscritos:</strong> {window.cupoMaximo - window.cupoDisponible}/{window.cupoMaximo}</span>
                           </div>
                           <div className={`exam-info-item ${timeStatus.class}`}>
                             <i className="fas fa-info-circle"></i>
@@ -409,8 +409,8 @@ export default function StudentInscriptionsPage() {
                             </button>
                           ) : window.cupoDisponible === 0 ? (
                             <button className="modern-btn modern-btn-secondary w-100" disabled>
-                              <i className="fas fa-times me-2"></i>
-                              Sin cupo
+                              <i className="fas fa-users-slash me-2"></i>
+                              Completo
                             </button>
                           ) : (
                             <button 
@@ -518,6 +518,11 @@ export default function StudentInscriptionsPage() {
                             <button className="modern-btn modern-btn-secondary w-100" disabled>
                               <i className="fas fa-flag-checkered me-2"></i>
                               Examen Finalizado
+                            </button>
+                          ) : timeStatus.text === 'En curso' ? (
+                            <button className="modern-btn modern-btn-success w-100" disabled>
+                              <i className="fas fa-clock me-2"></i>
+                              En Curso
                             </button>
                           ) : (
                             <button 
