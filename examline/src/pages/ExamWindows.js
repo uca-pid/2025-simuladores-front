@@ -438,6 +438,9 @@ export default function ExamWindowsPage() {
     if (!formData.duracion || formData.duracion <= 0) {
       errors.push('La duración debe ser mayor a 0 minutos');
       fieldErrors.duracion = true;
+    } else if (formData.duracion > 9999) {
+      errors.push('La duración no puede ser mayor a 9999 minutos');
+      fieldErrors.duracion = true;
     }
     
     if (!formData.modalidad) {
@@ -447,6 +450,9 @@ export default function ExamWindowsPage() {
     
     if (!formData.cupoMaximo || formData.cupoMaximo <= 0) {
       errors.push('El cupo máximo debe ser mayor a 0');
+      fieldErrors.cupoMaximo = true;
+    } else if (formData.cupoMaximo > 9999) {
+      errors.push('El cupo máximo no puede ser mayor a 9999');
       fieldErrors.cupoMaximo = true;
     }
     
@@ -1075,6 +1081,7 @@ export default function ExamWindowsPage() {
                         value={formData.duracion}
                         onChange={handleInputChange}
                         min="1"
+                        max="9999"
                         required
                         style={{
                           borderRadius: '8px',
@@ -1127,6 +1134,7 @@ export default function ExamWindowsPage() {
                                   ? editingWindow.inscripciones.filter(i => i && (i.cancelledAt == null && i.canceledAt == null)).length
                                   : 1))
                           : 1}
+                        max="9999"
                         required
                         disabled={!!editingWindow && editingWindow.estado === 'en_curso'}
                         style={{
