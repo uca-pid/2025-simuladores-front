@@ -72,14 +72,15 @@ export default function StudentInscriptionsPage({
                 const attemptData = await attemptResponse.json();
                 return {
                   ...inscription,
-                  hasCompletedAttempt: attemptData.hasAttempt && attemptData.attempt?.estado === 'finalizado'
+                  hasCompletedAttempt: attemptData.hasAttempt && attemptData.attempt?.estado === 'finalizado',
+                  attemptId: attemptData.hasAttempt ? attemptData.attempt?.id : null
                 };
               }
             } catch (error) {
               console.error('Error checking attempt for inscription:', inscription.id);
             }
             
-            return { ...inscription, hasCompletedAttempt: false };
+            return { ...inscription, hasCompletedAttempt: false, attemptId: null };
           })
         );
         
@@ -538,10 +539,19 @@ export default function StudentInscriptionsPage({
                         </div>
                         <div className="mt-3">
                           {inscription.hasCompletedAttempt ? (
-                            <button className="modern-btn modern-btn-success w-100" disabled>
-                              <i className="fas fa-check-circle me-2"></i>
-                              Examen Completado
-                            </button>
+                            <div className="d-grid gap-2">
+                              <button className="modern-btn modern-btn-success" disabled>
+                                <i className="fas fa-check-circle me-2"></i>
+                                Examen Completado
+                              </button>
+                              <button 
+                                className="modern-btn modern-btn-primary"
+                                onClick={() => navigate(`/exam-results/${inscription.attemptId}`)}
+                              >
+                                <i className="fas fa-chart-bar me-2"></i>
+                                Ver Resultados
+                              </button>
+                            </div>
                           ) : canTake ? (
                             <button 
                               className="modern-btn modern-btn-primary w-100"
