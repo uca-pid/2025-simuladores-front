@@ -1,16 +1,77 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import '../modern-examline.css';
 import { getExamById } from "../services/api";
+import Modal from "../components/Modal";
 
 const ExamAttempt = ({ examId: propExamId, onBack }) => {
   const { examId: routeExamId } = useParams();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const examId = propExamId || routeExamId;
+  const windowId = searchParams.get('windowId');
 
   const [exam, setExam] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [modal, setModal] = useState({
+    show: false,
+    type: 'info',
+    title: '',
+    message: '',
+    onConfirm: null,
+    showCancel: false
+  });
+
+  // Modal helper functions
+  const showModal = (type, title, message, onConfirm = null, showCancel = false) => {
+    setModal({ show: true, type, title, message, onConfirm, showCancel });
+  };
+
+  const closeModal = () => {
+    setModal(prev => ({ ...prev, show: false }));
+  };
+
+  // Handle back navigation for errors only
+  const handleErrorBack = () => {
+    if (onBack) {
+      // When used as embedded component (from StudentExamPage)
+      onBack();
+    } else {
+      // When accessed directly, go to student main page
+      navigate('/student-exam');
+    }
+  };
+
+  // Handle exam completion - always goes to student main page
+  const handleExamCompletion = () => {
+    if (onBack) {
+      // When used as embedded component (from StudentExamPage)
+      onBack();
+    } else {
+      // When accessed directly, go to student main page
+      navigate('/student-exam');
+    }
+  };
+
+  // Handle navigation away from exam with confirmation
+  const handleLeaveExam = () => {
+    showModal(
+      'warning',
+      'Salir del Examen',
+      '¿Estás seguro de que quieres salir del examen? Se perderá todo tu progreso y no podrás volver a intentarlo.',
+      () => {
+        closeModal();
+        if (onBack) {
+          onBack();
+        } else {
+          navigate('/student-exam');
+        }
+      },
+      true
+    );
+  };
 
   useEffect(() => {
     if (!examId) return;
@@ -33,6 +94,48 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
     fetchExam();
   }, [examId]);
 
+  // Add page leave confirmation for exam security
+  useEffect(() => {
+    if (!exam || error || propExamId) return; // Don't add for embedded mode or errors
+
+    const handleBeforeUnload = (e) => {
+      e.preventDefault();
+      e.returnValue = '¿Estás seguro de que quieres salir del examen? Se perderá tu progreso.';
+      return e.returnValue;
+    };
+
+    const handlePopState = (e) => {
+      e.preventDefault();
+      // Show modal for back button press
+      showModal(
+        'warning',
+        'Salir del Examen',
+        '¿Estás seguro de que quieres salir del examen? Se perderá todo tu progreso.',
+        () => {
+          closeModal();
+          // Allow navigation by going back
+          window.history.back();
+        },
+        true
+      );
+      
+      // Prevent the navigation initially
+      window.history.pushState(null, '', window.location.pathname);
+    };
+
+    // Add event listeners
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('popstate', handlePopState);
+    
+    // Push initial state to handle back button
+    window.history.pushState(null, '', window.location.pathname);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [exam, error, propExamId]);
+
   if (loading) {
     return (
       <div className="container py-5">
@@ -54,12 +157,10 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
           <p className="empty-subtitle">
             {error || "El examen solicitado no existe o no tienes permisos para acceder."}
           </p>
-          {propExamId && (
-            <button className="modern-btn modern-btn-secondary" onClick={onBack}>
-              <i className="fas fa-arrow-left me-2"></i>
-              Volver
-            </button>
-          )}
+          <button className="modern-btn modern-btn-secondary" onClick={handleErrorBack}>
+            <i className="fas fa-arrow-left me-2"></i>
+            Volver
+          </button>
         </div>
       </div>
     );
@@ -70,10 +171,23 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
       <div className="modern-card mb-4">
         <div className="modern-card-header">
           <div className="d-flex justify-content-between align-items-center">
-            <h1 className="page-title mb-0">
-              <i className="fas fa-clipboard-list me-3"></i>
-              {exam.titulo || "Sin título"}
-            </h1>
+            <div className="d-flex align-items-center">
+              <h1 className="page-title mb-0">
+                <i className="fas fa-clipboard-list me-3"></i>
+                {exam.titulo || "Sin título"}
+              </h1>
+              {!propExamId ? (
+                <span className="badge bg-warning text-dark ms-3">
+                  <i className="fas fa-exclamation-triangle me-1"></i>
+                  EXAMEN EN CURSO
+                </span>
+              ) : (
+                <span className="badge bg-info text-white ms-3">
+                  <i className="fas fa-eye me-1"></i>
+                  VISTA PREVIA
+                </span>
+              )}
+            </div>
             <span className="badge badge-primary">
               <i className="fas fa-question-circle me-2"></i>
               {exam.preguntas?.length || 0} preguntas
@@ -91,12 +205,10 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
           <p className="empty-subtitle">
             Este examen no tiene preguntas configuradas aún.
           </p>
-          {propExamId && (
-            <button className="modern-btn modern-btn-primary" onClick={onBack}>
-              <i className="fas fa-arrow-left me-2"></i>
-              Volver al inicio
-            </button>
-          )}
+          <button className="modern-btn modern-btn-primary" onClick={handleErrorBack}>
+            <i className="fas fa-arrow-left me-2"></i>
+            Volver al inicio
+          </button>
         </div>
       ) : (
         <>
@@ -137,16 +249,43 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
                 ¿Terminaste de revisar el examen?
               </h5>
               <p className="text-muted mb-4">
-                Una vez que termines, podrás volver al panel principal.
+                Una vez que termines, podrás volver al panel principal. Si necesitas salir antes de completar el examen, usa el botón "Salir sin terminar".
               </p>
-              <button className="modern-btn modern-btn-primary modern-btn-lg" onClick={onBack}>
-                <i className="fas fa-check me-2"></i>
-                Terminar intento
-              </button>
+              <div className="d-flex gap-3 justify-content-center">
+                <button className="modern-btn modern-btn-primary modern-btn-lg" onClick={handleExamCompletion}>
+                  <i className="fas fa-check me-2"></i>
+                  Terminar intento
+                </button>
+                {!propExamId && (
+                  <button className="modern-btn modern-btn-outline-danger modern-btn-lg" onClick={handleLeaveExam}>
+                    <i className="fas fa-times me-2"></i>
+                    Salir sin terminar
+                  </button>
+                )}
+                {propExamId && (
+                  <button className="modern-btn modern-btn-secondary modern-btn-lg" onClick={handleExamCompletion}>
+                    <i className="fas fa-arrow-left me-2"></i>
+                    Volver al inicio
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </>
       )}
+
+      {/* Modal Component */}
+      <Modal
+        show={modal.show}
+        onClose={closeModal}
+        onConfirm={modal.onConfirm}
+        title={modal.title}
+        message={modal.message}
+        type={modal.type}
+        showCancel={modal.showCancel}
+        confirmText={modal.type === 'warning' ? 'Salir del Examen' : 'Aceptar'}
+        cancelText="Continuar Examen"
+      />
     </div>
   );
 };
