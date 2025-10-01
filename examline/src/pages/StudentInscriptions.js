@@ -503,8 +503,18 @@ export default function StudentInscriptionsPage({
                             </span>
                           </div>
                           {inscription.presente === true && (
-                            <span className="badge badge-success">
-                              <i className="fas fa-check-circle me-1"></i>
+                            <span className="badge" style={{
+                              backgroundColor: '#10b981',
+                              color: 'white',
+                              fontSize: '0.75rem',
+                              fontWeight: '600',
+                              padding: '0.375rem 0.75rem',
+                              borderRadius: '0.5rem',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.25rem'
+                            }}>
+                              <i className="fas fa-check-circle"></i>
                               Habilitado
                             </span>
                           )}
