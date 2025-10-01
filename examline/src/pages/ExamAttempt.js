@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import '../modern-examline.css';
 import { getExamById } from "../services/api";
@@ -7,10 +7,8 @@ import Modal from "../components/Modal";
 
 const ExamAttempt = ({ examId: propExamId, onBack }) => {
   const { examId: routeExamId } = useParams();
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const examId = propExamId || routeExamId;
-  const windowId = searchParams.get('windowId');
 
   const [exam, setExam] = useState(null);
   const [loading, setLoading] = useState(true);
