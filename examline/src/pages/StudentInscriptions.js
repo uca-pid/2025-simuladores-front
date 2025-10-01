@@ -59,7 +59,31 @@ export default function StudentInscriptionsPage({
       
       if (response.ok) {
         const data = await response.json();
-        setMyInscriptions(data);
+        
+        // Para cada inscripción, verificar si tiene un intento completado
+        const inscriptionsWithAttempts = await Promise.all(
+          data.map(async (inscription) => {
+            try {
+              const attemptResponse = await fetch(`${API_BASE_URL}/exam-attempts/check/${inscription.examWindow.examId}?windowId=${inscription.examWindow.id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+              
+              if (attemptResponse.ok) {
+                const attemptData = await attemptResponse.json();
+                return {
+                  ...inscription,
+                  hasCompletedAttempt: attemptData.hasAttempt && attemptData.attempt?.estado === 'finalizado'
+                };
+              }
+            } catch (error) {
+              console.error('Error checking attempt for inscription:', inscription.id);
+            }
+            
+            return { ...inscription, hasCompletedAttempt: false };
+          })
+        );
+        
+        setMyInscriptions(inscriptionsWithAttempts);
       }
     } catch (error) {
       console.error('Error cargando mis inscripciones:', error);
@@ -513,7 +537,12 @@ export default function StudentInscriptionsPage({
                           </div>
                         </div>
                         <div className="mt-3">
-                          {canTake ? (
+                          {inscription.hasCompletedAttempt ? (
+                            <button className="modern-btn modern-btn-success w-100" disabled>
+                              <i className="fas fa-check-circle me-2"></i>
+                              Examen Completado
+                            </button>
+                          ) : canTake ? (
                             <button 
                               className="modern-btn modern-btn-primary w-100"
                               onClick={() => navigate(`/exam-attempt/${window.examId}?windowId=${window.id}`)}
@@ -524,10 +553,10 @@ export default function StudentInscriptionsPage({
                           ) : timeStatus.text === 'Finalizado' ? (
                             <button className="modern-btn modern-btn-secondary w-100" disabled>
                               <i className="fas fa-flag-checkered me-2"></i>
-                              Examen Finalizado
+                              Ventana Finalizada
                             </button>
                           ) : timeStatus.text === 'En curso' ? (
-                            <button className="modern-btn modern-btn-success w-100" disabled>
+                            <button className="modern-btn modern-btn-warning w-100" disabled>
                               <i className="fas fa-clock me-2"></i>
                               En Curso
                             </button>

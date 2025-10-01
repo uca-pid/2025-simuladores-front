@@ -13,8 +13,10 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
   const windowId = searchParams.get('windowId');
 
   const [exam, setExam] = useState(null);
+  const [attempt, setAttempt] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
   const [modal, setModal] = useState({
     show: false,
     type: 'info',
@@ -23,6 +25,8 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
     onConfirm: null,
     showCancel: false
   });
+
+const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
 
   // Modal helper functions
   const showModal = (type, title, message, onConfirm = null, showCancel = false) => {
@@ -62,15 +66,57 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
     }
   };
 
-  // Handle exam completion - always goes to student main page
+  // Handle exam completion - finish attempt and return
   const handleExamCompletion = () => {
-    if (onBack) {
-      // When used as embedded component (from StudentExamPage)
-      onBack();
-    } else {
-      // When accessed directly, go to student main page
-      navigate('/student-exam');
+    if (!attempt) {
+      // Si no hay intento, simplemente navegar de vuelta
+      if (onBack) {
+        onBack();
+      } else {
+        navigate('/student-exam');
+      }
+      return;
     }
+
+    showModal(
+      'confirm',
+      'Terminar Intento',
+      '¿Estás seguro de que quieres terminar el intento? Una vez finalizado no podrás volver a entrar al examen.',
+      async () => {
+        try {
+          setSubmitting(true);
+          const token = localStorage.getItem('token');
+
+          const response = await fetch(`${API_BASE_URL}/exam-attempts/${attempt.id}/finish`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            }
+          });
+
+          if (response.ok) {
+            showModal('success', '¡Intento Finalizado!', 'Has terminado el examen exitosamente.', () => {
+              closeModal();
+              if (onBack) {
+                onBack();
+              } else {
+                navigate('/student-exam');
+              }
+            });
+          } else {
+            const errorData = await response.json();
+            showModal('error', 'Error', errorData.error || 'Error al finalizar intento');
+          }
+        } catch (error) {
+          console.error('Error finishing attempt:', error);
+          showModal('error', 'Error', 'Error de conexión al finalizar intento');
+        } finally {
+          setSubmitting(false);
+        }
+      },
+      true
+    );
   };
 
   // Handle navigation away from exam with confirmation
@@ -94,19 +140,62 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
   useEffect(() => {
     if (!examId) return;
 
-    const fetchExam = async () => {
+    const loadExamAndAttempt = async () => {
       try {
         setLoading(true);
-        
-        // 🔒 Pasar windowId para validación de seguridad
-        const data = await getExamById(examId, windowId);
-        setExam(data);
+        const token = localStorage.getItem('token');
+
+        // Primero verificar si ya existe un intento
+        const checkResponse = await fetch(`${API_BASE_URL}/exam-attempts/check/${examId}?windowId=${windowId || ''}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (checkResponse.ok) {
+          const checkData = await checkResponse.json();
+          
+          if (checkData.hasAttempt && checkData.attempt.estado === 'finalizado') {
+            setError('Ya has completado este examen');
+            setLoading(false);
+            return;
+          }
+        }
+
+        // Cargar examen para validaciones de seguridad
+        const examData = await getExamById(examId, windowId);
+        setExam(examData);
+
+        // Crear o obtener intento existente
+        const attemptResponse = await fetch(`${API_BASE_URL}/exam-attempts/start`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ 
+            examId: parseInt(examId), 
+            examWindowId: windowId ? parseInt(windowId) : null 
+          })
+        });
+
+        if (attemptResponse.ok) {
+          const attemptData = await attemptResponse.json();
+          setAttempt(attemptData);
+          
+          if (attemptData.estado === 'finalizado') {
+            setError('Ya has completado este examen');
+            return;
+          }
+        } else {
+          const errorData = await attemptResponse.json();
+          setError(errorData.error || 'Error creando intento de examen');
+        }
+
         setError(null);
       } catch (err) {
-        console.error('Error obteniendo examen:', err);
+        console.error('Error cargando examen:', err);
         setExam(null);
         
-        // 🔒 Manejar errores específicos de seguridad
+        // Manejar errores específicos de seguridad
         if (err.code === 'WINDOW_ID_REQUIRED') {
           setError('Acceso no autorizado: Se requiere inscripción válida');
         } else if (err.code === 'NOT_ENROLLED') {
@@ -125,7 +214,7 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
       }
     };
 
-    fetchExam();
+    loadExamAndAttempt();
   }, [examId, windowId]);
 
   // Add page leave confirmation for exam security
@@ -280,20 +369,33 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
             <div className="modern-card-body text-center">
               <h5 className="mb-3">
                 <i className="fas fa-flag-checkered me-2"></i>
-                ¿Terminaste de revisar el examen?
+                ¿Terminaste el examen?
               </h5>
               <p className="text-muted mb-4">
-                Una vez que termines, podrás volver al panel principal. Si necesitas salir antes de completar el examen, usa el botón "Salir sin terminar".
+                Una vez que finalices el intento, no podrás volver a entrar al examen. Asegúrate de haber respondido todas las preguntas.
               </p>
               <div className="d-flex gap-3 justify-content-center">
-                <button className="modern-btn modern-btn-primary modern-btn-lg" onClick={handleExamCompletion}>
-                  <i className="fas fa-check me-2"></i>
-                  Terminar intento
+                <button 
+                  className="modern-btn modern-btn-primary modern-btn-lg" 
+                  onClick={handleExamCompletion}
+                  disabled={submitting}
+                >
+                  {submitting ? (
+                    <>
+                      <div className="spinner-border spinner-border-sm me-2" role="status"></div>
+                      Finalizando...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fas fa-check me-2"></i>
+                      Finalizar Intento
+                    </>
+                  )}
                 </button>
                 {!propExamId && (
                   <button className="modern-btn modern-btn-outline-danger modern-btn-lg" onClick={handleLeaveExam}>
                     <i className="fas fa-times me-2"></i>
-                    Salir sin terminar
+                    Salir sin finalizar
                   </button>
                 )}
                 {propExamId && (
@@ -317,8 +419,8 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
         message={modal.message}
         type={modal.type}
         showCancel={modal.showCancel}
-        confirmText={modal.type === 'warning' ? 'Salir del Examen' : 'Aceptar'}
-        cancelText="Continuar Examen"
+        confirmText={modal.type === 'warning' ? 'Salir del Examen' : modal.type === 'confirm' ? 'Finalizar' : 'Aceptar'}
+        cancelText={modal.type === 'confirm' ? 'Cancelar' : 'Continuar Examen'}
       />
     </div>
   );
