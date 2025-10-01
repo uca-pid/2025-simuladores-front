@@ -1,24 +1,36 @@
-import React from "react";
+import React, { useState } from "react";
 import UserHeader from "../components/UserHeader";
 import { useAuth } from "../contexts/AuthContext";
 import StudentInscriptionsPage from "./StudentInscriptions";
 
 const StudentExamPage = () => {
   const { user } = useAuth();
+  const [showInstructivo, setShowInstructivo] = useState(false);
 
   return (
     <div className="container py-5">
       {/* Header con información del usuario */}
       <UserHeader />
 
-      {/* Header explicativo del sistema */}
+      {/* Instructivo colapsable */}
       <div className="modern-card mb-4">
         <div className="modern-card-header">
-          <div>
-            <h1 className="page-title mb-2">
-              <i className="fas fa-graduation-cap me-2" style={{ color: 'var(--primary-color)' }}></i>
-              Sistema de Inscripciones y Exámenes
-            </h1>
+          <div className="d-flex justify-content-between align-items-center">
+            <h3 className="modern-card-title mb-0">
+              <i className="fas fa-info-circle me-2"></i>
+              Instructivo de Uso
+            </h3>
+            <button
+              className="modern-btn modern-btn-secondary"
+              onClick={() => setShowInstructivo(!showInstructivo)}
+            >
+              <i className={`fas fa-chevron-${showInstructivo ? 'up' : 'down'}`}></i>
+              {showInstructivo ? 'Ocultar' : 'Ver instructivo'}
+            </button>
+          </div>
+        </div>
+        {showInstructivo && (
+          <div className="modern-card-body">
             <div className="system-explanation">
               <div className="row g-4">
                 <div className="col-md-4">
@@ -63,7 +75,7 @@ const StudentExamPage = () => {
               </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Componente de inscripciones anidado */}

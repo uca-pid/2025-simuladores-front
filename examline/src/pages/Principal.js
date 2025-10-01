@@ -9,6 +9,7 @@ const Principal = () => {
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showInstructivo, setShowInstructivo] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -39,10 +40,77 @@ const Principal = () => {
   return (
     <div className="container py-5">
       <UserHeader />
+
+      {/* Instructivo colapsable */}
       <div className="modern-card mb-4">
         <div className="modern-card-header">
           <div className="d-flex justify-content-between align-items-center">
-            <h1 className="page-title mb-0">Panel de Profesor</h1>
+            <h3 className="modern-card-title mb-0">
+              <i className="fas fa-info-circle me-2"></i>
+              Instructivo de Uso
+            </h3>
+            <button
+              className="modern-btn modern-btn-secondary"
+              onClick={() => setShowInstructivo(!showInstructivo)}
+            >
+              <i className={`fas fa-chevron-${showInstructivo ? 'up' : 'down'}`}></i>
+              {showInstructivo ? 'Ocultar' : 'Ver instructivo'}
+            </button>
+          </div>
+        </div>
+        {showInstructivo && (
+          <div className="modern-card-body">
+            <div className="system-explanation">
+              <div className="row g-4">
+                <div className="col-md-4">
+                  <div className="explanation-step">
+                    <div className="step-icon">
+                      <i className="fas fa-plus-circle text-primary"></i>
+                    </div>
+                    <div className="step-content">
+                      <h5 className="step-title">1. Crear Exámenes</h5>
+                      <p className="step-description">
+                        Haz clic en "Crear Examen" para diseñar evaluaciones. Completa el título del examen, agrega preguntas de múltiple opción (mínimo 4 opciones) y marca la respuesta correcta. Puedes agregar tantas preguntas como necesites usando el botón "+".
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="col-md-4">
+                  <div className="explanation-step">
+                    <div className="step-icon">
+                      <i className="fas fa-calendar-alt text-success"></i>
+                    </div>
+                    <div className="step-content">
+                      <h5 className="step-title">2. Programar Ventanas</h5>
+                      <p className="step-description">
+                        Ve a "Ventanas de Examen" para crear fechas específicas. Selecciona un examen, define fecha y hora de inicio/fin, establece el cupo máximo de estudiantes y guarda. Los estudiantes podrán inscribirse según disponibilidad.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="col-md-4">
+                  <div className="explanation-step">
+                    <div className="step-icon">
+                      <i className="fas fa-user-check text-warning"></i>
+                    </div>
+                    <div className="step-content">
+                      <h5 className="step-title">3. Habilitar y Evaluar</h5>
+                      <p className="step-description">
+                        En cada ventana de examen, revisa las inscripciones y habilita a los estudiantes marcando "Presente". Solo estudiantes habilitados pueden rendir en el horario programado. Consulta resultados una vez finalizados.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="modern-card mb-4">
+        <div className="modern-card-header">
+          <div className="d-flex justify-content-between align-items-center">
+            <h2 className="page-title mb-0">Panel de Profesor</h2>
             <div className="d-flex gap-2">
               <button 
                 className="modern-btn modern-btn-secondary" 
