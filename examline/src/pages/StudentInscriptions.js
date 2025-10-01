@@ -16,7 +16,10 @@ export default function StudentInscriptionsPage({
   const [availableWindows, setAvailableWindows] = useState([]);
   const [myInscriptions, setMyInscriptions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('available'); // 'available' o 'myInscriptions'
+  const [activeTab, setActiveTab] = useState(() => {
+    // Recuperar la pestaña del localStorage o usar 'available' por defecto
+    return localStorage.getItem('studentInscriptions_activeTab') || 'available';
+  });
   const [filters, setFilters] = useState({
     materia: '',
     profesor: '',
@@ -106,6 +109,11 @@ export default function StudentInscriptionsPage({
       setLoading(false);
     }
   }, [loadAvailableWindows, loadMyInscriptions, showModal]);
+
+  // Guardar la pestaña activa en localStorage
+  useEffect(() => {
+    localStorage.setItem('studentInscriptions_activeTab', activeTab);
+  }, [activeTab]);
 
   // Verificar que es estudiante
   useEffect(() => {
