@@ -356,34 +356,51 @@ export default function StudentInscriptionsPage() {
                         <div className="exam-info">
                           <div className="exam-info-item">
                             <i className="fas fa-calendar"></i>
-                            <span>{new Date(window.fechaInicio).toLocaleDateString()}</span>
+                            <span><strong>Fecha:</strong> {new Date(window.fechaInicio).toLocaleDateString()}</span>
                           </div>
                           <div className="exam-info-item">
                             <i className="fas fa-clock"></i>
-                            <span>{new Date(window.fechaInicio).toLocaleTimeString()}</span>
+                            <span><strong>Hora de inicio:</strong> {new Date(window.fechaInicio).toLocaleTimeString()}</span>
                           </div>
                           <div className="exam-info-item">
                             <i className="fas fa-hourglass-half"></i>
-                            <span>{window.duracion} minutos</span>
+                            <span><strong>Duración:</strong> {window.duracion} min</span>
                           </div>
                           <div className="exam-info-item">
                             <i className="fas fa-laptop"></i>
-                            <span>{window.modalidad}</span>
+                            <span><strong>Modalidad:</strong> {window.modalidad ? window.modalidad.charAt(0).toUpperCase() + window.modalidad.slice(1) : ''}</span>
                           </div>
                           <div className="exam-info-item">
                             <i className="fas fa-users"></i>
-                            <span>{window.cupoDisponible}/{window.cupoMaximo} cupos</span>
+                            <span><strong>Cupos:</strong> {window.cupoDisponible}/{window.cupoMaximo}</span>
                           </div>
                           <div className={`exam-info-item ${timeStatus.class}`}>
                             <i className="fas fa-info-circle"></i>
                             <strong>{timeStatus.text}</strong>
                           </div>
                         </div>
-                        {window.notas && (
-                          <div className="alert alert-light mt-3">
-                            <small><strong>Notas:</strong> {window.notas}</small>
-                          </div>
-                        )}
+                          {window.notas && (
+                            <div className="exam-info-item">
+                              <i className="fas fa-sticky-note"></i>
+                              <span className="me-2"><strong>Notas:</strong></span>
+                              <span 
+                                style={{
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 3,
+                                  WebkitBoxOrient: 'vertical',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  maxHeight: '3.75em',
+                                  lineHeight: '1.25em',
+                                  fontStyle: !window.notas ? 'italic' : 'normal',
+                                  color: !window.notas ? '#6c757d' : 'inherit',
+                                  fontSize: '0.9em'
+                                }}
+                              >
+                                {window.notas || 'Sin notas adicionales'}
+                              </span>
+                            </div>
+                          )}
                         <div className="mt-3">
                           {window.yaInscrito ? (
                             <button className="modern-btn modern-btn-secondary w-100" disabled>
@@ -465,19 +482,19 @@ export default function StudentInscriptionsPage() {
                         <div className="exam-info">
                           <div className="exam-info-item">
                             <i className="fas fa-calendar"></i>
-                            <span>{new Date(window.fechaInicio).toLocaleDateString()}</span>
+                            <span><strong>Fecha:</strong> {new Date(window.fechaInicio).toLocaleDateString()}</span>
                           </div>
                           <div className="exam-info-item">
                             <i className="fas fa-clock"></i>
-                            <span>{new Date(window.fechaInicio).toLocaleTimeString()}</span>
+                            <span><strong>Hora de inicio:</strong> {new Date(window.fechaInicio).toLocaleTimeString()}</span>
                           </div>
                           <div className="exam-info-item">
                             <i className="fas fa-hourglass-half"></i>
-                            <span>{window.duracion} minutos</span>
+                            <span><strong>Duración:</strong> {window.duracion} min</span>
                           </div>
                           <div className="exam-info-item">
                             <i className="fas fa-laptop"></i>
-                            <span>{window.modalidad}</span>
+                            <span><strong>Modalidad:</strong> {window.modalidad ? window.modalidad.charAt(0).toUpperCase() + window.modalidad.slice(1) : ''}</span>
                           </div>
                           <div className={`exam-info-item ${timeStatus.class}`}>
                             <i className="fas fa-info-circle"></i>
@@ -485,7 +502,7 @@ export default function StudentInscriptionsPage() {
                           </div>
                           <div className="exam-info-item">
                             <i className="fas fa-user-check"></i>
-                            <span>Inscrito: {new Date(inscription.inscribedAt).toLocaleDateString()}</span>
+                            <span><strong>Inscrito:</strong> {new Date(inscription.inscribedAt).toLocaleDateString()}</span>
                           </div>
                         </div>
                         <div className="mt-3">
