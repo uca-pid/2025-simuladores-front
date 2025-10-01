@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import BackToMainButton from '../components/BackToMainButton';
@@ -39,36 +39,6 @@ export default function ExamWindowsPage() {
   const showModal = useCallback((type, title, message, onConfirm = null, showCancel = false) => {
     setModal({ show: true, type, title, message, onConfirm, showCancel });
   }, []);
-
-  // Función para comparar estados y detectar cambios
-  const checkForStatusChanges = useCallback((oldWindows, newWindows) => {
-    const changes = [];
-    
-    newWindows.forEach(newWindow => {
-      const oldWindow = oldWindows.find(w => w.id === newWindow.id);
-      if (oldWindow && oldWindow.estado !== newWindow.estado) {
-        changes.push({
-          titulo: newWindow.exam.titulo,
-          estadoAnterior: oldWindow.estado,
-          estadoNuevo: newWindow.estado
-        });
-      }
-    });
-    
-    if (changes.length > 0) {
-      const changeDetails = changes.map(c => 
-        `• ${c.titulo}: ${c.estadoAnterior} → ${c.estadoNuevo}`
-      ).join('\n');
-      
-      showModal(
-        'info',
-        '🔄 Estados Actualizados Automáticamente',
-        `Se detectaron cambios de estado:\n\n${changeDetails}`,
-        null,
-        false
-      );
-    }
-  }, [showModal]);
 
   // Función para ajustar altura del textarea
   const adjustTextareaHeight = (textarea) => {
@@ -131,19 +101,8 @@ export default function ExamWindowsPage() {
       
       if (windowsRes.ok) {
         const windowsData = await windowsRes.json();
-        
-        // Solo mostrar notificación de cambios si es una actualización en segundo plano
-        if (isBackgroundUpdate) {
-          setExamWindows(prevWindows => {
-            if (prevWindows.length > 0) {
-              checkForStatusChanges(prevWindows, windowsData);
-            }
-            return windowsData;
-          });
-        } else {
-          setExamWindows(windowsData);
-        }
-        
+        // Actualizar directamente sin modales de cambio de estado
+        setExamWindows(windowsData);
         setLastUpdate(new Date());
       } else {
         console.error('Error cargando ventanas:', windowsRes.status, await windowsRes.text());
@@ -160,7 +119,7 @@ export default function ExamWindowsPage() {
         setIsAutoUpdating(false);
       }
     }
-  }, [token, navigate, checkForStatusChanges, showModal]);
+  }, [token, navigate, showModal]);
 
   // Verificar que es profesor y cargar datos iniciales
   useEffect(() => {
@@ -253,19 +212,7 @@ export default function ExamWindowsPage() {
               });
             });
 
-            // Mostrar notificación ultra-rápida con métricas
-            const changeDetails = data.c.map(c => 
-              `• Ventana ${c.i} → ${c.s}`
-            ).join('\n');
-            
-            showModal(
-              'success',
-              `⚡ Actualización en ${latency}ms`,
-              `Cambio ultra-rápido:\n${changeDetails}\n\n📊 Latencia promedio: ${latencyStats.avg.toFixed(1)}ms`,
-              null,
-              false
-            );
-            
+            // Notificaciones visuales desactivadas para cambios de estado automáticos
             setLastUpdate(new Date());
             // Refrescar en background para sincronizar conteos de inscripciones
             triggerSilentRefresh();
@@ -294,19 +241,7 @@ export default function ExamWindowsPage() {
               });
             });
 
-            // Mostrar notificación ultra-rápida con métricas
-            const changeDetails = data.c.map(c => 
-              `• Ventana ${c.i} → ${c.s}`
-            ).join('\n');
-            
-            showModal(
-              'success',
-              `⚡ Actualización en ${latency}ms`,
-              `Cambio ultra-rápido:\n${changeDetails}\n\n📊 Latencia promedio: ${latencyStats.avg.toFixed(1)}ms`,
-              null,
-              false
-            );
-            
+            // Notificaciones visuales desactivadas para cambios de estado automáticos
             setLastUpdate(new Date());
             // Refrescar en background para sincronizar conteos de inscripciones
             triggerSilentRefresh();
