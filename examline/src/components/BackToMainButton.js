@@ -1,8 +1,9 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import '../modern-examline.css';
 
-const BackToMainButton = ({ className = "btn btn-outline-secondary" }) => {
+const BackToMainButton = ({ className = "modern-btn modern-btn-secondary" }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -14,17 +15,27 @@ const BackToMainButton = ({ className = "btn btn-outline-secondary" }) => {
     }
   };
 
-  const getButtonText = () => {
+  const getButtonContent = () => {
     if (user?.rol === "professor") {
-      return "Volver a Principal";
+      return (
+        <>
+          <i className="fas fa-chalkboard-teacher me-2"></i>
+          Volver a Principal
+        </>
+      );
     } else {
-      return "Volver al Inicio";
+      return (
+        <>
+          <i className="fas fa-home me-2"></i>
+          Volver al Inicio
+        </>
+      );
     }
   };
 
   return (
     <button className={className} onClick={handleBackToMain}>
-      {getButtonText()}
+      {getButtonContent()}
     </button>
   );
 };

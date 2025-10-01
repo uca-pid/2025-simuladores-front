@@ -181,9 +181,16 @@ export async function getExams() {
   }
 }
 
-export async function getExamById(examId) {
+export async function getExamById(examId, windowId = null) {
   try {
-    const res = await fetch(`${API_BASE_URL}/exams/${examId}`, {
+    let url = `${API_BASE_URL}/exams/${examId}`;
+    
+    // 🔒 Agregar windowId para validación de seguridad si se proporciona
+    if (windowId) {
+      url += `?windowId=${windowId}`;
+    }
+    
+    const res = await fetch(url, {
       method: "GET",
       headers: getAuthHeaders(),
     });

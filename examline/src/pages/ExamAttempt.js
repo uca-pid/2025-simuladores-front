@@ -1,69 +1,363 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { useAuth } from "../contexts/AuthContext";
+import '../modern-examline.css';
 import { getExamById } from "../services/api";
+import Modal from "../components/Modal";
 
 const ExamAttempt = ({ examId: propExamId, onBack }) => {
   const { examId: routeExamId } = useParams();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const examId = propExamId || routeExamId;
-  const { user } = useAuth();
+  const windowId = searchParams.get('windowId');
 
   const [exam, setExam] = useState(null);
+  const [attempt, setAttempt] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [modal, setModal] = useState({
+    show: false,
+    type: 'info',
+    title: '',
+    message: '',
+    onConfirm: null,
+    showCancel: false
+  });
+
+const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
+
+  // Modal helper functions
+  const showModal = (type, title, message, onConfirm = null, showCancel = false) => {
+    setModal({ show: true, type, title, message, onConfirm, showCancel });
+  };
+
+  const closeModal = () => {
+    setModal(prev => ({ ...prev, show: false }));
+  };
+
+  // 🔒 Validación inicial de seguridad para estudiantes
+  useEffect(() => {
+    // Verificar que estudiantes tengan windowId
+    const token = localStorage.getItem('token');
+    if (token && !propExamId) { // Solo para acceso directo (no componente embebido)
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (payload.rol === 'student' && !windowId) {
+          setError('Acceso no autorizado: Debes acceder desde tus inscripciones');
+          setLoading(false);
+          return;
+        }
+      } catch (err) {
+        console.error('Error validando token:', err);
+      }
+    }
+  }, [windowId, propExamId]);
+
+  // Handle back navigation for errors only
+  const handleErrorBack = () => {
+    if (onBack) {
+      // When used as embedded component (from StudentExamPage)
+      onBack();
+    } else {
+      // When accessed directly, go to student main page
+      navigate('/student-exam');
+    }
+  };
+
+  // Handle exam completion - finish attempt and return
+  const handleExamCompletion = () => {
+    if (!attempt) {
+      // Si no hay intento, simplemente navegar de vuelta
+      if (onBack) {
+        onBack();
+      } else {
+        navigate('/student-exam');
+      }
+      return;
+    }
+
+    showModal(
+      'confirm',
+      'Terminar Intento',
+      '¿Estás seguro de que quieres terminar el intento? Una vez finalizado no podrás volver a entrar al examen.',
+      async () => {
+        try {
+          setSubmitting(true);
+          const token = localStorage.getItem('token');
+
+          const response = await fetch(`${API_BASE_URL}/exam-attempts/${attempt.id}/finish`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            }
+          });
+
+          if (response.ok) {
+            showModal('success', '¡Intento Finalizado!', 'Has terminado el examen exitosamente.', () => {
+              closeModal();
+              if (onBack) {
+                onBack();
+              } else {
+                navigate('/student-exam');
+              }
+            });
+          } else {
+            const errorData = await response.json();
+            showModal('error', 'Error', errorData.error || 'Error al finalizar intento');
+          }
+        } catch (error) {
+          console.error('Error finishing attempt:', error);
+          showModal('error', 'Error', 'Error de conexión al finalizar intento');
+        } finally {
+          setSubmitting(false);
+        }
+      },
+      true
+    );
+  };
+
+  // Handle navigation away from exam with confirmation
+  const handleLeaveExam = () => {
+    showModal(
+      'warning',
+      'Salir del Examen',
+      '¿Estás seguro de que quieres salir del examen? Se perderá todo tu progreso y no podrás volver a intentarlo.',
+      () => {
+        closeModal();
+        if (onBack) {
+          onBack();
+        } else {
+          navigate('/student-exam');
+        }
+      },
+      true
+    );
+  };
 
   useEffect(() => {
     if (!examId) return;
 
-    const fetchExam = async () => {
+    const loadExamAndAttempt = async () => {
       try {
         setLoading(true);
-        const data = await getExamById(examId);
-        setExam(data);
+        const token = localStorage.getItem('token');
+
+        // Primero verificar si ya existe un intento
+        const checkResponse = await fetch(`${API_BASE_URL}/exam-attempts/check/${examId}?windowId=${windowId || ''}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (checkResponse.ok) {
+          const checkData = await checkResponse.json();
+          
+          if (checkData.hasAttempt && checkData.attempt.estado === 'finalizado') {
+            setError('Ya has completado este examen');
+            setLoading(false);
+            return;
+          }
+        }
+
+        // Cargar examen para validaciones de seguridad
+        const examData = await getExamById(examId, windowId);
+        setExam(examData);
+
+        // Crear o obtener intento existente
+        const attemptResponse = await fetch(`${API_BASE_URL}/exam-attempts/start`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ 
+            examId: parseInt(examId), 
+            examWindowId: windowId ? parseInt(windowId) : null 
+          })
+        });
+
+        if (attemptResponse.ok) {
+          const attemptData = await attemptResponse.json();
+          setAttempt(attemptData);
+          
+          if (attemptData.estado === 'finalizado') {
+            setError('Ya has completado este examen');
+            return;
+          }
+        } else {
+          const errorData = await attemptResponse.json();
+          setError(errorData.error || 'Error creando intento de examen');
+        }
+
         setError(null);
       } catch (err) {
-        console.error(err);
+        console.error('Error cargando examen:', err);
         setExam(null);
-        setError(err.message);
+        
+        // Manejar errores específicos de seguridad
+        if (err.code === 'WINDOW_ID_REQUIRED') {
+          setError('Acceso no autorizado: Se requiere inscripción válida');
+        } else if (err.code === 'NOT_ENROLLED') {
+          setError('No estás inscrito en esta ventana de examen');
+        } else if (err.code === 'NOT_ENABLED') {
+          setError('No estás habilitado para rendir este examen');
+        } else if (err.code === 'EXAM_NOT_AVAILABLE') {
+          setError('El examen no está disponible en este momento');
+        } else if (err.code === 'EXAM_MISMATCH') {
+          setError('La ventana no corresponde a este examen');
+        } else {
+          setError(err.message || 'Error de acceso al examen');
+        }
       } finally {
         setLoading(false);
       }
     };
 
-    fetchExam();
-  }, [examId]);
+    loadExamAndAttempt();
+  }, [examId, windowId]);
 
-  if (loading) return <p className="text-muted text-center py-5">Cargando examen...</p>;
-  if (error || !exam)
+  // Add page leave confirmation for exam security
+  useEffect(() => {
+    if (!exam || error || propExamId) return; // Don't add for embedded mode or errors
+
+    const handleBeforeUnload = (e) => {
+      e.preventDefault();
+      e.returnValue = '¿Estás seguro de que quieres salir del examen? Se perderá tu progreso.';
+      return e.returnValue;
+    };
+
+    const handlePopState = (e) => {
+      e.preventDefault();
+      // Show modal for back button press
+      showModal(
+        'warning',
+        'Salir del Examen',
+        '¿Estás seguro de que quieres salir del examen? Se perderá todo tu progreso.',
+        () => {
+          closeModal();
+          // Allow navigation by going back
+          window.history.back();
+        },
+        true
+      );
+      
+      // Prevent the navigation initially
+      window.history.pushState(null, '', window.location.pathname);
+    };
+
+    // Add event listeners
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('popstate', handlePopState);
+    
+    // Push initial state to handle back button
+    window.history.pushState(null, '', window.location.pathname);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [exam, error, propExamId]);
+
+  if (loading) {
     return (
-      <div className="text-center py-5">
-        <p className="text-danger">{error || "Examen no encontrado."}</p>
-        {propExamId && <button className="btn btn-outline-secondary" onClick={onBack}>Volver</button>}
+      <div className="container py-5">
+        <div className="loading-container">
+          <div className="modern-spinner"></div>
+          <p>Cargando examen...</p>
+        </div>
       </div>
     );
+  }
+  if (error || !exam) {
+    return (
+      <div className="container py-5">
+        <div className="empty-state">
+          <div className="empty-icon">
+            <i className="fas fa-exclamation-triangle"></i>
+          </div>
+          <h4 className="empty-title">Error al cargar examen</h4>
+          <p className="empty-subtitle">
+            {error || "El examen solicitado no existe o no tienes permisos para acceder."}
+          </p>
+          <button className="modern-btn modern-btn-secondary" onClick={handleErrorBack}>
+            <i className="fas fa-arrow-left me-2"></i>
+            Volver
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container py-5">
-      <div className="mb-4">
-        <h1 className="text-primary">{exam.titulo || "Sin título"}</h1>
+      <div className="modern-card mb-4">
+        <div className="modern-card-header">
+          <div className="d-flex justify-content-between align-items-center">
+            <div className="d-flex align-items-center">
+              <h1 className="page-title mb-0">
+                <i className="fas fa-clipboard-list me-3"></i>
+                {exam.titulo || "Sin título"}
+              </h1>
+              {!propExamId ? (
+                <span className="badge bg-warning text-dark ms-3">
+                  <i className="fas fa-exclamation-triangle me-1"></i>
+                  EXAMEN EN CURSO
+                </span>
+              ) : (
+                <span className="badge bg-info text-white ms-3">
+                  <i className="fas fa-eye me-1"></i>
+                  VISTA PREVIA
+                </span>
+              )}
+            </div>
+            <span className="badge badge-primary">
+              <i className="fas fa-question-circle me-2"></i>
+              {exam.preguntas?.length || 0} preguntas
+            </span>
+          </div>
+        </div>
       </div>
 
       {!exam.preguntas || exam.preguntas.length === 0 ? (
-        <p className="text-muted">Este examen no tiene preguntas aún.</p>
+        <div className="empty-state">
+          <div className="empty-icon">
+            <i className="fas fa-question-circle"></i>
+          </div>
+          <h4 className="empty-title">Sin preguntas</h4>
+          <p className="empty-subtitle">
+            Este examen no tiene preguntas configuradas aún.
+          </p>
+          <button className="modern-btn modern-btn-primary" onClick={handleErrorBack}>
+            <i className="fas fa-arrow-left me-2"></i>
+            Volver al inicio
+          </button>
+        </div>
       ) : (
         <>
-          <div className="row g-3">
+          <div className="row g-4">
             {exam.preguntas.map((p, i) => (
-              <div key={i} className="col-md-6">
-                <div className="card shadow-sm h-100">
-                  <div className="card-body">
-                    <h5 className="card-title">{i + 1}. {p.texto || "Sin texto"}</h5>
-                    <ul className="list-group list-group-flush mt-3">
+              <div key={i} className="col-lg-6">
+                <div className={`exam-card fade-in-up`} style={{animationDelay: `${i * 0.1}s`}}>
+                  <div className="exam-card-header">
+                    <h5 className="exam-title">
+                      <span className="badge badge-primary me-3">{i + 1}</span>
+                      {p.texto || "Sin texto"}
+                    </h5>
+                  </div>
+                  <div className="exam-card-body">
+                    <div className="exam-info">
+                      <h6 className="mb-3">
+                        <i className="fas fa-list-ul me-2"></i>
+                        Opciones de respuesta:
+                      </h6>
                       {p.opciones?.map((o, j) => (
-                        <li key={j} className="list-group-item">{o || "Opción vacía"}</li>
+                        <div key={j} className="exam-info-item">
+                          <i className="fas fa-circle me-2" style={{fontSize: '8px'}}></i>
+                          <span>{o || "Opción vacía"}</span>
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -71,13 +365,63 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
           </div>
 
           {/* Botón Terminar intento */}
-          <div className="d-grid mt-4">
-            <button className="btn btn-success btn-lg" onClick={onBack}>
-              Terminar intento
-            </button>
+          <div className="modern-card mt-4">
+            <div className="modern-card-body text-center">
+              <h5 className="mb-3">
+                <i className="fas fa-flag-checkered me-2"></i>
+                ¿Terminaste el examen?
+              </h5>
+              <p className="text-muted mb-4">
+                Una vez que finalices el intento, no podrás volver a entrar al examen. Asegúrate de haber respondido todas las preguntas.
+              </p>
+              <div className="d-flex gap-3 justify-content-center">
+                <button 
+                  className="modern-btn modern-btn-primary modern-btn-lg" 
+                  onClick={handleExamCompletion}
+                  disabled={submitting}
+                >
+                  {submitting ? (
+                    <>
+                      <div className="spinner-border spinner-border-sm me-2" role="status"></div>
+                      Finalizando...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fas fa-check me-2"></i>
+                      Finalizar Intento
+                    </>
+                  )}
+                </button>
+                {!propExamId && (
+                  <button className="modern-btn modern-btn-outline-danger modern-btn-lg" onClick={handleLeaveExam}>
+                    <i className="fas fa-times me-2"></i>
+                    Salir sin finalizar
+                  </button>
+                )}
+                {propExamId && (
+                  <button className="modern-btn modern-btn-secondary modern-btn-lg" onClick={handleExamCompletion}>
+                    <i className="fas fa-arrow-left me-2"></i>
+                    Volver al inicio
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </>
       )}
+
+      {/* Modal Component */}
+      <Modal
+        show={modal.show}
+        onClose={closeModal}
+        onConfirm={modal.onConfirm}
+        title={modal.title}
+        message={modal.message}
+        type={modal.type}
+        showCancel={modal.showCancel}
+        confirmText={modal.type === 'warning' ? 'Salir del Examen' : modal.type === 'confirm' ? 'Finalizar' : 'Aceptar'}
+        cancelText={modal.type === 'confirm' ? 'Cancelar' : 'Continuar Examen'}
+      />
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import React from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
+import '../modern-examline.css';
 
 const Modal = ({
   show,
@@ -15,23 +16,24 @@ const Modal = ({
   if (!show) return null;
 
   const getModalIcon = () => {
-    const iconStyle = { fontSize: '4rem', marginBottom: '1rem' };
+    const iconClass = "fas";
+    const iconStyle = { fontSize: '3.5rem', marginBottom: '1.5rem' };
     
     switch (type) {
       case 'success':
-        return <div style={{...iconStyle, color: '#198754'}}>✓</div>;
+        return <div style={{...iconStyle, color: 'var(--success-color)'}}><i className={`${iconClass} fa-check-circle`}></i></div>;
       case 'error':
-        return <div style={{...iconStyle, color: '#dc3545'}}>✕</div>;
+        return <div style={{...iconStyle, color: 'var(--danger-color)'}}><i className={`${iconClass} fa-times-circle`}></i></div>;
       case 'warning':
-        return <div style={{...iconStyle, color: '#ffc107'}}>⚠</div>;
+        return <div style={{...iconStyle, color: 'var(--warning-color)'}}><i className={`${iconClass} fa-exclamation-triangle`}></i></div>;
       case 'confirm':
-        return <div style={{...iconStyle, color: '#0d6efd'}}>?</div>;
+        return <div style={{...iconStyle, color: 'var(--primary-color)'}}><i className={`${iconClass} fa-question-circle`}></i></div>;
       default:
-        return <div style={{...iconStyle, color: '#0dcaf0'}}>ℹ</div>;
+        return <div style={{...iconStyle, color: 'var(--info-color)'}}><i className={`${iconClass} fa-info-circle`}></i></div>;
     }
   };
 
-  const getHeaderClass = () => {
+  const getGradientClass = () => {
     switch (type) {
       case 'success':
         return 'border-success';
@@ -46,36 +48,59 @@ const Modal = ({
     }
   };
 
+  const handleBackdropClick = (e) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
   return (
-    <div className="modal d-block" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }} tabIndex="-1">
-      <div className="modal-dialog modal-dialog-centered">
-        <div className={`modal-content shadow-lg border-0 rounded-4 ${getHeaderClass()} border-3 border-top`}>
-          <div className="modal-body text-center p-4">
+    <div 
+      className="modal-backdrop-fade"
+      onClick={handleBackdropClick}
+    >
+      <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: '480px' }}>
+        <div className={`modern-card border-0 ${getGradientClass()} border-3 border-top`} style={{ borderRadius: '16px', overflow: 'hidden' }}>
+          <div className="modal-body text-center p-5">
             {getModalIcon()}
-            {title && <h5 className="modal-title mb-3 fw-bold text-dark">{title}</h5>}
-            <p className="mb-4 text-muted">{message}</p>
+            {title && (
+              <h4 className="modal-title mb-3 fw-bold" style={{ color: 'var(--text-color-2)' }}>
+                {title}
+              </h4>
+            )}
+            <p className="mb-4" style={{ color: 'var(--text-color-1)', fontSize: '1.1rem', lineHeight: '1.6' }}>
+              {message}
+            </p>
             
-            <div className="d-flex gap-2 justify-content-center">
+            <div className="d-flex gap-3 justify-content-center">
               {showCancel && (
                 <button
                   type="button"
-                  className="btn btn-outline-secondary px-4"
+                  className="modern-btn modern-btn-secondary modern-btn-lg"
                   onClick={onClose}
                 >
+                  <i className="fas fa-times me-2"></i>
                   {cancelText}
                 </button>
               )}
               <button
                 type="button"
-                className={`btn px-4 ${
-                  type === 'error' ? 'btn-danger' :
-                  type === 'success' ? 'btn-success' :
-                  type === 'warning' ? 'btn-warning' :
-                  'btn-primary'
+                className={`modern-btn modern-btn-lg ${
+                  type === 'error' ? 'modern-btn-danger' :
+                  type === 'success' ? 'modern-btn-primary' :
+                  type === 'warning' ? 'modern-btn-primary' :
+                  'modern-btn-primary'
                 }`}
                 onClick={onConfirm || onClose}
                 autoFocus
               >
+                <i className={`fas me-2 ${
+                  type === 'error' ? 'fa-trash' :
+                  type === 'success' ? 'fa-check' :
+                  type === 'warning' ? 'fa-exclamation' :
+                  type === 'confirm' ? 'fa-check' :
+                  'fa-info'
+                }`}></i>
                 {confirmText}
               </button>
             </div>

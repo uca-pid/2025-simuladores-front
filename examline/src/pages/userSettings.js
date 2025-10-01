@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
+import '../modern-examline.css';
 import BackToMainButton from "../components/BackToMainButton";
 import Modal from "../components/Modal";
 import { useAuth } from "../contexts/AuthContext";
@@ -161,76 +162,122 @@ export default function UserSettingsPage() {
     );
   };
 
-  if (loading) return <p className="text-center mt-5">Cargando...</p>;
+  if (loading) {
+    return (
+      <div className="container py-5">
+        <div className="loading-container">
+          <div className="modern-spinner"></div>
+          <p>Cargando configuración...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container py-5">
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h1 className="text-primary flex-grow-1 me-3" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-          Configuración de Usuario
-        </h1>
-        <div className="d-flex gap-2">
-          <BackToMainButton />
-          <button className="btn btn-outline-danger" onClick={handleDelete}>Eliminar cuenta</button>
+      <div className="modern-card mb-4">
+        <div className="modern-card-header">
+          <div className="d-flex justify-content-between align-items-center">
+            <h1 className="page-title mb-0">
+              <i className="fas fa-user-cog me-3"></i>
+              Configuración de Usuario
+            </h1>
+            <div className="d-flex gap-2">
+              <BackToMainButton />
+              <button className="modern-btn modern-btn-danger" onClick={handleDelete}>
+                <i className="fas fa-trash me-2"></i>
+                Eliminar cuenta
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="card shadow-sm">
-        <div className="card-body">
+      <div className="modern-card">
+        <div className="modern-card-header">
+          <h3 className="modern-card-title">
+            <i className="fas fa-edit me-2"></i>
+            Datos Personales
+          </h3>
+        </div>
+        <div className="modern-card-body">
           <form onSubmit={handleSubmit}>
-            {/* Nombre */}
-            <div className="mb-3">
-              <label className="form-label">Nombre</label>
-              <input
-                type="text"
-                name="nombre"
-                value={formData.nombre}
-                onChange={handleChange}
-                className={`form-control ${nombreError ? "is-invalid" : ""}`}
-              />
-              {nombreError && <div className="invalid-feedback">{nombreError}</div>}
+            <div className="row g-4">
+              {/* Nombre */}
+              <div className="col-md-6">
+                <label className="form-label fw-semibold">
+                  <i className="fas fa-user me-2"></i>
+                  Nombre
+                </label>
+                <input
+                  type="text"
+                  name="nombre"
+                  value={formData.nombre}
+                  onChange={handleChange}
+                  className={`form-control modern-input ${nombreError ? "is-invalid" : ""}`}
+                  placeholder="Ingrese su nombre completo"
+                />
+                {nombreError && <div className="invalid-feedback">{nombreError}</div>}
+              </div>
+
+              {/* Email (solo lectura) */}
+              <div className="col-md-6">
+                <label className="form-label fw-semibold">
+                  <i className="fas fa-envelope me-2"></i>
+                  Email
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  className="form-control modern-input"
+                  disabled
+                />
+                <small className="text-muted">El email no se puede modificar</small>
+              </div>
+
+              {/* Contraseña actual */}
+              <div className="col-md-6">
+                <label className="form-label fw-semibold">
+                  <i className="fas fa-key me-2"></i>
+                  Contraseña actual
+                </label>
+                <input
+                  type="password"
+                  name="currentPassword"
+                  value={formData.currentPassword}
+                  onChange={handleChange}
+                  className="form-control modern-input"
+                  placeholder="Contraseña actual"
+                />
+                <small className="text-muted">Requerida solo si desea cambiar la contraseña</small>
+              </div>
+
+              {/* Nueva contraseña */}
+              <div className="col-md-6">
+                <label className="form-label fw-semibold">
+                  <i className="fas fa-lock me-2"></i>
+                  Nueva contraseña
+                </label>
+                <input
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="Nueva contraseña"
+                  className={`form-control modern-input ${passwordError ? "is-invalid" : ""}`}
+                />
+                {passwordError && <div className="invalid-feedback">{passwordError}</div>}
+                <small className="text-muted">Dejar en blanco para mantener la actual</small>
+              </div>
             </div>
 
-            {/* Email (solo lectura) */}
-            <div className="mb-3">
-              <label className="form-label">Email</label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                className="form-control"
-                disabled
-              />
+            <div className="mt-4 d-flex justify-content-end">
+              <button type="submit" className="modern-btn modern-btn-primary modern-btn-lg">
+                <i className="fas fa-save me-2"></i>
+                Guardar cambios
+              </button>
             </div>
-
-            {/* Contraseña actual */}
-            <div className="mb-3">
-              <label className="form-label">Contraseña actual</label>
-              <input
-                type="password"
-                name="currentPassword"
-                value={formData.currentPassword}
-                onChange={handleChange}
-                className="form-control"
-                placeholder="Ingrese su contraseña actual si desea cambiarla"
-              />
-            </div>
-
-            {/* Nueva contraseña */}
-            <div className="mb-3">
-              <label className="form-label">Nueva contraseña</label>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="Dejar en blanco para no cambiar"
-                className={`form-control ${passwordError ? "is-invalid" : ""}`}
-              />
-              {passwordError && <div className="invalid-feedback">{passwordError}</div>}
-            </div>
-
-            <button type="submit" className="btn btn-success w-100">Guardar cambios</button>
           </form>
         </div>
       </div>

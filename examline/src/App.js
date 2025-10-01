@@ -8,9 +8,12 @@ import ExamCreator from "./pages/ExamCreator";
 import ExamView from "./pages/ExamView";
 import UserSettingsPage from "./pages/userSettings";
 import StudentExamPage from "./pages/StudentExamPage"; // 👈 NUEVO
+import ExamAttempt from "./pages/ExamAttempt";
+import ExamResults from "./pages/ExamResults";
 import ExamWindows from "./pages/ExamWindows";
 import StudentInscriptions from "./pages/StudentInscriptions";
 import WindowInscriptions from "./pages/WindowInscriptions";
+import "./modern-examline.css";
 
 function App() {
   return (
@@ -39,12 +42,22 @@ function App() {
               <StudentExamPage />
             </StudentRoute>
           } />
+          <Route path="/exam-attempt/:examId" element={
+            <StudentRoute>
+              <ExamAttempt />
+            </StudentRoute>
+          } />
+          <Route path="/exam-results/:attemptId" element={
+            <StudentRoute>
+              <ExamResults />
+            </StudentRoute>
+          } />
           <Route path="/exam-windows" element={
             <ProfessorRoute>
               <ExamWindows />
             </ProfessorRoute>
           } />
-          <Route path="/exam-windows-inscriptions" element={
+          <Route path="/exam-windows/:windowId/inscriptions" element={
             <ProfessorRoute>
               <WindowInscriptions />
             </ProfessorRoute>
