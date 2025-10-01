@@ -381,10 +381,21 @@ export default function ExamWindowsPage() {
     setShowCreateModal(true);
   };
 
+  // Función auxiliar para convertir fecha a formato datetime-local manteniendo zona horaria local
+  const formatDateTimeLocal = (dateString) => {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
   const handleEditWindow = (window) => {
     setFormData({
       examId: window.examId,
-      fechaInicio: new Date(window.fechaInicio).toISOString().slice(0, 16),
+      fechaInicio: formatDateTimeLocal(window.fechaInicio),
       duracion: window.duracion,
       modalidad: window.modalidad,
       cupoMaximo: window.cupoMaximo,
@@ -477,7 +488,7 @@ export default function ExamWindowsPage() {
         payload.modalidad = editingWindow.modalidad;
         payload.cupoMaximo = editingWindow.cupoMaximo;
         // Mantener el mismo formato que el input (YYYY-MM-DDTHH:mm)
-        payload.fechaInicio = new Date(editingWindow.fechaInicio).toISOString().slice(0, 16);
+        payload.fechaInicio = formatDateTimeLocal(editingWindow.fechaInicio);
       }
 
       // Si se está editando y el nuevo cupo es exactamente igual a los inscriptos activos actuales,
