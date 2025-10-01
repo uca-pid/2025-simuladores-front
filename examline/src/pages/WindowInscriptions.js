@@ -193,22 +193,6 @@ export default function WindowInscriptionsPage() {
     );
   };
 
-  const getWindowStatus = () => {
-    if (!examWindow) return null;
-    
-    const now = new Date();
-    const start = new Date(examWindow.fechaInicio);
-    const end = new Date(start.getTime() + (examWindow.duracion * 60 * 1000));
-    
-    if (now < start) {
-      return { text: 'Programada', class: 'bg-primary' };
-    } else if (now >= start && now <= end) {
-      return { text: 'En Curso', class: 'bg-success' };
-    } else {
-      return { text: 'Finalizada', class: 'bg-secondary' };
-    }
-  };
-
   const canManageAttendance = () => {
     if (!examWindow) return false;
     
@@ -220,6 +204,16 @@ export default function WindowInscriptionsPage() {
     const canManageFrom = new Date(start.getTime() - (30 * 60 * 1000));
     
     return now >= canManageFrom && now <= end;
+  };
+
+  const isExamFinished = () => {
+    if (!examWindow) return false;
+    
+    const now = new Date();
+    const start = new Date(examWindow.fechaInicio);
+    const end = new Date(start.getTime() + (examWindow.duracion * 60 * 1000));
+    
+    return now > end;
   };
 
   if (loading) {
@@ -250,8 +244,8 @@ export default function WindowInscriptionsPage() {
     );
   }
 
-  const status = getWindowStatus();
   const canManage = canManageAttendance();
+  const isFinished = isExamFinished();
 
   return (
     <div className="container py-5">
@@ -286,20 +280,10 @@ export default function WindowInscriptionsPage() {
       {/* Información de la ventana */}
       <div className="modern-card mb-4">
         <div className="modern-card-header">
-          <div className="d-flex justify-content-between align-items-center">
-            <h3 className="modern-card-title">
-              <i className="fas fa-info-circle me-2"></i>
-              Información de la Ventana
-            </h3>
-            <span className={`badge ${status.class === 'bg-primary' ? 'badge-primary' : status.class === 'bg-success' ? 'badge-success' : 'badge-secondary'}`}>
-              <i className={`fas me-2 ${
-                status.text === 'Programada' ? 'fa-clock' :
-                status.text === 'En Curso' ? 'fa-play-circle' :
-                'fa-flag-checkered'
-              }`}></i>
-              {status.text}
-            </span>
-          </div>
+          <h3 className="modern-card-title">
+            <i className="fas fa-info-circle me-2"></i>
+            Información de la Ventana
+          </h3>
         </div>
         <div className="modern-card-body">
           <div className="row g-4">
@@ -409,6 +393,12 @@ export default function WindowInscriptionsPage() {
                         Acciones
                       </th>
                     )}
+                    {isFinished && (
+                      <th scope="col" className="text-center">
+                        <i className="fas fa-user-check me-2"></i>
+                        Asistencia
+                      </th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -441,6 +431,24 @@ export default function WindowInscriptionsPage() {
                               Ausente
                             </button>
                           </div>
+                        </td>
+                      )}
+                      {isFinished && (
+                        <td className="text-center">
+                          <span className={`badge ${
+                            inscription.presente === true ? 'badge-success' : 
+                            inscription.presente === false ? 'badge-danger' : 
+                            'badge-secondary'
+                          }`}>
+                            <i className={`fas me-1 ${
+                              inscription.presente === true ? 'fa-check' : 
+                              inscription.presente === false ? 'fa-times' : 
+                              'fa-question'
+                            }`}></i>
+                            {inscription.presente === true ? 'Presente' : 
+                             inscription.presente === false ? 'Ausente' : 
+                             'Sin registrar'}
+                          </span>
                         </td>
                       )}
                     </tr>
