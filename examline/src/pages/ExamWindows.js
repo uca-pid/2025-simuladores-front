@@ -392,6 +392,21 @@ export default function ExamWindowsPage() {
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
+  // Función para calcular la hora de finalización del examen
+  const calculateEndTime = (startTime, duration) => {
+    const start = new Date(startTime);
+    const end = new Date(start.getTime() + (duration * 60 * 1000));
+    return end.toLocaleTimeString();
+  };
+
+  // Función para validar que la nueva duración no resulte en una fecha pasada
+  const validateEndTimeNotPast = (startTime, duration) => {
+    const start = new Date(startTime);
+    const end = new Date(start.getTime() + (duration * 60 * 1000));
+    const now = new Date();
+    return end > now;
+  };
+
   const handleEditWindow = (window) => {
     setFormData({
       examId: window.examId,
@@ -458,6 +473,14 @@ export default function ExamWindowsPage() {
       if (!isEditingEnCurso && fechaInicio <= ahora) {
         errors.push('La fecha y hora de inicio debe ser en el futuro');
         fieldErrors.fechaInicio = true;
+      }
+      
+      // Validar que la nueva duración no resulte en una hora de finalización pasada
+      if (isEditingEnCurso && formData.duracion > 0) {
+        if (!validateEndTimeNotPast(editingWindow.fechaInicio, formData.duracion)) {
+          errors.push('La nueva duración resultaría en una hora de finalización que ya pasó');
+          fieldErrors.duracion = true;
+        }
       }
     }
     
@@ -638,6 +661,12 @@ export default function ExamWindowsPage() {
               <i className="fas fa-hourglass-half"></i>
                 <span><strong>Duración:</strong> {window.duracion} min</span>
             </div>
+            {window.estado === 'en_curso' && (
+              <div className="exam-info-item">
+                <i className="fas fa-flag-checkered"></i>
+                <span><strong>Termina a las:</strong> {calculateEndTime(window.fechaInicio, window.duracion)}</span>
+              </div>
+            )}
             <div className="exam-info-item">
               <i className="fas fa-laptop"></i>
                 <span><strong>Modalidad:</strong> {window.modalidad ? window.modalidad.charAt(0).toUpperCase() + window.modalidad.slice(1) : ''}</span>
@@ -1055,6 +1084,22 @@ export default function ExamWindowsPage() {
                           fontSize: '0.9rem'
                         }}
                       />
+                      {editingWindow && editingWindow.estado === 'en_curso' && formData.duracion && (
+                        <div className="mt-2 p-2" style={{
+                          backgroundColor: validateEndTimeNotPast(editingWindow.fechaInicio, formData.duracion) ? '#e3f2fd' : '#ffebee',
+                          borderRadius: '6px',
+                          border: `1px solid ${validateEndTimeNotPast(editingWindow.fechaInicio, formData.duracion) ? '#2196f3' : '#f44336'}`
+                        }}>
+                          <small style={{ color: validateEndTimeNotPast(editingWindow.fechaInicio, formData.duracion) ? '#1565c0' : '#c62828' }}>
+                            <i className={`fas me-1 ${validateEndTimeNotPast(editingWindow.fechaInicio, formData.duracion) ? 'fa-info-circle' : 'fa-exclamation-triangle'}`}></i>
+                            <strong>
+                              {validateEndTimeNotPast(editingWindow.fechaInicio, formData.duracion) 
+                                ? 'Nueva hora de finalización:' 
+                                : 'ADVERTENCIA - Hora ya pasada:'}
+                            </strong> {calculateEndTime(editingWindow.fechaInicio, formData.duracion)}
+                          </small>
+                        </div>
+                      )}
                     </div>
                     <div className="col-md-4">
                       <label className="form-label" style={{ 
