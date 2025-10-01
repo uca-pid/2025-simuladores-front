@@ -925,3 +925,59 @@ body {
 .modal-backdrop-fade form {
   pointer-events: auto;
 }
+
+/* Window Inscriptions Header Responsive */
+.header-title-section {
+  flex: 1;
+  min-width: 0; /* Permite que el flex item se reduzca */
+}
+
+.header-title-section .page-title {
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+
+.header-actions-section {
+  flex-shrink: 0;
+  width: 100%;
+}
+
+/* Responsive adjustments for window inscriptions */
+@media (max-width: 576px) {
+  .header-title-section .page-title {
+    font-size: 1.1rem;
+  }
+  
+  .header-actions-section .modern-btn {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.75rem;
+  }
+  
+  .modern-card-header {
+    padding: 1rem;
+  }
+  
+  .header-actions-section {
+    width: 100%;
+  }
+  
+  .header-actions-section .d-flex {
+    width: 100%;
+  }
+}
+
+@media (min-width: 576px) {
+  .header-actions-section {
+    width: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .header-title-section .page-title .fas {
+    font-size: 1.1rem;
+  }
+  
+  .header-title-section .page-title {
+    font-size: 1.25rem;
+  }
+}

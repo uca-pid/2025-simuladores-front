@@ -257,12 +257,28 @@ export default function WindowInscriptionsPage() {
     <div className="container py-5">
       <div className="modern-card mb-4">
         <div className="modern-card-header">
-          <div className="d-flex justify-content-between align-items-center">
-            <h1 className="page-title mb-0">
-              <i className="fas fa-users me-3"></i>
-              Inscripciones - {examWindow.exam.titulo}
-            </h1>
-            <BackToMainButton />
+          <div className="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-3">
+            <div className="header-title-section">
+              <h1 className="page-title mb-0 d-flex align-items-center flex-wrap">
+                <i className="fas fa-users me-2 me-lg-3"></i>
+                <span className="d-none d-sm-inline">Inscripciones - </span>
+                <span className="text-truncate">{examWindow.exam.titulo}</span>
+              </h1>
+            </div>
+            <div className="header-actions-section">
+              <div className="d-flex flex-column flex-sm-row gap-2 w-100 w-sm-auto">
+                <button 
+                  className="modern-btn modern-btn-secondary d-flex align-items-center justify-content-center" 
+                  onClick={() => navigate('/exam-windows')}
+                  title="Volver a Ventanas de Examen"
+                >
+                  <i className="fas fa-arrow-left me-2"></i>
+                  <span className="d-none d-sm-inline">Ventanas de Examen</span>
+                  <span className="d-inline d-sm-none">Ventanas</span>
+                </button>
+                <BackToMainButton />
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -295,7 +311,7 @@ export default function WindowInscriptionsPage() {
                 </div>
                 <div className="exam-info-item">
                   <i className="fas fa-clock"></i>
-                  <span><strong>Hora:</strong> {new Date(examWindow.fechaInicio).toLocaleTimeString()}</span>
+                  <span><strong>Hora de inicio:</strong> {new Date(examWindow.fechaInicio).toLocaleTimeString()}</span>
                 </div>
                 <div className="exam-info-item">
                   <i className="fas fa-hourglass-half"></i>
@@ -307,15 +323,11 @@ export default function WindowInscriptionsPage() {
               <div className="exam-info">
                 <div className="exam-info-item">
                   <i className="fas fa-laptop"></i>
-                  <span><strong>Modalidad:</strong> {examWindow.modalidad}</span>
+                  <span><strong>Modalidad:</strong> {examWindow.modalidad?.charAt(0).toUpperCase() + examWindow.modalidad?.slice(1).toLowerCase()}</span>
                 </div>
                 <div className="exam-info-item">
                   <i className="fas fa-users"></i>
-                  <span><strong>Cupo:</strong> {inscriptions.length}/{examWindow.cupoMaximo}</span>
-                </div>
-                <div className="exam-info-item">
-                  <i className={`fas ${examWindow.activa ? 'fa-check-circle text-success' : 'fa-times-circle text-danger'}`}></i>
-                  <span><strong>Activa:</strong> {examWindow.activa ? 'Sí' : 'No'}</span>
+                  <span><strong>Inscritos:</strong> {inscriptions.length}/{examWindow.cupoMaximo}</span>
                 </div>
               </div>
             </div>
