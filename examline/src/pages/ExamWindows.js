@@ -383,12 +383,7 @@ export default function ExamWindowsPage() {
 
   // Función auxiliar para convertir fecha del servidor a formato datetime-local
   const formatDateTimeLocal = (dateString) => {
-    // Debug: mostrar información sobre la conversión
-    console.log('🔍 Convirtiendo fecha del servidor:', dateString);
-    
     const date = new Date(dateString);
-    console.log('📅 Fecha interpretada por navegador:', date.toLocaleString());
-    console.log('🌍 Zona horaria del navegador:', Intl.DateTimeFormat().resolvedOptions().timeZone);
     
     // Crear formato para input datetime-local
     const year = date.getFullYear();
@@ -397,10 +392,7 @@ export default function ExamWindowsPage() {
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
     
-    const result = `${year}-${month}-${day}T${hours}:${minutes}`;
-    console.log('✅ Resultado para input:', result);
-    
-    return result;
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
   // Función para calcular la hora de finalización del examen
@@ -558,13 +550,6 @@ export default function ExamWindowsPage() {
           payload.estado = 'programada';
         }
       }
-
-      // Debug: mostrar qué se está enviando al servidor
-      console.log('📤 Enviando al servidor:', {
-        fechaInicio: payload.fechaInicio,
-        timestamp: new Date().toISOString(),
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
-      });
 
       const response = await fetch(url, {
         method,
