@@ -381,14 +381,17 @@ export default function ExamWindowsPage() {
     setShowCreateModal(true);
   };
 
-  // Función auxiliar para convertir fecha a formato datetime-local manteniendo zona horaria local
+  // Función auxiliar para convertir fecha del servidor a formato datetime-local
   const formatDateTimeLocal = (dateString) => {
     const date = new Date(dateString);
+    
+    // Crear formato para input datetime-local
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
+    
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
@@ -513,12 +516,15 @@ export default function ExamWindowsPage() {
       // Blindaje: si está en curso, no permitir modificar modalidad, cupo, hora de inicio
       const isEditingEnCurso = !!editingWindow && editingWindow.estado === 'en_curso';
       const payload = { ...formData };
+      
+      // Para exámenes en curso, no permitir cambiar la fecha
       if (isEditingEnCurso) {
         payload.modalidad = editingWindow.modalidad;
         payload.cupoMaximo = editingWindow.cupoMaximo;
-        // Mantener el mismo formato que el input (YYYY-MM-DDTHH:mm)
-        payload.fechaInicio = formatDateTimeLocal(editingWindow.fechaInicio);
+        // Mantener fecha original del servidor si está en curso
+        payload.fechaInicio = editingWindow.fechaInicio;
       }
+      // Para nuevas ventanas o edición libre, usar la fecha del formulario directamente
 
       // Si se está editando y el nuevo cupo es exactamente igual a los inscriptos activos actuales,
       // cerrar inscripciones automáticamente (estado = cerrada_inscripciones)
@@ -529,7 +535,8 @@ export default function ExamWindowsPage() {
               ? editingWindow.inscripciones.filter(i => i && (i.cancelledAt == null && i.canceledAt == null)).length
               : 0);
         const desiredCupo = typeof payload.cupoMaximo === 'number' ? payload.cupoMaximo : parseInt(payload.cupoMaximo, 10);
-        const startsAt = new Date(payload.fechaInicio);
+        // Para comparaciones de tiempo usamos la fecha local del formulario
+        const startsAt = new Date(formData.fechaInicio);
         const now = new Date();
         if (!Number.isNaN(desiredCupo) && desiredCupo === currentActive) {
           payload.estado = 'cerrada_inscripciones';
