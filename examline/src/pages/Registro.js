@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { useAuth } from "../contexts/AuthContext";
 import { signupUser, loginUser } from "../services/api";
+import { validatePasswordStrength } from "../utils/password";
 
 const Registro = () => {
   const [nombre, setNombre] = useState("");
@@ -15,6 +16,8 @@ const Registro = () => {
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isOnCooldown, setIsOnCooldown] = useState(false);
 
   const navigate = useNavigate();
 
@@ -35,19 +38,19 @@ const Registro = () => {
 
   const validatePassword = (password) => {
     if (!password) return "Debe ingresar una contraseña.";
-    if (password.length < 8) return "Debe tener al menos 8 caracteres.";
-    if (!/[A-ZÁÉÍÓÚÜÑ]/.test(password)) return "Debe incluir al menos una letra mayúscula.";
-    if (!/[a-záéíóúüñ]/.test(password)) return "Debe incluir al menos una letra minúscula.";
-    if (!/\d/.test(password)) return "Debe incluir al menos un número.";
-    if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?~`¡¿]/.test(password))
-      return "Debe incluir al menos un carácter especial.";
-    if (/\s/.test(password)) return "No se permiten espacios en blanco.";
-    return "";
+    
+    const validation = validatePasswordStrength(password);
+    return validation.isValid ? "" : validation.message;
   };
 
   // ---------------- Submit ----------------
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Prevent submission if already loading or on cooldown
+    if (isLoading || isOnCooldown) {
+      return;
+    }
 
     const nombreErr = validateName(nombre);
     const emailErr = validateEmail(email);
@@ -59,9 +62,12 @@ const Registro = () => {
 
     if (nombreErr || emailErr || passwordErr) return;
 
+    setIsLoading(true);
+    setError("");
+
   try {
   // 1️⃣ Registro
-  const signupData = await signupUser({
+  await signupUser({
     nombre,
     email,
     password,
@@ -94,98 +100,200 @@ const Registro = () => {
   } else {
     setError("No se pudo conectar al servidor. Revisa tu conexión.");
   }
+} finally {
+  setIsLoading(false);
+  // Start cooldown period
+  setIsOnCooldown(true);
+  setTimeout(() => {
+    setIsOnCooldown(false);
+  }, 1000); // 1 second cooldown
 }
   };  
   return (
-    <div className="bg-light d-flex align-items-center justify-content-center vh-100">
-      <div className="card shadow-lg border-0 rounded-4" style={{ maxWidth: "800px", width: "100%" }}>
+    <div className="d-flex align-items-center justify-content-center min-vh-100 py-4" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+      <div className="modern-card" style={{ maxWidth: "800px", width: "100%" }}>
         <div className="row g-0">
           {/* Columna izquierda: Logo y título */}
-          <div className="col-md-5 d-flex flex-column justify-content-center align-items-center p-4">
-            <img src="/logo.png" alt="Examline" className="mb-4" style={{ width: "150px", height: "auto" }} />
-            <h2 className="fw-bold text-primary text-center">Registro</h2>
+          <div className="col-md-4 d-flex flex-column justify-content-center align-items-center p-4" style={{ background: 'white' }}>
+            <img src="/logo.png" alt="ExamLine" className="mb-3" style={{ width: "80px", height: "auto" }} />
+            <h3 className="fw-bold text-center mb-2" style={{ fontSize: '1.4rem' }}>Únete a Examline</h3>
+            <p className="text-center px-2" style={{ fontSize: '0.9rem', color: 'var(--text-color-1)' }}>Crea tu cuenta y gestiona exámenes</p>
+            <div className="mt-3">
+              <div className="d-flex align-items-center gap-2 mb-1" style={{ color: 'var(--success-color)' }}>
+                <i className="fas fa-check-circle" style={{ fontSize: '0.8rem' }}></i>
+                <small style={{ fontSize: '0.8rem' }}>Gestión de exámenes</small>
+              </div>
+              <div className="d-flex align-items-center gap-2 mb-1" style={{ color: 'var(--success-color)' }}>
+                <i className="fas fa-check-circle" style={{ fontSize: '0.8rem' }}></i>
+                <small style={{ fontSize: '0.8rem' }}>Interfaz moderna</small>
+              </div>
+              <div className="d-flex align-items-center gap-2" style={{ color: 'var(--success-color)' }}>
+                <i className="fas fa-check-circle" style={{ fontSize: '0.8rem' }}></i>
+                <small style={{ fontSize: '0.8rem' }}>Para profes y estudiantes</small>
+              </div>
+            </div>
           </div>
 
           {/* Columna derecha: Formulario */}
-          <div className="col-md-7 p-5 bg-light">
-            {error && <div className="alert alert-danger">{error}</div>}
+          <div className="col-md-8 p-4" style={{ background: '#f8fafc' }}>
+            {error && (
+              <div className="error-message mb-4">
+                <i className="fas fa-exclamation-triangle"></i>
+                {error}
+              </div>
+            )}
             <form onSubmit={handleSubmit} noValidate>
               {/* Nombre */}
               <div className="mb-3 text-start">
+                <label htmlFor="nombre" className="form-label d-flex align-items-center gap-2" style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>
+                  <i className="fas fa-user text-muted"></i>
+                  Nombre Completo
+                </label>
                 <input
                   type="text"
                   className={`form-control ${nombreError ? "is-invalid" : ""}`}
                   id="nombre"
-                  placeholder="Nombre"
+                  placeholder="Ingresa tu nombre completo"
                   value={nombre}
                   onChange={(e) => {
                     setNombre(e.target.value);
                     setNombreError(validateName(e.target.value));
                   }}
+                  style={{
+                    padding: '0.6rem 0.8rem',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '6px',
+                    fontSize: '0.9rem'
+                  }}
                 />
-                <div className="form-text text-primary">
-                  Solo letras, letras con tildes, espacios y caracteres como ñ, apóstrofes o guiones.
+                <div className="form-text" style={{ color: 'var(--text-color-3)', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                  Solo letras, tildes, espacios, ñ, apóstrofes o guiones.
                 </div>
                 {nombreError && <div className="invalid-feedback">{nombreError}</div>}
               </div>
 
               {/* Email */}
               <div className="mb-3 text-start">
+                <label htmlFor="email" className="form-label d-flex align-items-center gap-2" style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>
+                  <i className="fas fa-envelope text-muted"></i>
+                  Correo Electrónico
+                </label>
                 <input
                   type="email"
                   className={`form-control ${emailError ? "is-invalid" : ""}`}
                   id="email"
-                  placeholder="Email"
+                  placeholder="ejemplo@dominio.com"
                   value={email}
                   onChange={(e) => {
                     setEmail(e.target.value);
                     setEmailError(validateEmail(e.target.value));
                   }}
+                  style={{
+                    padding: '0.6rem 0.8rem',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '6px',
+                    fontSize: '0.9rem'
+                  }}
                 />
-                <div className="form-text text-primary">Debe tener formato ejemplo@dominio.com</div>
+                <div className="form-text" style={{ color: 'var(--text-color-3)', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                  Formato: ejemplo@dominio.com
+                </div>
                 {emailError && <div className="invalid-feedback">{emailError}</div>}
               </div>
 
               {/* Contraseña */}
               <div className="mb-3 text-start">
+                <label htmlFor="password" className="form-label d-flex align-items-center gap-2" style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>
+                  <i className="fas fa-lock text-muted"></i>
+                  Contraseña
+                </label>
                 <input
                   type="password"
                   className={`form-control ${passwordError ? "is-invalid" : ""}`}
                   id="password"
-                  placeholder="Contraseña"
+                  placeholder="Crea una contraseña segura"
                   value={password}
                   onChange={(e) => {
                     setPassword(e.target.value);
                     setPasswordError(validatePassword(e.target.value));
                   }}
+                  style={{
+                    padding: '0.6rem 0.8rem',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '6px',
+                    fontSize: '0.9rem'
+                  }}
                 />
-                <div className="form-text text-primary">
-                  Debe incluir al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial. No se permiten espacios.
+                <div className="form-text" style={{ color: 'var(--text-color-3)', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                  8+ caracteres, mayúscula, minúscula, número y carácter especial.
                 </div>
                 {passwordError && <div className="invalid-feedback">{passwordError}</div>}
               </div>
 
               {/* Switch de rol */}
-              <div className="form-check form-switch mb-3 text-start">
-                <input
-                  className="form-check-input"
-                  type="checkbox"
-                  id="isProfessor"
-                  checked={isProfessor}
-                  onChange={() => setIsProfessor(!isProfessor)}
-                />
-                <label className="form-check-label" htmlFor="isProfessor">
-                  Registrarme como profesor
-                </label>
+              <div className="mb-3">
+                <div className="d-flex align-items-center gap-2 p-2" style={{ 
+                  background: isProfessor ? 'rgba(99, 102, 241, 0.1)' : 'rgba(16, 185, 129, 0.1)', 
+                  border: '1px solid ' + (isProfessor ? 'rgba(99, 102, 241, 0.2)' : 'rgba(16, 185, 129, 0.2)'),
+                  borderRadius: '6px',
+                  transition: 'all 0.3s ease'
+                }}>
+                  <div className="d-flex align-items-center" style={{ color: isProfessor ? 'var(--primary-color)' : 'var(--success-color)' }}>
+                    <i className={isProfessor ? "fas fa-chalkboard-teacher" : "fas fa-user-graduate"} style={{ fontSize: '1rem' }}></i>
+                  </div>
+                  <div className="flex-grow-1">
+                    <div className="form-check form-switch">
+                      <input
+                        className="form-check-input"
+                        type="checkbox"
+                        id="isProfessor"
+                        checked={isProfessor}
+                        onChange={() => setIsProfessor(!isProfessor)}
+                        style={{ transform: 'scale(1.1)' }}
+                      />
+                      <label className="form-check-label" htmlFor="isProfessor" style={{ fontSize: '0.9rem', fontWeight: '500' }}>
+                        {isProfessor ? "Profesor" : "Estudiante"}
+                      </label>
+                    </div>
+                    <small style={{ color: 'var(--text-color-3)', fontSize: '0.75rem' }}>
+                      {isProfessor 
+                        ? "Crear y gestionar exámenes" 
+                        : "Tomar exámenes asignados"
+                      }
+                    </small>
+                  </div>
+                </div>
               </div>
 
               {/* Botón */}
               <div className="d-grid mb-3">
-                <button type="submit" className="btn btn-primary btn-lg">Registrarse</button>
+                <button 
+                  type="submit" 
+                  className="modern-btn modern-btn-primary"
+                  disabled={isLoading || isOnCooldown}
+                  style={{ padding: '0.7rem 1.5rem', fontSize: '0.9rem' }}
+                >
+                  {isLoading ? (
+                    <>
+                      <div className="modern-spinner" style={{ width: '14px', height: '14px', marginRight: '0.4rem' }}></div>
+                      Registrando...
+                    </>
+                  ) : isOnCooldown ? (
+                    <>
+                      <i className="fas fa-clock me-2"></i>
+                      Espera...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fas fa-user-plus me-2"></i>
+                      Crear Cuenta
+                    </>
+                  )}
+                </button>
               </div>
 
-              <p className="mb-0">
-                ¿Ya tenés cuenta? <Link to="/login">Inicia sesión</Link>.
+              <p className="mb-0 text-center" style={{ color: 'var(--text-color-1)', fontSize: '0.85rem' }}>
+                ¿Ya tenés cuenta? <Link to="/login" style={{ color: 'var(--primary-color)', textDecoration: 'none', fontWeight: '500' }}>Inicia sesión aquí</Link>
               </p>
             </form>
           </div>
