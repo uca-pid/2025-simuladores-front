@@ -349,14 +349,14 @@ export default function StudentInscriptionsPage({
             <div className="modern-card-body">
               <div className="row g-3">
                 <div className="col-md-3">
-                  <label className="form-label fw-semibold">Materia</label>
+                  <label className="form-label fw-semibold">Título</label>
                   <input 
                     type="text" 
                     className="form-control modern-input"
                     name="materia"
                     value={filters.materia}
                     onChange={handleFilterChange}
-                    placeholder="Buscar por materia"
+                    placeholder="Buscar por título del examen"
                   />
                 </div>
                 <div className="col-md-3">
