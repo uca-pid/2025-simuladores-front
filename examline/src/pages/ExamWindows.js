@@ -620,7 +620,7 @@ export default function ExamWindowsPage() {
 
   // Tarjeta reutilizable para una ventana
   const renderWindowCard = (window, index) => (
-    <div key={window.id} className="col-12 col-md-6 col-lg-6 col-xl-4 d-flex">
+    <div key={window.id} className="exam-window-card-wrapper">
       {(() => {
         const statusStyles = {
           programada: {

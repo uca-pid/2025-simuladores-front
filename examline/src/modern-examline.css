@@ -479,6 +479,11 @@ body {
   overflow: hidden;
   transition: all 0.3s ease;
   position: relative;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  height: auto;
+  min-height: auto;
 }
 
 .exam-card:hover {
@@ -2513,9 +2518,40 @@ body {
 /* ExamWindows Grid */
 .exam-windows-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 1.5rem;
   align-items: start;
+  width: 100%;
+  max-width: 100%;
+}
+
+.exam-window-card-wrapper {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+/* Desktop breakpoints for ExamWindows */
+@media (min-width: 1400px) {
+  .exam-windows-grid {
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 2rem;
+    max-width: none;
+  }
+}
+
+@media (min-width: 1200px) and (max-width: 1399px) {
+  .exam-windows-grid {
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 1.75rem;
+  }
+}
+
+@media (min-width: 992px) and (max-width: 1199px) {
+  .exam-windows-grid {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+  }
 }
 
 /* Responsive breakpoints for ExamWindows */
