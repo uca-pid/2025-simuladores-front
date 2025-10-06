@@ -59,8 +59,8 @@ const Login = () => {
   };
 
   return (
-    <div className="d-flex align-items-center justify-content-center vh-100" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
-      <div className="modern-card" style={{ maxWidth: "420px", width: "100%" }}>
+    <div className="d-flex align-items-center justify-content-center min-vh-100 py-3" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+      <div className="modern-card login-card" style={{ maxWidth: "420px", width: "100%" }}>
         <div className="modern-card-body p-5 text-center">
           <div className="mb-4">
             <img src="/logo.png" alt="ExamLine" className="mb-3" style={{ width: "80px", height: "auto" }} />
@@ -125,24 +125,24 @@ const Login = () => {
             <div className="d-grid mb-4">
               <button 
                 type="submit" 
-                className="modern-btn modern-btn-primary modern-btn-lg"
+                className="modern-btn modern-btn-primary modern-btn-lg login-submit-btn"
                 disabled={isLoading || isOnCooldown}
                 style={{ padding: '0.875rem 2rem' }}
               >
                 {isLoading ? (
                   <>
                     <div className="modern-spinner" style={{ width: '16px', height: '16px', marginRight: '0.5rem' }}></div>
-                    Ingresando...
+                    <span className="btn-text">Ingresando...</span>
                   </>
                 ) : isOnCooldown ? (
                   <>
                     <i className="fas fa-clock me-2"></i>
-                    Espera...
+                    <span className="btn-text">Espera...</span>
                   </>
                 ) : (
                   <>
                     <i className="fas fa-sign-in-alt me-2"></i>
-                    Ingresar
+                    <span className="btn-text">Ingresar</span>
                   </>
                 )}
               </button>

@@ -75,17 +75,19 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
       <div className="container py-5">
         <div className="modern-card">
           <div className="modern-card-body text-center">
-            <div className="empty-icon text-danger mb-3">
-              <i className="fas fa-exclamation-triangle fa-3x"></i>
+            <div className="exam-results-error-state">
+              <div className="empty-icon text-danger mb-3">
+                <i className="fas fa-exclamation-triangle fa-3x"></i>
+              </div>
+              <h4 className="empty-title">{error || 'Resultados no disponibles'}</h4>
+              <p className="empty-subtitle mb-4">
+                No se pudieron cargar los resultados del examen.
+              </p>
+              <button className="modern-btn modern-btn-primary" onClick={handleBack}>
+                <i className="fas fa-arrow-left me-2"></i>
+                <span className="btn-text">Volver al inicio</span>
+              </button>
             </div>
-            <h4 className="empty-title">{error || 'Resultados no disponibles'}</h4>
-            <p className="empty-subtitle mb-4">
-              No se pudieron cargar los resultados del examen.
-            </p>
-            <button className="modern-btn modern-btn-primary" onClick={handleBack}>
-              <i className="fas fa-arrow-left me-2"></i>
-              Volver al inicio
-            </button>
           </div>
         </div>
       </div>
@@ -99,14 +101,16 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
       {/* Header */}
       <div className="modern-card mb-4">
         <div className="modern-card-header">
-          <div className="d-flex justify-content-between align-items-center">
-            <div className="d-flex align-items-center">
+          <div className="exam-results-header">
+            <div className="header-content-section">
               <h1 className="page-title mb-0">
                 <i className="fas fa-chart-bar me-3"></i>
-                Resultados del Examen
+                <span className="title-text">Resultados del Examen</span>
               </h1>
             </div>
-            {!propAttemptId && <BackToMainButton />}
+            <div className="header-actions-section">
+              {!propAttemptId && <BackToMainButton />}
+            </div>
           </div>
         </div>
       </div>
@@ -114,10 +118,13 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
       {/* Exam Info */}
       <div className="modern-card mb-4">
         <div className="modern-card-body">
-          <h2 className="mb-2">{attempt.exam.titulo}</h2>
-          <p className="text-muted mb-0">
-            Respuestas correctas del examen
-          </p>
+          <div className="exam-results-info">
+            <h2 className="exam-results-title mb-2">{attempt.exam.titulo}</h2>
+            <p className="exam-results-description text-muted mb-0">
+              <i className="fas fa-info-circle me-2"></i>
+              <span className="description-text">Respuestas correctas del examen</span>
+            </p>
+          </div>
         </div>
       </div>
 
@@ -141,40 +148,42 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
               </p>
             </div>
           ) : (
-            <div className="row g-4">
+            <div className="exam-results-questions-grid">
               {attempt.exam.preguntas.map((question, index) => (
-                <div key={index} className="col-lg-6">
+                <div key={index} className="exam-results-question-card">
                   <div className="exam-card fade-in-up" style={{animationDelay: `${index * 0.1}s`}}>
                     <div className="exam-card-header">
                       <h5 className="exam-title">
                         <span className="badge badge-primary me-3">{index + 1}</span>
-                        {question.texto || "Sin texto"}
+                        <span className="question-text">{question.texto || "Sin texto"}</span>
                       </h5>
                     </div>
                     <div className="exam-card-body">
                       <div className="exam-info">
                         <h6 className="mb-3">
                           <i className="fas fa-list-ul me-2"></i>
-                          Opciones de respuesta:
+                          <span className="options-label">Opciones de respuesta:</span>
                         </h6>
-                        {question.opciones?.map((option, optionIndex) => {
-                          const isCorrect = optionIndex === question.correcta;
-                          
-                          return (
-                            <div key={optionIndex} className={`exam-info-item ${isCorrect ? 'bg-success bg-opacity-10 border-success rounded p-2 mb-2' : ''}`}>
-                              <i className={isCorrect ? "fas fa-check-circle me-2 text-success" : "fas fa-circle me-2 text-muted"} 
-                                 style={{fontSize: isCorrect ? '14px' : '8px'}}></i>
-                              <span className={isCorrect ? "fw-bold text-success" : ""}>
-                                {option || "Opción vacía"}
-                                {isCorrect && (
-                                  <span className="ms-2 badge bg-success text-white">
-                                    Respuesta Correcta
-                                  </span>
-                                )}
-                              </span>
-                            </div>
-                          );
-                        })}
+                        <div className="exam-results-options-list">
+                          {question.opciones?.map((option, optionIndex) => {
+                            const isCorrect = optionIndex === question.correcta;
+                            
+                            return (
+                              <div key={optionIndex} className={`exam-info-item ${isCorrect ? 'bg-success bg-opacity-10 border-success rounded p-2 mb-2' : ''}`}>
+                                <i className={isCorrect ? "fas fa-check-circle me-2 text-success" : "fas fa-circle me-2 text-muted"} 
+                                   style={{fontSize: isCorrect ? '14px' : '8px'}}></i>
+                                <span className={isCorrect ? "fw-bold text-success" : ""}>
+                                  {option || "Opción vacía"}
+                                  {isCorrect && (
+                                    <span className="ms-2 badge bg-success text-white correct-badge">
+                                      <span className="badge-text">Respuesta Correcta</span>
+                                    </span>
+                                  )}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
                   </div>

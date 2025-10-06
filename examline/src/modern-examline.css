@@ -981,3 +981,2178 @@ body {
     font-size: 1.25rem;
   }
 }
+
+/* User Settings Header Responsive */
+.user-settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.user-settings-header .header-title-section {
+  flex: 1;
+  min-width: 200px;
+}
+
+.user-settings-header .header-actions-section {
+  flex-shrink: 0;
+}
+
+/* Responsive breakpoints for user settings */
+@media (max-width: 768px) {
+  .user-settings-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+  
+  .user-settings-header .header-title-section {
+    text-align: center;
+  }
+  
+  .user-settings-header .header-actions-section {
+    width: 100%;
+  }
+  
+  .user-settings-header .header-actions-section .d-flex {
+    justify-content: center !important;
+  }
+}
+
+@media (max-width: 576px) {
+  .user-settings-header .page-title .title-text {
+    font-size: 1.1rem;
+  }
+  
+  .user-settings-header .page-title .fas {
+    font-size: 1rem;
+  }
+  
+  .user-settings-header .header-actions-section .modern-btn {
+    font-size: 0.75rem;
+    padding: 0.5rem 0.6rem;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 400px) {
+  .user-settings-header .header-actions-section .d-flex {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .user-settings-header .header-actions-section .modern-btn {
+    width: 100%;
+    justify-content: center;
+    font-size: 0.8rem;
+    padding: 0.6rem 1rem;
+  }
+}
+
+/* Save changes button responsive */
+@media (max-width: 576px) {
+  .save-changes-btn {
+    width: 100%;
+    padding: 0.75rem 1rem !important;
+    font-size: 0.9rem;
+  }
+}
+
+/* Tablet-specific improvements for user settings */
+@media (min-width: 768px) and (max-width: 991px) {
+  .user-settings-header {
+    align-items: center;
+  }
+  
+  .user-settings-header .page-title {
+    font-size: 1.5rem;
+  }
+  
+  .user-settings-header .header-actions-section .modern-btn {
+    font-size: 0.85rem;
+    padding: 0.6rem 1rem;
+  }
+}
+
+/* Student Exam Tabs Responsive */
+.student-exam-tabs {
+  display: flex;
+  width: 100%;
+}
+
+.student-tab-button {
+  flex: 1;
+  border: none;
+  padding: 1rem;
+  background: transparent;
+  border-radius: 0;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #64748b;
+  min-height: 60px;
+  cursor: pointer;
+  flex-wrap: wrap;
+  text-align: center;
+}
+
+.student-tab-button:first-child {
+  border-radius: 12px 0 0 12px;
+}
+
+.student-tab-button:last-child {
+  border-radius: 0 12px 12px 0;
+}
+
+.student-tab-button.active {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  font-weight: 600;
+}
+
+.student-tab-button:hover:not(.active) {
+  background: #f8fafc;
+  color: #334155;
+}
+
+.student-tab-button .tab-text {
+  white-space: nowrap;
+}
+
+.student-tab-button .tab-count {
+  font-weight: 600;
+}
+
+/* Responsive breakpoints for tabs */
+@media (max-width: 768px) {
+  .student-tab-button {
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.75rem 0.5rem;
+    font-size: 0.85rem;
+    min-height: 70px;
+  }
+  
+  .student-tab-button .fas {
+    margin-right: 0 !important;
+    font-size: 1.1rem;
+  }
+  
+  .student-tab-button .tab-text {
+    font-size: 0.8rem;
+    line-height: 1.2;
+  }
+  
+  .student-tab-button .tab-count {
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .student-tab-button {
+    padding: 0.6rem 0.25rem;
+    font-size: 0.8rem;
+    min-height: 65px;
+  }
+  
+  .student-tab-button .tab-text {
+    font-size: 0.75rem;
+    white-space: normal;
+    text-align: center;
+  }
+  
+  .student-tab-button .tab-count {
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .student-exam-tabs {
+    flex-direction: column;
+  }
+  
+  .student-tab-button {
+    flex-direction: row;
+    justify-content: center;
+    min-height: 50px;
+    padding: 0.75rem 1rem;
+    gap: 0.5rem;
+  }
+  
+  .student-tab-button:first-child {
+    border-radius: 12px 12px 0 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  }
+  
+  .student-tab-button:last-child {
+    border-radius: 0 0 12px 12px;
+  }
+  
+  .student-tab-button .fas {
+    margin-right: 0.5rem !important;
+  }
+  
+  .student-tab-button .tab-text {
+    white-space: nowrap;
+    font-size: 0.8rem;
+  }
+}
+
+/* Better touch targets for mobile */
+@media (max-width: 768px) {
+  .user-settings-header .modern-btn {
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+  
+  .modern-card .form-control {
+    min-height: 44px;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+  
+  .save-changes-btn {
+    min-height: 48px;
+  }
+  
+  .student-tab-button {
+    touch-action: manipulation;
+  }
+}
+
+/* Student filters responsive */
+.student-filters-actions {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 576px) {
+  .student-filters-actions {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 0.5rem;
+  }
+  
+  .student-filters-actions .modern-btn {
+    min-height: 44px;
+    justify-content: center;
+  }
+  
+  .student-filters-actions .btn-text {
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .student-filters-actions .btn-text {
+    display: none;
+  }
+  
+  .student-filters-actions .modern-btn .fas {
+    margin-right: 0 !important;
+  }
+}
+
+/* ExamView Responsive Styles */
+.exam-view-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.exam-view-header .header-content-section {
+  flex: 1;
+  min-width: 250px;
+}
+
+.exam-view-header .header-button-section {
+  flex-shrink: 0;
+}
+
+.exam-questions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+  gap: 1.5rem;
+}
+
+.exam-question-card-wrapper .exam-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.exam-question-card-wrapper .exam-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.question-text {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  border-left: 4px solid var(--primary-color);
+}
+
+.option-item {
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.option-item:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.option-text {
+  flex: 1;
+  word-break: break-word;
+}
+
+.correct-badge {
+  margin-left: 0.5rem;
+  background: var(--success-color);
+  color: white;
+  padding: 0.2rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Responsive breakpoints for ExamView */
+@media (max-width: 768px) {
+  .exam-view-header {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+  
+  .exam-view-header .header-content-section {
+    text-align: center;
+  }
+  
+  .exam-view-header .header-button-section {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+  }
+  
+  .exam-questions-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .question-text {
+    padding: 0.75rem;
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .exam-view-header .page-title .title-text {
+    font-size: 1.25rem;
+    display: block;
+    margin-top: 0.25rem;
+  }
+  
+  .exam-view-header .page-title .fas {
+    font-size: 1.1rem;
+  }
+  
+  .exam-view-header .header-button-section .modern-btn {
+    font-size: 0.8rem;
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .exam-card-header {
+    padding: 1rem;
+  }
+  
+  .exam-card-body {
+    padding: 1rem;
+  }
+  
+  .question-text {
+    padding: 0.75rem;
+    font-size: 0.9rem;
+  }
+  
+  .option-item {
+    padding: 0.6rem;
+  }
+  
+  .exam-badge .badge-text {
+    display: none;
+  }
+  
+  .correct-badge {
+    font-size: 0.7rem;
+    padding: 0.15rem 0.4rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .exam-view-header .header-button-section .btn-text {
+    display: none;
+  }
+  
+  .exam-view-header .header-button-section .modern-btn .fas {
+    margin-right: 0 !important;
+  }
+  
+  .exam-questions-grid {
+    gap: 0.75rem;
+  }
+  
+  .question-text {
+    padding: 0.5rem;
+    font-size: 0.85rem;
+  }
+  
+  .option-item {
+    padding: 0.5rem;
+    font-size: 0.85rem;
+  }
+  
+  .exam-title {
+    font-size: 1rem;
+  }
+}
+
+/* Tablet specific improvements */
+@media (min-width: 768px) and (max-width: 991px) {
+  .exam-questions-grid {
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  }
+  
+  .exam-view-header .page-title {
+    font-size: 1.5rem;
+  }
+}
+
+/* Principal Page Professor Panel Responsive */
+.instructivo-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.profesor-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.profesor-panel-header .panel-title-section {
+  flex: 1;
+  min-width: 200px;
+}
+
+.profesor-panel-header .panel-actions-section {
+  flex-shrink: 0;
+}
+
+.exams-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.exam-grid-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.exam-grid-item .exam-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.exam-grid-item .exam-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* Responsive breakpoints for Professor Panel */
+@media (max-width: 768px) {
+  .instructivo-header {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+  
+  .profesor-panel-header {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+  
+  .profesor-panel-header .panel-actions-section {
+    width: 100%;
+  }
+  
+  .profesor-panel-header .panel-actions-section .d-flex {
+    justify-content: center;
+  }
+  
+  .exams-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .instructivo-header .modern-card-title .title-text {
+    font-size: 1.1rem;
+  }
+  
+  .instructivo-header .modern-btn {
+    font-size: 0.8rem;
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .profesor-panel-header .page-title .title-text {
+    font-size: 1.25rem;
+  }
+  
+  .profesor-panel-header .panel-actions-section .modern-btn {
+    font-size: 0.75rem;
+    padding: 0.5rem 0.6rem;
+    white-space: nowrap;
+  }
+  
+  .exam-card .exam-badge .badge-text {
+    font-size: 0.7rem;
+  }
+  
+  .view-exam-btn {
+    font-size: 0.85rem;
+    padding: 0.6rem 1rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .profesor-panel-header .panel-actions-section .d-flex {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .profesor-panel-header .panel-actions-section .modern-btn {
+    width: 100%;
+    justify-content: center;
+    font-size: 0.8rem;
+    padding: 0.6rem 1rem;
+  }
+  
+  .view-exam-btn {
+    font-size: 0.8rem;
+    padding: 0.7rem 1rem;
+  }
+  
+  .exams-grid {
+    gap: 0.75rem;
+  }
+}
+
+/* Better touch targets for professor panel */
+@media (max-width: 768px) {
+  .profesor-panel-header .modern-btn {
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+  
+  .view-exam-btn {
+    min-height: 48px;
+  }
+}
+
+/* Extra small screens - keep text but make more compact */
+@media (max-width: 350px) {
+  .profesor-panel-header .panel-actions-section .modern-btn {
+    font-size: 0.7rem;
+    padding: 0.5rem 0.6rem;
+  }
+  
+  .instructivo-header .modern-btn {
+    font-size: 0.75rem;
+    padding: 0.4rem 0.6rem;
+  }
+  
+  .view-exam-btn {
+    font-size: 0.75rem;
+    padding: 0.6rem 0.8rem;
+  }
+  
+  .profesor-panel-header .page-title .title-text {
+    font-size: 1.1rem;
+  }
+}
+
+/* Tablet specific improvements for professor panel */
+@media (min-width: 768px) and (max-width: 991px) {
+  .profesor-panel-header {
+    align-items: center;
+  }
+  
+  .profesor-panel-header .page-title {
+    font-size: 1.5rem;
+  }
+  
+  .exams-grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+}
+
+/* ExamCreator Page Responsive Styles */
+.exam-creator-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.exam-creator-title-section {
+  flex: 1;
+  min-width: 200px;
+}
+
+.exam-creator-actions {
+  flex-shrink: 0;
+}
+
+.exam-creator-buttons {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.exam-creator-questions-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+
+.exam-creator-question-card {
+  width: 100%;
+}
+
+.question-number {
+  display: inline;
+}
+
+.badge-text {
+  display: inline;
+}
+
+.question-text {
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+.exam-creator-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.exam-creator-option-item {
+  flex: 1;
+}
+
+/* ExamCreator Tablet Styles */
+@media (max-width: 768px) and (min-width: 577px) {
+  .exam-creator-header {
+    gap: 0.75rem;
+  }
+  
+  .exam-creator-buttons {
+    gap: 0.5rem;
+  }
+  
+  .exam-creator-buttons .modern-btn {
+    font-size: 0.9rem;
+    padding: 0.65rem 0.9rem;
+  }
+}
+
+/* ExamAttempt Page Responsive Styles */
+.exam-attempt-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.exam-attempt-header .header-content-section {
+  flex: 1;
+  min-width: 250px;
+}
+
+.exam-attempt-header .header-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.exam-attempt-questions-grid {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+}
+
+.exam-attempt-question-card {
+  width: 100%;
+}
+
+.question-text {
+  word-wrap: break-word;
+  line-height: 1.4;
+}
+
+.options-label {
+  display: inline;
+}
+
+.exam-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.exam-completion-section {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.completion-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.completion-text {
+  display: inline;
+}
+
+.completion-description {
+  line-height: 1.5;
+}
+
+.exam-attempt-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.badge-text {
+  display: inline;
+}
+
+.count-text {
+  display: inline;
+}
+
+/* ExamResults Page Responsive Styles */
+.exam-results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.exam-results-header .header-content-section {
+  flex: 1;
+  min-width: 250px;
+}
+
+.exam-results-header .header-actions-section {
+  flex-shrink: 0;
+}
+
+.exam-results-info {
+  text-align: left;
+}
+
+.exam-results-title {
+  color: var(--primary-color);
+  font-weight: 600;
+  word-wrap: break-word;
+}
+
+.exam-results-description {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.description-text {
+  display: inline;
+}
+
+.exam-results-questions-grid {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+}
+
+.exam-results-question-card {
+  width: 100%;
+}
+
+.exam-results-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.correct-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75rem;
+}
+
+.correct-badge .badge-text {
+  display: inline;
+}
+
+.exam-results-error-state {
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+/* WindowInscriptions Mobile Styles */
+@media (max-width: 991px) and (min-width: 769px) {
+  .window-inscriptions-info-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .window-inscriptions-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+  
+  .window-inscriptions-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+  
+  .window-inscriptions-actions .modern-btn {
+    flex: 1;
+    min-height: 44px;
+  }
+  
+  .compact-btn {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.85rem;
+  }
+  
+  .window-inscriptions-info-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .attendance-actions {
+    width: 100%;
+  }
+  
+  .attendance-btn {
+    width: 100%;
+    min-width: auto;
+  }
+  
+  .inscription-compact-card {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0.75rem;
+    gap: 0.75rem;
+  }
+  
+  .attendance-controls-section {
+    margin-left: 0;
+  }
+  
+  .student-meta {
+    gap: 0.75rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .window-inscriptions-header .page-title {
+    font-size: 1.5rem;
+  }
+  
+  .exam-title-text {
+    font-size: 0.9rem;
+    display: block;
+    margin-top: 0.25rem;
+  }
+  
+  .window-inscriptions-actions {
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  
+  .compact-btn {
+    padding: 0.5rem 0.7rem;
+    font-size: 0.8rem;
+  }
+  
+  .attendance-description {
+    font-size: 0.9rem;
+  }
+  
+  .info-value {
+    font-size: 0.9rem;
+  }
+  
+  .inscription-compact-card {
+    padding: 0.6rem;
+    min-height: 60px;
+  }
+  
+  .student-details .student-name {
+    font-size: 0.95rem;
+  }
+  
+  .student-email,
+  .inscription-date {
+    font-size: 0.8rem;
+  }
+  
+  .attendance-toggle-btn {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.8rem;
+    min-width: 70px;
+  }
+  
+  .toggle-label {
+    display: none;
+  }
+  
+  .status-indicator {
+    font-size: 0.8rem;
+    padding: 0.25rem 0.5rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .window-inscriptions-header .title-text {
+    font-size: 0.85rem;
+  }
+  
+  .window-inscriptions-actions .btn-text {
+    font-size: 0.8rem;
+  }
+  
+  .compact-btn {
+    padding: 0.45rem 0.6rem;
+    font-size: 0.75rem;
+  }
+  
+  .student-details .student-name {
+    font-size: 0.9rem;
+  }
+  
+  .student-meta {
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  
+  .student-email,
+  .inscription-date {
+    font-size: 0.75rem;
+  }
+  
+  .attendance-toggle-btn {
+    padding: 0.35rem 0.5rem;
+    min-width: 60px;
+  }
+  
+  .description-text {
+    font-size: 0.85rem;
+  }
+  
+  .inscription-date {
+    display: none !important;
+  }
+}
+
+/* Login and Registro Responsive Enhancements */
+.login-card,
+.registro-card {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .login-card,
+  .registro-card {
+    margin: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+  
+  .registro-card .row {
+    flex-direction: column;
+  }
+  
+  .registro-card .col-md-4,
+  .registro-card .col-md-8 {
+    max-width: 100%;
+    flex: 0 0 100%;
+  }
+}
+
+@media (max-width: 576px) {
+  .login-card,
+  .registro-card {
+    margin: 0.5rem;
+  }
+  
+  .modern-card .modern-card-body {
+    padding: 2rem 1.5rem !important;
+  }
+  
+  .form-control {
+    font-size: 16px !important; /* Previene zoom en iOS */
+  }
+  
+  .modern-btn-lg,
+  .login-submit-btn {
+    padding: 0.875rem 1.5rem !important;
+    font-size: 1rem !important;
+    min-height: 48px;
+  }
+  
+  .registro-submit-btn {
+    padding: 0.75rem 1.5rem !important;
+    font-size: 0.95rem !important;
+    min-height: 48px;
+  }
+}
+
+@media (max-width: 400px) {
+  .login-card .modern-card-body,
+  .registro-card .modern-card-body {
+    padding: 1.5rem 1rem !important;
+  }
+  
+  .page-title {
+    font-size: 1.5rem !important;
+  }
+  
+  .page-subtitle {
+    font-size: 0.9rem !important;
+  }
+  
+  .login-submit-btn .btn-text,
+  .registro-submit-btn .btn-text {
+    font-size: 0.9rem;
+  }
+  
+  .registro-card .col-md-4 {
+    padding: 1.5rem 1rem !important;
+  }
+}
+
+/* StudentExamPage Responsive Styles */
+.student-exam-page-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.student-exam-instructivo-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.instructivo-title-section {
+  flex: 1;
+  min-width: 200px;
+}
+
+.instructivo-toggle-section {
+  flex-shrink: 0;
+}
+
+.instructivo-toggle-btn {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.student-exam-steps-grid {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.explanation-step-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1.5rem;
+  transition: all 0.2s ease;
+}
+
+.explanation-step-card:hover {
+  border-color: var(--primary-color);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.explanation-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.step-icon {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(var(--primary-color-rgb), 0.1);
+  border-radius: 50%;
+  font-size: 1.25rem;
+}
+
+.step-content {
+  flex: 1;
+}
+
+.step-title {
+  color: var(--text-color);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.step-description {
+  color: var(--text-color-2);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin-bottom: 0;
+}
+
+/* WindowInscriptions Page Responsive Styles */
+.window-inscriptions-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.window-inscriptions-header .header-content-section {
+  flex: 1;
+  min-width: 250px;
+}
+
+.window-inscriptions-header .header-actions-section {
+  flex-shrink: 0;
+}
+
+.window-inscriptions-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.compact-btn {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.exam-title-text {
+  word-wrap: break-word;
+  line-height: 1.3;
+}
+
+.window-inscriptions-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+}
+
+.info-section {
+  flex: 1;
+}
+
+.info-value {
+  color: var(--primary-color);
+  font-weight: 500;
+}
+
+.attendance-management-section {
+  text-align: center;
+}
+
+.attendance-description {
+  margin-bottom: 1rem;
+}
+
+.description-text {
+  display: inline;
+}
+
+.attendance-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.attendance-btn {
+  min-width: 180px;
+  padding: 0.6rem 1rem;
+}
+
+/* Compact List Design */
+.window-inscriptions-compact-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.inscription-compact-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  min-height: 70px;
+}
+
+.inscription-compact-card:hover {
+  border-color: var(--primary-color);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.student-info-section {
+  flex: 1;
+  min-width: 0;
+}
+
+.student-details .student-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-color);
+  margin-bottom: 0.3rem;
+}
+
+.student-meta {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.student-email,
+.inscription-date {
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.attendance-controls-section {
+  flex-shrink: 0;
+  margin-left: 1rem;
+}
+
+.attendance-toggle-group {
+  display: flex;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+
+.attendance-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  background: var(--card-bg);
+  color: var(--text-color-2);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.85rem;
+  min-width: 80px;
+  justify-content: center;
+}
+
+.attendance-toggle-btn:hover:not(:disabled) {
+  background: var(--hover-bg);
+}
+
+.attendance-toggle-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.present-btn.active {
+  background: var(--success-color);
+  color: white;
+}
+
+.absent-btn.active {
+  background: var(--danger-color);
+  color: white;
+}
+
+.attendance-toggle-btn + .attendance-toggle-btn {
+  border-left: 1px solid var(--border-color);
+}
+
+.toggle-label {
+  font-weight: 500;
+}
+
+.attendance-status-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0.75rem;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.status-indicator.present {
+  background: rgba(34, 197, 94, 0.1);
+  color: var(--success-color);
+}
+
+.status-indicator.absent {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--danger-color);
+}
+
+.status-indicator.unknown {
+  background: rgba(107, 114, 128, 0.1);
+  color: var(--text-color-2);
+}
+
+.window-inscriptions-loading-state,
+.window-inscriptions-error-state {
+  max-width: 600px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+/* ExamWindows Page Responsive Styles */
+.exam-windows-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.exam-windows-header .header-content-section {
+  flex: 1;
+  min-width: 250px;
+}
+
+.exam-windows-header .header-actions-section {
+  flex-shrink: 0;
+}
+
+.exam-states-panel {
+  padding: 1rem;
+}
+
+.exam-states-panel .panel-title {
+  margin-bottom: 1rem;
+  color: var(--text-color-2);
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.states-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.state-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.state-badge {
+  white-space: nowrap;
+  flex-shrink: 0;
+  padding: 0.375rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.state-description {
+  color: var(--text-color-1);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+/* ExamWindows Tabs */
+.exam-windows-tabs {
+  display: flex;
+  width: 100%;
+}
+
+.exam-windows-tab-button {
+  flex: 1;
+  border: none;
+  padding: 0.875rem 0.5rem;
+  background: transparent;
+  border-radius: 0;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #64748b;
+  min-height: 60px;
+  cursor: pointer;
+  text-align: center;
+  flex-wrap: wrap;
+}
+
+.exam-windows-tab-button:first-child {
+  border-radius: 12px 0 0 12px;
+}
+
+.exam-windows-tab-button:nth-child(2) {
+  border-left: 1px solid rgba(226, 232, 240, 0.5);
+  border-right: 1px solid rgba(226, 232, 240, 0.5);
+}
+
+.exam-windows-tab-button:last-child {
+  border-radius: 0 12px 12px 0;
+}
+
+.exam-windows-tab-button.active {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  font-weight: 600;
+}
+
+.exam-windows-tab-button:hover:not(.active) {
+  background: #f8fafc;
+  color: #334155;
+}
+
+.exam-windows-tab-button .tab-text {
+  white-space: nowrap;
+}
+
+.exam-windows-tab-button .tab-count {
+  font-weight: 600;
+}
+
+/* ExamWindows Grid */
+.exam-windows-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 1.5rem;
+  align-items: start;
+}
+
+/* Responsive breakpoints for ExamWindows */
+@media (max-width: 768px) {
+  .exam-windows-header {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+  
+  .exam-windows-header .header-content-section {
+    text-align: center;
+  }
+  
+  .exam-windows-header .header-actions-section {
+    width: 100%;
+  }
+  
+  .exam-windows-header .header-actions-section .d-flex {
+    justify-content: center;
+  }
+  
+  .exam-windows-header .update-time {
+    display: block;
+    margin-top: 0.5rem;
+    margin-left: 0 !important;
+  }
+  
+  .states-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  
+  .exam-windows-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .exam-windows-tab-button {
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.65rem 0.25rem;
+    font-size: 0.8rem;
+    min-height: 70px;
+  }
+  
+  .exam-windows-tab-button .fas {
+    margin-right: 0 !important;
+    font-size: 1rem;
+  }
+  
+  .exam-windows-tab-button .tab-text {
+    font-size: 0.75rem;
+    line-height: 1.2;
+  }
+  
+  .exam-windows-tab-button .tab-count {
+    font-size: 0.7rem;
+  }
+}
+
+/* ExamCreator Mobile Styles */
+@media (max-width: 576px) {
+  .exam-creator-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+  
+  .exam-creator-title-section .page-title {
+    font-size: 1.5rem;
+  }
+  
+  .exam-creator-title-section .page-subtitle {
+    font-size: 0.9rem;
+    margin-top: 0.25rem;
+  }
+  
+  .exam-creator-buttons {
+    width: 100%;
+    justify-content: stretch;
+  }
+  
+  .exam-creator-buttons .modern-btn {
+    flex: 1;
+    min-height: 44px;
+    font-size: 0.9rem;
+    padding: 0.6rem 0.8rem;
+  }
+  
+  .question-text {
+    font-size: 0.95rem;
+  }
+  
+  .exam-info-item {
+    font-size: 0.9rem;
+    margin-bottom: 0.4rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .exam-creator-title-section .title-text {
+    display: block;
+    margin-top: 0.25rem;
+  }
+  
+  .exam-creator-buttons .button-text {
+    font-size: 0.85rem;
+  }
+  
+  .exam-creator-buttons .modern-btn {
+    padding: 0.5rem 0.6rem;
+  }
+  
+  .question-number {
+    font-size: 0.9rem;
+  }
+  
+  .badge-text {
+    display: none;
+  }
+}
+
+/* ExamAttempt Mobile Styles */
+@media (max-width: 991px) and (min-width: 769px) {
+  .exam-attempt-questions-grid {
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.25rem;
+  }
+}
+
+@media (max-width: 768px) and (min-width: 577px) {
+  .exam-attempt-questions-grid {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+  
+  .exam-attempt-actions {
+    gap: 0.6rem;
+  }
+  
+  .exam-attempt-actions .modern-btn {
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .exam-attempt-questions-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 576px) {
+  .exam-attempt-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+  
+  .exam-attempt-header .page-title {
+    font-size: 1.5rem;
+  }
+  
+  .exam-attempt-header .header-badges {
+    justify-content: flex-start;
+  }
+  
+  .exam-attempt-questions-grid {
+    gap: 1rem;
+  }
+  
+  .completion-title {
+    font-size: 1.1rem;
+    justify-content: center;
+  }
+  
+  .completion-description {
+    font-size: 0.9rem;
+  }
+  
+  .exam-attempt-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+  
+  .exam-attempt-actions .modern-btn {
+    width: 100%;
+    min-height: 48px;
+  }
+  
+  .question-text {
+    font-size: 0.95rem;
+  }
+  
+  .exam-options-list .exam-info-item {
+    font-size: 0.9rem;
+    margin-bottom: 0.4rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .exam-attempt-header .title-text {
+    display: block;
+    margin-top: 0.25rem;
+  }
+  
+  .badge-text {
+    display: none;
+  }
+  
+  .count-text {
+    font-size: 0.85rem;
+  }
+  
+  .completion-text {
+    font-size: 0.95rem;
+  }
+  
+  .exam-attempt-actions .btn-text {
+    font-size: 0.9rem;
+  }
+  
+  .options-label {
+    display: none;
+  }
+}
+
+/* ExamResults Mobile Styles */
+@media (max-width: 991px) and (min-width: 769px) {
+  .exam-results-questions-grid {
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.25rem;
+  }
+}
+
+@media (max-width: 768px) and (min-width: 577px) {
+  .exam-results-questions-grid {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+  
+  .exam-results-title {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .exam-results-questions-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 576px) {
+  .exam-results-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+  
+  .exam-results-header .page-title {
+    font-size: 1.5rem;
+  }
+  
+  .exam-results-questions-grid {
+    gap: 1rem;
+  }
+  
+  .exam-results-title {
+    font-size: 1.25rem;
+    line-height: 1.3;
+  }
+  
+  .exam-results-description {
+    font-size: 0.9rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+  
+  .question-text {
+    font-size: 0.95rem;
+    line-height: 1.4;
+  }
+  
+  .exam-results-options-list .exam-info-item {
+    font-size: 0.9rem;
+    margin-bottom: 0.4rem;
+  }
+  
+  .correct-badge {
+    font-size: 0.7rem;
+  }
+  
+  .exam-results-error-state {
+    padding: 1.5rem 0.5rem;
+  }
+  
+  .exam-results-error-state .empty-title {
+    font-size: 1.25rem;
+  }
+  
+  .exam-results-error-state .empty-subtitle {
+    font-size: 0.9rem;
+  }
+  
+  .exam-results-error-state .modern-btn {
+    width: 100%;
+    min-height: 48px;
+  }
+}
+
+@media (max-width: 400px) {
+  .exam-results-header .title-text {
+    display: block;
+    margin-top: 0.25rem;
+  }
+  
+  .description-text {
+    font-size: 0.85rem;
+  }
+  
+  .correct-badge .badge-text {
+    display: none;
+  }
+  
+  .correct-badge {
+    min-width: 20px;
+    min-height: 20px;
+    border-radius: 50%;
+    padding: 2px;
+  }
+  
+  .options-label {
+    display: none;
+  }
+  
+  .exam-results-title {
+    font-size: 1.1rem;
+  }
+  
+  .exam-results-error-state .btn-text {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .exam-windows-header .page-title .title-text {
+    font-size: 1.25rem;
+  }
+  
+  .exam-windows-header .header-actions-section .modern-btn {
+    font-size: 0.8rem;
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .exam-states-panel {
+    padding: 0.75rem;
+  }
+  
+  .exam-states-panel .panel-title {
+    font-size: 0.9rem;
+  }
+  
+  .state-item {
+    padding: 0.5rem;
+    gap: 0.5rem;
+  }
+  
+  .state-badge {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+  }
+  
+  .state-description {
+    font-size: 0.8rem;
+  }
+  
+  .exam-windows-tab-button {
+    padding: 0.5rem 0.15rem;
+    font-size: 0.75rem;
+    min-height: 65px;
+    gap: 0.2rem;
+  }
+  
+  .exam-windows-tab-button .tab-text {
+    font-size: 0.7rem;
+    white-space: nowrap;
+  }
+  
+  .exam-windows-tab-button .tab-count {
+    font-size: 0.65rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .exam-windows-tabs {
+    flex-direction: column;
+  }
+  
+  .exam-windows-tab-button {
+    flex-direction: row;
+    justify-content: center;
+    min-height: 50px;
+    padding: 0.75rem 1rem;
+    gap: 0.5rem;
+    border-left: none !important;
+    border-right: none !important;
+  }
+  
+  .exam-windows-tab-button:first-child {
+    border-radius: 12px 12px 0 0;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+  }
+  
+  .exam-windows-tab-button:nth-child(2) {
+    border-radius: 0;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+    border-top: 1px solid rgba(226, 232, 240, 0.5);
+  }
+  
+  .exam-windows-tab-button:last-child {
+    border-radius: 0 0 12px 12px;
+    border-top: 1px solid rgba(226, 232, 240, 0.5);
+  }
+  
+  .exam-windows-tab-button .fas {
+    margin-right: 0.5rem !important;
+  }
+  
+  .exam-windows-tab-button .tab-text {
+    white-space: nowrap;
+    font-size: 0.8rem;
+  }
+  
+  .exam-windows-header .header-actions-section .d-flex {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .exam-windows-header .header-actions-section .modern-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .states-grid {
+    gap: 0.5rem;
+  }
+  
+  .state-item {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.5rem;
+  }
+}
+
+/* Extra small screens - keep text but make more compact */
+@media (max-width: 350px) {
+  .user-settings-header .header-actions-section .modern-btn {
+    font-size: 0.7rem;
+    padding: 0.4rem 0.5rem;
+  }
+  
+  .user-settings-header .page-title .title-text {
+    font-size: 1rem;
+  }
+  
+  .save-changes-btn {
+    font-size: 0.85rem;
+    padding: 0.7rem 0.8rem !important;
+  }
+}
+
+/* ============================================
+   StudentExamPage Responsive Styles
+   ============================================ */
+
+.student-exam-instructivo-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.student-exam-instructivo-header h4 {
+  margin: 0;
+  color: var(--primary-color);
+  flex: 1;
+}
+
+.student-exam-instructivo-toggle {
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 120px;
+}
+
+.student-exam-instructivo-toggle:hover {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+.student-exam-steps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.explanation-step-card {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  padding: 20px;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.explanation-step-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(45deg, var(--primary-color), var(--accent-color));
+}
+
+.explanation-step-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+  border-color: var(--primary-color);
+}
+
+.explanation-step-card h5 {
+  color: var(--primary-color);
+  margin-bottom: 15px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.explanation-step-card h5::before {
+  content: '📋';
+  font-size: 1.2em;
+}
+
+.explanation-step-card p {
+  color: #495057;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.student-exam-page-wrapper {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* StudentExamPage Mobile Styles */
+@media (max-width: 991px) {
+  .student-exam-instructivo-header {
+    flex-direction: column;
+    text-align: center;
+    gap: 15px;
+  }
+
+  .student-exam-instructivo-header h4 {
+    font-size: 1.4rem;
+  }
+
+  .student-exam-steps-grid {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+}
+
+@media (max-width: 768px) {
+  .student-exam-page-wrapper {
+    padding: 15px;
+  }
+
+  .student-exam-instructivo-toggle {
+    width: 100%;
+    padding: 12px;
+    font-size: 1rem;
+  }
+
+  .explanation-step-card {
+    padding: 16px;
+  }
+
+  .explanation-step-card h5 {
+    font-size: 1.1rem;
+  }
+
+  .student-exam-instructivo-header h4 {
+    font-size: 1.3rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .student-exam-page-wrapper {
+    padding: 10px;
+  }
+
+  .student-exam-instructivo-header h4 {
+    font-size: 1.2rem;
+  }
+
+  .explanation-step-card {
+    padding: 12px;
+  }
+
+  .explanation-step-card h5 {
+    font-size: 1rem;
+  }
+
+  .explanation-step-card p {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .student-exam-instructivo-toggle {
+    font-size: 0.9rem;
+    padding: 10px;
+  }
+
+  .explanation-step-card h5::before {
+    font-size: 1em;
+  }
+}

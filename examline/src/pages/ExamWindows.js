@@ -34,6 +34,10 @@ export default function ExamWindowsPage() {
   });
   const [, setIsAutoUpdating] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(null);
+  const [activeTab, setActiveTab] = useState(() => {
+    // Recuperar la pestaña del localStorage o usar 'current' por defecto
+    return localStorage.getItem('examWindows_activeTab') || 'current';
+  });
 
   // Función para mostrar modal
   const showModal = useCallback((type, title, message, onConfirm = null, showCancel = false) => {
@@ -120,6 +124,11 @@ export default function ExamWindowsPage() {
       }
     }
   }, [token, navigate, showModal]);
+
+  // Guardar la pestaña activa en localStorage
+  useEffect(() => {
+    localStorage.setItem('examWindows_activeTab', activeTab);
+  }, [activeTab]);
 
   // Verificar que es profesor y cargar datos iniciales
   useEffect(() => {
@@ -743,7 +752,7 @@ export default function ExamWindowsPage() {
 
   if (loading) {
     return (
-      <div className="container py-5">
+      <div className="container-fluid container-lg py-5 px-3 px-md-4">
         <div className="loading-container">
           <div className="modern-spinner"></div>
           <p>Cargando ventanas de examen...</p>
@@ -753,50 +762,47 @@ export default function ExamWindowsPage() {
   }
 
   return (
-    <div className="container py-5">
+    <div className="container-fluid container-lg py-5 px-3 px-md-4">
       {/* Header */}
       <div className="modern-card mb-4">
         <div className="modern-card-header">
-          <div className="row align-items-center">
-            <div className="col-12 col-lg-8 mb-3 mb-lg-0">
+          <div className="exam-windows-header">
+            <div className="header-content-section">
               <h1 className="page-title mb-1">
                 <i className="fas fa-calendar-alt me-2" style={{ color: 'var(--primary-color)' }}></i>
-                Ventanas de Examen
+                <span className="title-text">Ventanas de Examen</span>
               </h1>
               <p className="page-subtitle mb-0">
                 Gestiona los horarios y modalidades de tus exámenes
                 {lastUpdate && (
-                  <span className="ms-2 text-muted" style={{ fontSize: '0.85em' }}>
+                  <span className="ms-2 text-muted update-time">
                     • Última actualización: {lastUpdate.toLocaleTimeString()}
                   </span>
                 )}
               </p>
             </div>
-            <div className="col-12 col-lg-4">
-              <div className="d-flex flex-column flex-sm-row gap-2 justify-content-lg-end">
+            <div className="header-actions-section">
+              <div className="d-flex gap-2 flex-wrap justify-content-end">
                 <button 
-                  className="modern-btn modern-btn-primary flex-fill flex-sm-grow-0" 
+                  className="modern-btn modern-btn-primary modern-btn-sm" 
                   onClick={handleCreateWindow}
                   disabled={exams.length === 0}
                   style={
                     exams.length === 0
                       ? {
-                          minWidth: '140px',
                           background: '#d1d5db',
                           borderColor: '#d1d5db',
                           color: '#6b7280',
                           cursor: 'not-allowed',
                           boxShadow: 'none',
                         }
-                      : { minWidth: '140px' }
+                      : {}
                   }
                 >
                   <i className="fas fa-plus me-2"></i>
-                  Nueva Ventana
+                  <span className="btn-text">Nueva Ventana</span>
                 </button>
-                <div className="flex-fill flex-sm-grow-0">
-                  <BackToMainButton />
-                </div>
+                <BackToMainButton className="modern-btn modern-btn-secondary modern-btn-sm" />
               </div>
             </div>
           </div>
@@ -813,57 +819,84 @@ export default function ExamWindowsPage() {
 
       {/* Panel informativo de estados */}
       <div className="modern-card mb-4">
-        <div className="modern-card-body" style={{ padding: '1rem' }}>
-          <h6 className="mb-3" style={{ color: 'var(--text-color-2)', fontWeight: '600' }}>
+        <div className="modern-card-body exam-states-panel">
+          <h6 className="panel-title">
             <i className="fas fa-info-circle me-2" style={{ color: 'var(--primary-color)' }}></i>
             Estados de las Ventanas de Examen
           </h6>
-          <div className="row g-3">
-            <div className="col-6 col-md-3">
-              <div className="d-flex align-items-center">
-                <span className="badge bg-primary me-2">📅 Programada</span>
-                <small className="text-muted">Abierta a inscripciones</small>
-              </div>
+          <div className="states-grid">
+            <div className="state-item">
+              <span className="state-badge bg-primary">📅 Programada</span>
+              <small className="state-description">Abierta a inscripciones</small>
             </div>
-            <div className="col-6 col-md-3">
-              <div className="d-flex align-items-center">
-                <span className="badge bg-warning text-dark me-2">🔒 Cerrada</span>
-                <small className="text-muted">Cerrada a inscripciones</small>
-              </div>
+            <div className="state-item">
+              <span className="state-badge bg-warning text-dark">🔒 Cerrada</span>
+              <small className="state-description">Cerrada a inscripciones</small>
             </div>
-            <div className="col-6 col-md-3">
-              <div className="d-flex align-items-center">
-                <span className="badge bg-success me-2">▶️ En Curso</span>
-                <small className="text-muted">Examen en progreso</small>
-              </div>
+            <div className="state-item">
+              <span className="state-badge bg-success">▶️ En Curso</span>
+              <small className="state-description">Examen en progreso</small>
             </div>
-            <div className="col-6 col-md-3">
-              <div className="d-flex align-items-center">
-                <span className="badge bg-secondary me-2">✅ Finalizada</span>
-                <small className="text-muted">Examen completado</small>
-              </div>
+            <div className="state-item">
+              <span className="state-badge bg-secondary">✅ Finalizada</span>
+              <small className="state-description">Examen completado</small>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Secciones agrupadas */}
+      {/* Tabs */}
+      <div className="modern-card mb-4">
+        <div className="modern-card-body p-0">
+          <div className="exam-windows-tabs">
+            {(() => {
+              const enCurso = examWindows.filter(w => w.estado === 'en_curso');
+              const programadasYCerradas = examWindows.filter(w => w.estado === 'programada' || w.estado === 'cerrada_inscripciones');
+              const finalizadas = examWindows.filter(w => w.estado === 'finalizada');
+
+              return (
+                <>
+                  <button 
+                    className={`exam-windows-tab-button ${activeTab === 'current' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('current')}
+                  >
+                    <i className="fas fa-play-circle me-2"></i>
+                    <span className="tab-text">En Curso</span>
+                    <span className="tab-count">({enCurso.length})</span>
+                  </button>
+                  <button 
+                    className={`exam-windows-tab-button ${activeTab === 'scheduled' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('scheduled')}
+                  >
+                    <i className="fas fa-calendar-check me-2"></i>
+                    <span className="tab-text">Programadas</span>
+                    <span className="tab-count">({programadasYCerradas.length})</span>
+                  </button>
+                  <button 
+                    className={`exam-windows-tab-button ${activeTab === 'finished' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('finished')}
+                  >
+                    <i className="fas fa-flag-checkered me-2"></i>
+                    <span className="tab-text">Finalizadas</span>
+                    <span className="tab-count">({finalizadas.length})</span>
+                  </button>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      </div>
+
+      {/* Tab Content */}
       {(() => {
         const enCurso = examWindows.filter(w => w.estado === 'en_curso');
         const programadasYCerradas = examWindows.filter(w => w.estado === 'programada' || w.estado === 'cerrada_inscripciones');
         const finalizadas = examWindows.filter(w => w.estado === 'finalizada');
-
         const total = examWindows.length;
 
         if (total === 0) {
           return (
             <div className="modern-card">
-              <div className="modern-card-header">
-                <h3 className="modern-card-title">
-                  <i className="fas fa-window-restore me-2"></i>
-                  Ventanas
-                </h3>
-              </div>
               <div className="modern-card-body">
                 <div className="empty-state">
                   <div className="empty-icon">
@@ -888,66 +921,95 @@ export default function ExamWindowsPage() {
           );
         }
 
-        return (
-          <>
-            {/* En curso */}
-            <div className="modern-card mb-4">
+        if (activeTab === 'current') {
+          return (
+            <div className="modern-card">
               <div className="modern-card-header">
                 <h3 className="modern-card-title">
                   <i className="fas fa-play-circle me-2" style={{ color: 'var(--success-color)' }}></i>
-                  En curso ({enCurso.length})
+                  Ventanas en Curso ({enCurso.length})
                 </h3>
               </div>
               <div className="modern-card-body">
                 {enCurso.length === 0 ? (
-                  <p className="text-muted mb-0">No hay ventanas en curso.</p>
+                  <div className="empty-state">
+                    <div className="empty-icon">
+                      <i className="fas fa-play-circle"></i>
+                    </div>
+                    <h4 className="empty-title">No hay ventanas en curso</h4>
+                    <p className="empty-subtitle">
+                      No tienes exámenes ejecutándose en este momento.
+                    </p>
+                  </div>
                 ) : (
-                  <div className="row g-4" style={{ alignItems: 'stretch' }}>
+                  <div className="exam-windows-grid">
                     {enCurso.map((w, idx) => renderWindowCard(w, idx))}
                   </div>
                 )}
               </div>
             </div>
+          );
+        }
 
-            {/* Programadas y cerradas */}
-            <div className="modern-card mb-4">
+        if (activeTab === 'scheduled') {
+          return (
+            <div className="modern-card">
               <div className="modern-card-header">
                 <h3 className="modern-card-title">
                   <i className="fas fa-calendar-check me-2" style={{ color: 'var(--primary-color)' }}></i>
-                  Programadas y cerradas ({programadasYCerradas.length})
+                  Ventanas Programadas y Cerradas ({programadasYCerradas.length})
                 </h3>
               </div>
               <div className="modern-card-body">
                 {programadasYCerradas.length === 0 ? (
-                  <p className="text-muted mb-0">No hay ventanas programadas o cerradas.</p>
+                  <div className="empty-state">
+                    <div className="empty-icon">
+                      <i className="fas fa-calendar-check"></i>
+                    </div>
+                    <h4 className="empty-title">No hay ventanas programadas</h4>
+                    <p className="empty-subtitle">
+                      No tienes ventanas programadas o cerradas a inscripciones.
+                    </p>
+                  </div>
                 ) : (
-                  <div className="row g-4" style={{ alignItems: 'stretch' }}>
+                  <div className="exam-windows-grid">
                     {programadasYCerradas.map((w, idx) => renderWindowCard(w, idx))}
                   </div>
                 )}
               </div>
             </div>
+          );
+        }
 
-            {/* Finalizadas */}
+        if (activeTab === 'finished') {
+          return (
             <div className="modern-card">
               <div className="modern-card-header">
                 <h3 className="modern-card-title">
                   <i className="fas fa-flag-checkered me-2" style={{ color: 'var(--text-color-3)' }}></i>
-                  Finalizadas ({finalizadas.length})
+                  Ventanas Finalizadas ({finalizadas.length})
                 </h3>
               </div>
               <div className="modern-card-body">
                 {finalizadas.length === 0 ? (
-                  <p className="text-muted mb-0">No hay ventanas finalizadas.</p>
+                  <div className="empty-state">
+                    <div className="empty-icon">
+                      <i className="fas fa-flag-checkered"></i>
+                    </div>
+                    <h4 className="empty-title">No hay ventanas finalizadas</h4>
+                    <p className="empty-subtitle">
+                      Las ventanas completadas aparecerán aquí.
+                    </p>
+                  </div>
                 ) : (
-                  <div className="row g-4" style={{ alignItems: 'stretch' }}>
+                  <div className="exam-windows-grid">
                     {finalizadas.map((w, idx) => renderWindowCard(w, idx))}
                   </div>
                 )}
               </div>
             </div>
-          </>
-        );
+          );
+        }
       })()}
 
       {/* Modal para crear/editar ventana */}

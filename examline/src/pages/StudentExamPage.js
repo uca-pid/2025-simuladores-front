@@ -9,31 +9,38 @@ const StudentExamPage = () => {
 
   return (
     <div className="container py-5">
-      {/* Header con información del usuario */}
-      <UserHeader />
+      <div className="student-exam-page-wrapper">
+        {/* Header con información del usuario */}
+        <UserHeader />
 
-      {/* Instructivo colapsable */}
-      <div className="modern-card mb-4">
+        {/* Instructivo colapsable */}
+        <div className="modern-card mb-4">
         <div className="modern-card-header">
-          <div className="d-flex justify-content-between align-items-center">
-            <h3 className="modern-card-title mb-0">
-              <i className="fas fa-info-circle me-2"></i>
-              Instructivo de Uso
-            </h3>
-            <button
-              className="modern-btn modern-btn-secondary"
-              onClick={() => setShowInstructivo(!showInstructivo)}
-            >
-              <i className={`fas fa-chevron-${showInstructivo ? 'up' : 'down'}`}></i>
-              {showInstructivo ? 'Ocultar' : 'Ver instructivo'}
-            </button>
+          <div className="student-exam-instructivo-header">
+            <div className="instructivo-title-section">
+              <h3 className="modern-card-title mb-0">
+                <i className="fas fa-info-circle me-2"></i>
+                <span className="title-text">Instructivo de Uso</span>
+              </h3>
+            </div>
+            <div className="instructivo-toggle-section">
+              <button
+                className="modern-btn modern-btn-secondary instructivo-toggle-btn"
+                onClick={() => setShowInstructivo(!showInstructivo)}
+              >
+                <i className={`fas fa-chevron-${showInstructivo ? 'up' : 'down'} me-2`}></i>
+                <span className="btn-text">
+                  {showInstructivo ? 'Ocultar' : 'Ver instructivo'}
+                </span>
+              </button>
+            </div>
           </div>
         </div>
         {showInstructivo && (
           <div className="modern-card-body">
             <div className="system-explanation">
-              <div className="row g-4">
-                <div className="col-md-4">
+              <div className="student-exam-steps-grid">
+                <div className="explanation-step-card">
                   <div className="explanation-step">
                     <div className="step-icon">
                       <i className="fas fa-search text-primary"></i>
@@ -46,7 +53,7 @@ const StudentExamPage = () => {
                     </div>
                   </div>
                 </div>
-                <div className="col-md-4">
+                <div className="explanation-step-card">
                   <div className="explanation-step">
                     <div className="step-icon">
                       <i className="fas fa-user-plus text-success"></i>
@@ -59,7 +66,7 @@ const StudentExamPage = () => {
                     </div>
                   </div>
                 </div>
-                <div className="col-md-4">
+                <div className="explanation-step-card">
                   <div className="explanation-step">
                     <div className="step-icon">
                       <i className="fas fa-play text-warning"></i>
@@ -78,8 +85,9 @@ const StudentExamPage = () => {
         )}
       </div>
 
-      {/* Componente de inscripciones anidado */}
-      <StudentInscriptionsPage embedded={true} showHeader={false} />
+        {/* Componente de inscripciones anidado */}
+        <StudentInscriptionsPage embedded={true} showHeader={false} />
+      </div>
     </div>
   );
 };

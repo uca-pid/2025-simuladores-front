@@ -288,7 +288,7 @@ export default function StudentInscriptionsPage({
     );
   }
 
-  const containerClass = embedded ? "" : "container py-5";
+  const containerClass = embedded ? "" : "container-fluid container-lg py-5 px-3 px-md-4";
   
   return (
     <div className={containerClass}>
@@ -306,30 +306,22 @@ export default function StudentInscriptionsPage({
       {/* Tabs */}
       <div className="modern-card mb-4">
         <div className="modern-card-body p-0">
-          <div className="d-flex">
+          <div className="student-exam-tabs">
             <button 
-              className={`flex-fill border-0 py-3 px-4 ${activeTab === 'available' ? 'text-white' : 'bg-transparent'}`}
-              style={{
-                borderRadius: activeTab === 'available' ? '12px 0 0 12px' : '0',
-                background: activeTab === 'available' ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'transparent',
-                transition: 'all 0.2s ease'
-              }}
+              className={`student-tab-button ${activeTab === 'available' ? 'active' : ''}`}
               onClick={() => setActiveTab('available')}
             >
               <i className="fas fa-calendar-check me-2"></i>
-              Exámenes Disponibles ({availableWindows.length})
+              <span className="tab-text">Exámenes Disponibles</span>
+              <span className="tab-count">({availableWindows.length})</span>
             </button>
             <button 
-              className={`flex-fill border-0 py-3 px-4 ${activeTab === 'myInscriptions' ? 'text-white' : 'bg-transparent'}`}
-              style={{
-                borderRadius: activeTab === 'myInscriptions' ? '0 12px 12px 0' : '0',
-                background: activeTab === 'myInscriptions' ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'transparent',
-                transition: 'all 0.2s ease'
-              }}
+              className={`student-tab-button ${activeTab === 'myInscriptions' ? 'active' : ''}`}
               onClick={() => setActiveTab('myInscriptions')}
             >
               <i className="fas fa-user-graduate me-2"></i>
-              Mis Inscripciones ({myInscriptions.length})
+              <span className="tab-text">Mis Inscripciones</span>
+              <span className="tab-count">({myInscriptions.length})</span>
             </button>
           </div>
         </div>
@@ -348,7 +340,7 @@ export default function StudentInscriptionsPage({
             </div>
             <div className="modern-card-body">
               <div className="row g-3">
-                <div className="col-md-3">
+                <div className="col-lg-3 col-md-6">
                   <label className="form-label fw-semibold">Título</label>
                   <input 
                     type="text" 
@@ -359,7 +351,7 @@ export default function StudentInscriptionsPage({
                     placeholder="Buscar por título del examen"
                   />
                 </div>
-                <div className="col-md-3">
+                <div className="col-lg-3 col-md-6">
                   <label className="form-label fw-semibold">Profesor</label>
                   <input 
                     type="text" 
@@ -370,7 +362,7 @@ export default function StudentInscriptionsPage({
                     placeholder="Buscar por profesor"
                   />
                 </div>
-                <div className="col-md-3">
+                <div className="col-lg-3 col-md-6">
                   <label className="form-label fw-semibold">Fecha</label>
                   <input 
                     type="date" 
@@ -380,20 +372,20 @@ export default function StudentInscriptionsPage({
                     onChange={handleFilterChange}
                   />
                 </div>
-                <div className="col-md-3 d-flex align-items-end gap-2">
+                <div className="col-lg-3 col-md-6 d-flex align-items-end gap-2 student-filters-actions">
                   <button 
-                    className="modern-btn modern-btn-primary"
+                    className="modern-btn modern-btn-primary flex-fill"
                     onClick={applyFilters}
                   >
                     <i className="fas fa-search me-2"></i>
-                    Filtrar
+                    <span className="btn-text">Filtrar</span>
                   </button>
                   <button 
-                    className="modern-btn modern-btn-secondary"
+                    className="modern-btn modern-btn-secondary flex-fill"
                     onClick={clearFilters}
                   >
                     <i className="fas fa-times me-2"></i>
-                    Limpiar
+                    <span className="btn-text">Limpiar</span>
                   </button>
                 </div>
               </div>

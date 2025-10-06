@@ -62,15 +62,17 @@ const ExamCreator = () => {
       {/* Header */}
       <div className="modern-card mb-4">
         <div className="modern-card-header">
-          <div className="d-flex justify-content-between align-items-center">
-            <div>
+          <div className="exam-creator-header">
+            <div className="exam-creator-title-section">
               <h1 className="page-title mb-1">
                 <i className="fas fa-plus-circle me-2" style={{ color: 'var(--primary-color)' }}></i>
-                Crear Examen
+                <span className="title-text">Crear Examen</span>
               </h1>
               <p className="page-subtitle mb-0">Diseña un nuevo examen con preguntas personalizadas</p>
             </div>
-            <BackToMainButton />
+            <div className="exam-creator-actions">
+              <BackToMainButton />
+            </div>
           </div>
         </div>
       </div>
@@ -82,46 +84,47 @@ const ExamCreator = () => {
         </div>
       )}
 
-      {/* Título del examen */}
-      <div className="modern-card mb-4">
-        <div className="modern-card-header">
-          <h3 className="modern-card-title">
-            <i className="fas fa-edit me-2"></i>
-            Información del Examen
-          </h3>
-        </div>
-        <div className="modern-card-body">
-          <div className="mb-0">
-            <label className="form-label d-flex align-items-center gap-2">
-              <i className="fas fa-heading text-muted"></i>
-              Título del Examen
-            </label>
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Ingresa el título del examen"
-              value={titulo}
-              onChange={(e) => setTitulo(e.target.value)}
-              style={{
-                padding: '0.75rem 1rem',
-                border: '1px solid var(--border-color)',
-                borderRadius: '8px',
-                fontSize: '1rem'
-              }}
-            />
+
+        {/* Título del examen */}
+        <div className="modern-card mb-4">
+          <div className="modern-card-header">
+            <h3 className="modern-card-title">
+              <i className="fas fa-edit me-2"></i>
+              Información del Examen
+            </h3>
+          </div>
+          <div className="modern-card-body">
+            <div className="mb-0">
+              <label className="form-label d-flex align-items-center gap-2">
+                <i className="fas fa-heading text-muted"></i>
+                Título del Examen
+              </label>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Ingresa el título del examen"
+                value={titulo}
+                onChange={(e) => setTitulo(e.target.value)}
+                style={{
+                  padding: '0.75rem 1rem',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '8px',
+                  fontSize: '1rem'
+                }}
+              />
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Agregar pregunta */}
-      <div className="modern-card mb-4">
-        <div className="modern-card-header">
-          <h3 className="modern-card-title">
-            <i className="fas fa-question-circle me-2"></i>
-            Agregar Pregunta
-          </h3>
-        </div>
-        <div className="modern-card-body">
+        {/* Agregar pregunta */}
+        <div className="modern-card mb-4">
+          <div className="modern-card-header">
+            <h3 className="modern-card-title">
+              <i className="fas fa-question-circle me-2"></i>
+              Agregar Pregunta
+            </h3>
+          </div>
+          <div className="modern-card-body">
           <div className="mb-4">
             <label className="form-label d-flex align-items-center gap-2">
               <i className="fas fa-comment-alt text-muted"></i>
@@ -147,27 +150,29 @@ const ExamCreator = () => {
               <i className="fas fa-list text-muted"></i>
               Opciones de respuesta
             </label>
-            {opciones.map((op, i) => (
-              <div key={i} className="mb-2">
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder={`Opción ${i + 1}`}
-                  value={op}
-                  onChange={(e) => {
-                    const nuevasOpciones = [...opciones];
-                    nuevasOpciones[i] = e.target.value;
-                    setOpciones(nuevasOpciones);
-                  }}
-                  style={{
-                    padding: '0.6rem 0.8rem',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '6px',
-                    fontSize: '0.9rem'
-                  }}
-                />
-              </div>
-            ))}
+            <div className="exam-creator-options-list">
+              {opciones.map((op, i) => (
+                <div key={i} className="exam-creator-option-item mb-2">
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder={`Opción ${i + 1}`}
+                    value={op}
+                    onChange={(e) => {
+                      const nuevasOpciones = [...opciones];
+                      nuevasOpciones[i] = e.target.value;
+                      setOpciones(nuevasOpciones);
+                    }}
+                    style={{
+                      padding: '0.6rem 0.8rem',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '6px',
+                      fontSize: '0.9rem'
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="mb-4">
@@ -194,20 +199,20 @@ const ExamCreator = () => {
             </select>
           </div>
 
-          <div className="d-flex gap-3">
+          <div className="exam-creator-buttons">
             <button 
               className="modern-btn modern-btn-secondary"
               onClick={handleAgregarPregunta}
             >
               <i className="fas fa-plus me-2"></i>
-              Agregar Pregunta
+              <span className="button-text">Agregar Pregunta</span>
             </button>
             <button 
               className="modern-btn modern-btn-primary"
               onClick={handlePublicarExamen}
             >
               <i className="fas fa-paper-plane me-2"></i>
-              Publicar Examen
+              <span className="button-text">Publicar Examen</span>
             </button>
           </div>
         </div>
@@ -233,21 +238,21 @@ const ExamCreator = () => {
               </p>
             </div>
           ) : (
-            <div className="row g-3">
+            <div className="exam-creator-questions-grid">
               {preguntas.map((p, idx) => (
-                <div key={idx} className="col-12">
+                <div key={idx} className="exam-creator-question-card">
                   <div className="exam-card">
                     <div className="exam-card-header">
                       <h5 className="exam-title">
-                        Pregunta {idx + 1}
+                        <span className="question-number">Pregunta {idx + 1}</span>
                       </h5>
                       <span className="exam-badge">
                         <i className="fas fa-check-circle"></i>
-                        Lista
+                        <span className="badge-text">Lista</span>
                       </span>
                     </div>
                     <div className="exam-card-body">
-                      <div className="mb-3">
+                      <div className="question-text mb-3">
                         <strong>{p.texto}</strong>
                       </div>
                       <div className="exam-info">
