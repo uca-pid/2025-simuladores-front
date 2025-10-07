@@ -200,8 +200,50 @@ export default function WindowInscriptionsPage() {
     );
   };
 
+  const togglePresentismo = () => {
+    const requierePresente = examWindow.requierePresente === true;
+    const action = requierePresente ? 'desactivar' : 'activar';
+    const message = requierePresente 
+      ? '¿Deseas desactivar el sistema de presentismo? Los estudiantes podrán acceder al examen sin necesidad de ser marcados como presentes.'
+      : '¿Deseas activar el sistema de presentismo? Los estudiantes deberán ser marcados como presentes para poder acceder al examen.';
+    
+    showModal(
+      'confirm',
+      `${action.charAt(0).toUpperCase() + action.slice(1)} presentismo`,
+      message,
+      async () => {
+        try {
+          const response = await fetch(`${API_BASE_URL}/exam-windows/${windowId}/toggle-presentismo`, {
+            method: 'PATCH',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            showModal('success', '¡Éxito!', result.message);
+            loadData(); // Recargar datos
+          } else {
+            showModal('error', 'Error', 'Error al cambiar el sistema de presentismo');
+          }
+        } catch (error) {
+          console.error('Error cambiando presentismo:', error);
+          showModal('error', 'Error', 'Error de conexión');
+        }
+        closeModal();
+      },
+      true
+    );
+  };
+
   const canManageAttendance = () => {
     if (!examWindow) return false;
+    
+    // Si no requiere presentismo, no se puede gestionar asistencia
+    // Ser defensivo: si requierePresente es null/undefined, asumir false
+    const requierePresente = examWindow.requierePresente === true;
+    if (!requierePresente) return false;
     
     const now = new Date();
     const start = new Date(examWindow.fechaInicio);
@@ -341,30 +383,59 @@ export default function WindowInscriptionsPage() {
       </div>
 
       {/* Controles de gestión */}
-      {canManage && inscriptions.length > 0 && (
+      {!isFinished && inscriptions.length > 0 && (
         <div className="modern-card mb-4">
           <div className="modern-card-header">
             <h3 className="modern-card-title">
-              <i className="fas fa-user-check me-2"></i>
-              Gestión de Asistencia
+              <i className="fas fa-cog me-2"></i>
+              Configuración de Presentismo
             </h3>
           </div>
           <div className="modern-card-body">
             <div className="attendance-management-section">
-              <p className="attendance-description text-muted mb-3">
-                <i className="fas fa-info-circle me-2"></i>
-                <span className="description-text">Marca a los estudiantes como presentes para habilitarlos a rendir el examen.</span>
-              </p>
-              <div className="attendance-actions">
-                <button 
-                  className="modern-btn modern-btn-primary attendance-btn"
-                  onClick={markAllPresent}
-                  disabled={inscriptions.every(i => i.presente === true)}
-                >
-                  <i className="fas fa-user-check me-2"></i>
-                  <span className="btn-text">Marcar Todos como Presentes</span>
-                </button>
+              <div className="presentismo-toggle-section mb-4">
+                <div className="d-flex align-items-center justify-content-between flex-wrap">
+                  <div className="presentismo-info">
+                    <h6 className="mb-1">
+                      <i className={`fas ${examWindow.requierePresente === true ? 'fa-user-check text-success' : 'fa-user-slash text-muted'} me-2`}></i>
+                      Sistema de Presentismo: {examWindow.requierePresente === true ? 'Activado' : 'Desactivado'}
+                    </h6>
+                    <p className="text-muted mb-0 small">
+                      {examWindow.requierePresente === true 
+                        ? 'Los estudiantes deben ser marcados como presentes para acceder al examen'
+                        : 'Los estudiantes pueden acceder al examen libremente sin control de asistencia'
+                      }
+                    </p>
+                  </div>
+                  <button 
+                    className={`modern-btn ${examWindow.requierePresente === true ? 'modern-btn-danger' : 'modern-btn-success'} ms-2`}
+                    onClick={togglePresentismo}
+                  >
+                    <i className={`fas ${examWindow.requierePresente === true ? 'fa-toggle-off' : 'fa-toggle-on'} me-2`}></i>
+                    {examWindow.requierePresente === true ? 'Desactivar' : 'Activar'}
+                  </button>
+                </div>
               </div>
+
+              {examWindow.requierePresente === true && canManage && (
+                <div className="attendance-controls-section">
+                  <hr className="my-3" />
+                  <p className="attendance-description text-muted mb-3">
+                    <i className="fas fa-info-circle me-2"></i>
+                    <span className="description-text">Marca a los estudiantes como presentes para habilitarlos a rendir el examen.</span>
+                  </p>
+                  <div className="attendance-actions">
+                    <button 
+                      className="modern-btn modern-btn-primary attendance-btn"
+                      onClick={markAllPresent}
+                      disabled={inscriptions.every(i => i.presente === true)}
+                    >
+                      <i className="fas fa-user-check me-2"></i>
+                      <span className="btn-text">Marcar Todos como Presentes</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -410,7 +481,7 @@ export default function WindowInscriptionsPage() {
                   </div>
                   
                   <div className="attendance-controls-section">
-                    {canManage && (
+                    {examWindow.requierePresente === true && canManage && (
                       <div className="attendance-toggle-group">
                         <button 
                           className={`attendance-toggle-btn present-btn ${
@@ -437,7 +508,7 @@ export default function WindowInscriptionsPage() {
                       </div>
                     )}
                     
-                    {isFinished && !canManage && (
+                    {examWindow.requierePresente === true && (isFinished || !canManage) && (
                       <div className="attendance-status-display">
                         <span className={`status-indicator ${
                           inscription.presente === true ? 'present' : 
@@ -454,6 +525,15 @@ export default function WindowInscriptionsPage() {
                              inscription.presente === false ? 'Ausente' : 
                              'Sin registrar'}
                           </span>
+                        </span>
+                      </div>
+                    )}
+
+                    {examWindow.requierePresente !== true && (
+                      <div className="attendance-status-display">
+                        <span className="status-indicator present">
+                          <i className="fas fa-unlock"></i>
+                          <span className="status-text">Acceso libre</span>
                         </span>
                       </div>
                     )}

@@ -251,8 +251,12 @@ export default function StudentInscriptionsPage({
     const windowStart = new Date(window.fechaInicio);
     const windowEnd = new Date(windowStart.getTime() + (window.duracion * 60 * 1000));
     
+    // Verificar si la ventana requiere presentismo
+    const requierePresente = window.requierePresente === true;
+    
     return now >= windowStart && now <= windowEnd && 
-           window.estado === 'en_curso' && inscription.presente === true;
+           window.estado === 'en_curso' && 
+           (!requierePresente || inscription.presente === true);
   };
 
   const getTimeStatus = (fechaInicio, duracion) => {
@@ -545,22 +549,30 @@ export default function StudentInscriptionsPage({
                               Prof. {window.exam.profesor.nombre}
                             </span>
                           </div>
-                          {inscription.presente === true && (
-                            <span className="badge" style={{
-                              backgroundColor: '#10b981',
-                              color: 'white',
-                              fontSize: '0.75rem',
-                              fontWeight: '600',
-                              padding: '0.375rem 0.75rem',
-                              borderRadius: '0.5rem',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.25rem'
-                            }}>
-                              <i className="fas fa-check-circle"></i>
-                              Habilitado
-                            </span>
-                          )}
+                          {(() => {
+                            const requierePresente = window.requierePresente === true;
+                            const estaHabilitado = !requierePresente || inscription.presente === true;
+                            
+                            if (estaHabilitado) {
+                              return (
+                                <span className="badge" style={{
+                                  backgroundColor: requierePresente ? '#10b981' : '#3b82f6',
+                                  color: 'white',
+                                  fontSize: '0.75rem',
+                                  fontWeight: '600',
+                                  padding: '0.375rem 0.75rem',
+                                  borderRadius: '0.5rem',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.25rem'
+                                }}>
+                                  <i className={`fas ${requierePresente ? 'fa-check-circle' : 'fa-unlock'}`}></i>
+                                  {requierePresente ? 'Habilitado' : 'Acceso libre'}
+                                </span>
+                              );
+                            }
+                            return null;
+                          })()}
                         </div>
                       </div>
                       <div className="exam-card-body">
