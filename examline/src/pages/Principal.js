@@ -70,7 +70,9 @@ const Principal = () => {
                     <div className="step-content">
                       <h5 className="step-title">1. Crear Exámenes</h5>
                       <p className="step-description">
-                        Haz clic en "Crear Examen" para diseñar evaluaciones. Completa el título del examen, agrega preguntas de múltiple opción (mínimo 4 opciones) y marca la respuesta correcta. Puedes agregar tantas preguntas como necesites usando el botón "+".
+                        Haz clic en "Crear Examen" para diseñar evaluaciones. Puedes crear dos tipos: 
+                        <strong>Múltiple Choice</strong> (agrega preguntas con 4 opciones y marca la correcta) o 
+                        <strong>Programación</strong> (define un problema, selecciona el lenguaje Python/JavaScript y configura intellisense).
                       </p>
                     </div>
                   </div>
@@ -189,16 +191,29 @@ const Principal = () => {
                           <span>Código: {exam.id}</span>
                         </div>
                         <div className="exam-info-item">
-                          <i className="fas fa-question-circle"></i>
-                          <span>Preguntas: {exam.preguntas?.length || 0}</span>
+                          <i className="fas fa-tag"></i>
+                          <span>Tipo: {exam.tipo === 'programming' ? 'Programación' : 'Múltiple Choice'}</span>
                         </div>
+                        {exam.tipo === 'programming' ? (
+                          <div className="exam-info-item">
+                            <i className="fas fa-code"></i>
+                            <span>Lenguaje: {exam.lenguajeProgramacion === 'python' ? 'Python' : 'JavaScript'}</span>
+                          </div>
+                        ) : (
+                          <div className="exam-info-item">
+                            <i className="fas fa-question-circle"></i>
+                            <span>Preguntas: {exam.preguntas?.length || 0}</span>
+                          </div>
+                        )}
                       </div>
                       <button
                         className="modern-btn modern-btn-primary w-100 view-exam-btn"
                         onClick={() => handleVerExamen(exam.id)}
                       >
                         <i className="fas fa-eye me-2"></i>
-                        <span className="btn-text">Ver preguntas</span>
+                        <span className="btn-text">
+                          {exam.tipo === 'programming' ? 'Ver examen' : 'Ver preguntas'}
+                        </span>
                       </button>
                     </div>
                   </div>
