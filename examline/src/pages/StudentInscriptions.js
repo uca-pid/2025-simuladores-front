@@ -160,22 +160,47 @@ export default function StudentInscriptionsPage({
   const closeModal = () => {
     setModal(prev => ({ ...prev, show: false }));
   };
-const handleOpenExam = (examId,  windowId, token) => {
+const isRunningSEB = () => {
+  // Método 1: Verificar el User Agent
+  const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+  if (userAgent.includes('SEB')) {
+    return true;
+  }
+  
+  // Método 2: Verificar variables globales de SEB
+  if (window.SafeExamBrowser) {
+    return true;
+  }
+  
+  // Método 3: Verificar propiedades específicas de SEB
+  if (navigator.userAgent.includes('SafeExamBrowser')) {
+    return true;
+  }
+  
+  return false;
+};
+
+// Usar la función
+const handleOpenExam = (examId, windowId, token) => {
   const backendUrl = `http://localhost:4000/exam-start/download/${examId}/${windowId}/${token}`;
-  alert("Opening exam with URL:", backendUrl)
-
-  // 1️⃣ Descargar el .seb automáticamente
-  const link = document.createElement("a")
-  link.href = backendUrl
-  link.download = `examen_${examId}.seb`
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-
-  // 2️⃣ Intentar abrir SEB directamente (si está instalado)
-  //const sebUrl = `seb://open?url=${encodeURIComponent(backendUrl)}`
-  //window.location.href = sebUrl
-}
+  
+  if (isRunningSEB()) {
+    console.log('Ya estás en SEB, navegando directamente...');
+    // Si ya estás en SEB, solo navega a la URL del examen
+   navigate(`/exam-attempt/${examId}?windowId=${windowId}`);
+  } else {
+    console.log('No estás en SEB, descargando archivo .seb...');
+    alert("Opening exam with URL: " + backendUrl);
+    
+    // Descargar el .seb automáticamente
+    const link = document.createElement("a");
+    link.href = backendUrl;
+    link.download = `examen_${examId}.seb`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+};
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;

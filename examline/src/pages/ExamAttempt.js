@@ -36,51 +36,32 @@ const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simula
   const closeModal = () => {
     setModal(prev => ({ ...prev, show: false }));
   };
+  const closeSEB = () => {
+  try {
+    console.log('Intentando cerrar SEB...');
+    window.location.href = 'seb://quit';
+  } catch (error) {
+    console.log('No se pudo cerrar SEB automáticamente:', error);
+  }
+};
 
   // 🔒 Validación inicial de seguridad para estudiantes
- useEffect(() => {
-  const params = new URLSearchParams(window.location.search);
-
-  // Leer token desde la URL (si viene de SEB)
-  const tokenFromUrl = params.get('token');
-  if (tokenFromUrl) {
-    localStorage.setItem('token', tokenFromUrl);
-  }
-
-  // Leer examId y windowId desde la URL si no vienen como props
-  const urlExamId = params.get('examId');
-  const urlWindowId = params.get('windowId');
-
-  if (!propExamId && urlExamId) {
-    // Aquí podrías actualizar estado o alguna variable local
-    // Por ejemplo, si usas setExamId en el componente
-    // setExamId(urlExamId);
-  }
-
-  if (!windowId && urlWindowId) {
-    // Actualizar windowId si no viene como prop
-    // setWindowId(urlWindowId);
-  }
-
-  const token = localStorage.getItem('token');
-
-  if (token && !propExamId) {
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-
-      // Validación: si viene token desde SEB, asumimos windowId válido
-      if (payload.rol === 'student' && !windowId && !tokenFromUrl) {
-        setError('Acceso no autorizado: Debes acceder desde tus inscripciones');
-        setLoading(false);
-        return;
+  useEffect(() => {
+    // Verificar que estudiantes tengan windowId
+    const token = localStorage.getItem('token');
+    if (token && !propExamId) { // Solo para acceso directo (no componente embebido)
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (payload.rol === 'student' && !windowId) {
+          setError('Acceso no autorizado: Debes acceder desde tus inscripciones');
+          setLoading(false);
+          return;
+        }
+      } catch (err) {
+        console.error('Error validando token:', err);
       }
-    } catch (err) {
-      console.error('Error validando token:', err);
     }
-  }
-}, [windowId, propExamId]);
-
-
+  }, [windowId, propExamId]);
 
   // Handle back navigation for errors only
   const handleErrorBack = () => {
@@ -122,16 +103,25 @@ const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simula
             }
           });
 
-          if (response.ok) {
-            showModal('success', '¡Intento Finalizado!', 'Has terminado el examen exitosamente.', () => {
-              closeModal();
-              if (onBack) {
-                onBack();
-              } else {
-                navigate('/student-exam');
-              }
-            });
-          } else {
+         if (response.ok) {
+  showModal('success', '¡Intento Finalizado!', 'Has terminado el examen exitosamente. SEB se cerrará automáticamente.', () => {
+    closeModal();
+    
+    // Cerrar SEB después de 1.5 segundos
+    setTimeout(() => {
+      closeSEB();
+      
+      // Fallback si no cierra
+      setTimeout(() => {
+        if (onBack) {
+          onBack();
+        } else {
+          navigate('/student-exam');
+        }
+      }, 1000);
+    }, 1500);
+  });
+} else {
             const errorData = await response.json();
             showModal('error', 'Error', errorData.error || 'Error al finalizar intento');
           }
