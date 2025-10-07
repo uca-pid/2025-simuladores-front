@@ -160,6 +160,22 @@ export default function StudentInscriptionsPage({
   const closeModal = () => {
     setModal(prev => ({ ...prev, show: false }));
   };
+const handleOpenExam = (examId,  windowId, token) => {
+  const backendUrl = `http://localhost:4000/exam-start/download/${examId}/${windowId}/${token}`;
+  alert("Opening exam with URL:", backendUrl)
+
+  // 1️⃣ Descargar el .seb automáticamente
+  const link = document.createElement("a")
+  link.href = backendUrl
+  link.download = `examen_${examId}.seb`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+
+  // 2️⃣ Intentar abrir SEB directamente (si está instalado)
+  //const sebUrl = `seb://open?url=${encodeURIComponent(backendUrl)}`
+  //window.location.href = sebUrl
+}
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -606,7 +622,7 @@ export default function StudentInscriptionsPage({
                           ) : canTake ? (
                             <button 
                               className="modern-btn modern-btn-primary w-100"
-                              onClick={() => navigate(`/exam-attempt/${window.examId}?windowId=${window.id}`)}
+                              onClick={() =>handleOpenExam(window.examId, window.id, token)}
                             >
                               <i className="fas fa-play me-2"></i>
                               Rendir Examen
