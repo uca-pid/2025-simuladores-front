@@ -287,6 +287,20 @@ export default function ExamWindowsPage() {
         socket.on('enrollment_cancelled', applyEnrollmentUpdate);
         socket.on('ic', applyEnrollmentUpdate);
 
+        // Listener para cambios de activación/desactivación de ventanas
+        socket.on('window_toggle', (data) => {
+          console.log('🔄 Toggle recibido via WebSocket:', data);
+          
+          setExamWindows(prev => prev.map(window => 
+            window.id === data.i // 'i' = id en el payload optimizado
+              ? { ...window, activa: data.a } // 'a' = activa
+              : window
+          ));
+          
+          // Actualizar timestamp de última actualización
+          setLastUpdate(new Date());
+        });
+
         // 🚀 Sistema de medición de latencia en tiempo real
         socket.on('latency_ping', (serverTime) => {
           // Responder inmediatamente para medir latencia
@@ -585,7 +599,38 @@ export default function ExamWindowsPage() {
     }
   };
 
-  // Eliminado: handleDeleteWindow (se quitó el botón Eliminar de las cards)
+  const handleToggleActive = async (windowId, currentActive) => {
+    const action = currentActive ? 'desactivar' : 'activar';
+    try {
+      const response = await fetch(`${API_BASE_URL}/exam-windows/${windowId}/toggle-active`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        
+        // Actualizar inmediatamente el estado local para feedback visual instantáneo
+        setExamWindows(prev => prev.map(window => 
+          window.id === windowId 
+            ? { ...window, activa: result.window.activa }
+            : window
+        ));
+        
+        // También recargar datos para asegurar consistencia
+        loadData();
+      } else {
+        const errorData = await response.json();
+        showModal('error', 'Error', errorData.error || `Error al ${action} la ventana`);
+      }
+    } catch (error) {
+      console.error(`Error ${action}ndo ventana:`, error);
+      showModal('error', 'Error', 'Error de conexión');
+    }
+  };
 
   const getStatusBadge = (estado) => {
     const badges = {
@@ -663,13 +708,68 @@ export default function ExamWindowsPage() {
                 background: `linear-gradient(135deg, ${st.a}, ${st.b})`
               }}
             >
-            <h5 className="exam-title">
-              {window.exam.titulo}
-              {window.estado === 'en_curso' && <span className="status-pulse" />}
-            </h5>
-          {getStatusBadge(window.estado)}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
+              <h5 className="exam-title" style={{ margin: 0, flex: 1 }}>
+                {window.exam.titulo}
+                {window.estado === 'en_curso' && <span className="status-pulse" />}
+              </h5>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
+                {getStatusBadge(window.estado)}
+                <div 
+                  className="form-check form-switch"
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '0.5rem',
+                    margin: 0,
+                    opacity: (window.estado === 'en_curso' || window.estado === 'finalizada') ? 0.6 : 1
+                  }}
+                  title={window.activa 
+                    ? 'Desactivar ventana (estudiantes no la verán)' 
+                    : 'Activar ventana (estudiantes podrán inscribirse)'
+                  }
+                >
+                  <input 
+                    className="form-check-input" 
+                    type="checkbox" 
+                    id={`toggle-${window.id}`}
+                    checked={window.activa}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      handleToggleActive(window.id, window.activa);
+                    }}
+                    disabled={window.estado === 'en_curso' || window.estado === 'finalizada'}
+                    style={{
+                      width: '2.5rem',
+                      height: '1.2rem',
+                      backgroundColor: window.activa ? '#28a745' : '#6c757d',
+                      borderColor: window.activa ? '#28a745' : '#6c757d'
+                    }}
+                  />
+                  <label 
+                    className="form-check-label" 
+                    htmlFor={`toggle-${window.id}`}
+                    style={{ 
+                      fontSize: '0.75rem', 
+                      fontWeight: '500',
+                      color: window.activa ? '#28a745' : '#6c757d',
+                      cursor: (window.estado === 'en_curso' || window.estado === 'finalizada') ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    <i className={`fas ${window.activa ? 'fa-eye' : 'fa-eye-slash'} me-1`}></i>
+                    {window.activa ? 'Visible' : 'Oculta'}
+                  </label>
+                </div>
+              </div>
+            </div>
             </div>
         <div className="exam-card-body" style={{ flex: '1', display: 'flex', flexDirection: 'column' }}>
+          {!window.activa && (
+            <div className="alert alert-warning py-2 mb-3" style={{ fontSize: '0.85rem' }}>
+              <i className="fas fa-eye-slash me-2"></i>
+              <strong>Ventana oculta:</strong> Los estudiantes no pueden ver esta ventana ni inscribirse.
+            </div>
+          )}
           <div className="exam-info" style={{ flex: '1' }}>
             <div className="exam-info-item">
               <i className="fas fa-calendar"></i>
