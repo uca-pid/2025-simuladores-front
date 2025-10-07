@@ -17,6 +17,7 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [isInSEB, setIsInSEB] = useState(false);
   const [modal, setModal] = useState({
     show: false,
     type: 'info',
@@ -26,7 +27,21 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
     showCancel: false
   });
 
-const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
+  const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
+
+  // Detectar si estamos en SEB
+  useEffect(() => {
+    const checkSEB = () => {
+      const userAgent = navigator.userAgent || '';
+      return userAgent.includes('SEB') || 
+             userAgent.includes('SafeExamBrowser') || 
+             window.SafeExamBrowser !== undefined;
+    };
+    
+    const inSEB = checkSEB();
+    setIsInSEB(inSEB);
+    console.log('Ejecutando en SEB:', inSEB);
+  }, []);
 
   // Modal helper functions
   const showModal = (type, title, message, onConfirm = null, showCancel = false) => {
@@ -36,23 +51,59 @@ const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simula
   const closeModal = () => {
     setModal(prev => ({ ...prev, show: false }));
   };
-  const closeSEB = () => {
+
+  // 🚪 Función para cerrar SEB
+const closeSEB = () => {
   try {
-    console.log('Intentando cerrar SEB...');
+    console.log('Intentando cerrar SEB - Método 1: seb://quit');
     window.location.href = 'seb://quit';
+    
+    // Método alternativo después de 500ms
+    setTimeout(() => {
+      console.log('Intentando cerrar SEB - Método 2: sebs://quit');
+      window.location.href = 'sebs://quit';
+    }, 500);
+    
+    // Método 3: Usar el API de SEB si está disponible
+    setTimeout(() => {
+      if (window.SafeExamBrowser && window.SafeExamBrowser.security) {
+        console.log('Intentando cerrar SEB - Método 3: SafeExamBrowser API');
+        window.SafeExamBrowser.security.closeApplication();
+      }
+    }, 1000);
+    
+    // Método 4: Ctrl+Q programático
+    setTimeout(() => {
+      console.log('Intentando cerrar SEB - Método 4: KeyboardEvent');
+      const event = new KeyboardEvent('keydown', {
+        key: 'q',
+        code: 'KeyQ',
+        ctrlKey: true,
+        bubbles: true
+      });
+      document.dispatchEvent(event);
+    }, 1500);
+    
   } catch (error) {
-    console.log('No se pudo cerrar SEB automáticamente:', error);
+    console.log('Error al cerrar SEB:', error);
   }
 };
 
   // 🔒 Validación inicial de seguridad para estudiantes
   useEffect(() => {
-    // Verificar que estudiantes tengan windowId
+    const params = new URLSearchParams(window.location.search);
+    const tokenFromUrl = params.get('token');
+    
+    if (tokenFromUrl) {
+      console.log('Token recibido desde URL, guardando en localStorage');
+      localStorage.setItem('token', tokenFromUrl);
+    }
+
     const token = localStorage.getItem('token');
-    if (token && !propExamId) { // Solo para acceso directo (no componente embebido)
+    if (token && !propExamId) {
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
-        if (payload.rol === 'student' && !windowId) {
+        if (payload.rol === 'student' && !windowId && !tokenFromUrl) {
           setError('Acceso no autorizado: Debes acceder desde tus inscripciones');
           setLoading(false);
           return;
@@ -65,23 +116,42 @@ const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simula
 
   // Handle back navigation for errors only
   const handleErrorBack = () => {
-    if (onBack) {
-      // When used as embedded component (from StudentExamPage)
-      onBack();
+    if (isInSEB) {
+      closeSEB();
+      setTimeout(() => {
+        if (onBack) {
+          onBack();
+        } else {
+          navigate('/student-exam');
+        }
+      }, 1000);
     } else {
-      // When accessed directly, go to student main page
-      navigate('/student-exam');
+      if (onBack) {
+        onBack();
+      } else {
+        navigate('/student-exam');
+      }
     }
   };
 
   // Handle exam completion - finish attempt and return
   const handleExamCompletion = () => {
     if (!attempt) {
-      // Si no hay intento, simplemente navegar de vuelta
-      if (onBack) {
-        onBack();
+      if (isInSEB) {
+        closeSEB();
+        setTimeout(() => {
+          if (onBack) {
+            onBack();
+          } else {
+            navigate('/student-exam');
+          }
+        }, 1000);
       } else {
-        navigate('/student-exam');
+        if (onBack) {
+          onBack();
+        } else {
+          navigate('/student-exam');
+        }
       }
       return;
     }
@@ -103,25 +173,38 @@ const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simula
             }
           });
 
-         if (response.ok) {
-  showModal('success', '¡Intento Finalizado!', 'Has terminado el examen exitosamente. SEB se cerrará automáticamente.', () => {
-    closeModal();
-    
-    // Cerrar SEB después de 1.5 segundos
-    setTimeout(() => {
-      closeSEB();
-      
-      // Fallback si no cierra
-      setTimeout(() => {
-        if (onBack) {
-          onBack();
-        } else {
-          navigate('/student-exam');
-        }
-      }, 1000);
-    }, 1500);
-  });
-} else {
+          if (response.ok) {
+            const successMessage = isInSEB 
+              ? 'Has terminado el examen exitosamente. SEB se cerrará automáticamente.'
+              : 'Has terminado el examen exitosamente.';
+
+            showModal('success', '¡Intento Finalizado!', successMessage, () => {
+              closeModal();
+              
+              if (isInSEB) {
+                // Cerrar SEB después de 1.5 segundos
+                setTimeout(() => {
+                  closeSEB();
+                  
+                  // Fallback si no cierra
+                  setTimeout(() => {
+                    if (onBack) {
+                      onBack();
+                    } else {
+                      navigate('/student-exam');
+                    }
+                  }, 1000);
+                }, 1500);
+              } else {
+                // Navegación normal si no está en SEB
+                if (onBack) {
+                  onBack();
+                } else {
+                  navigate('/student-exam');
+                }
+              }
+            });
+          } else {
             const errorData = await response.json();
             showModal('error', 'Error', errorData.error || 'Error al finalizar intento');
           }
@@ -144,10 +227,22 @@ const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simula
       '¿Estás seguro de que quieres salir del examen? Se perderá todo tu progreso y no podrás volver a intentarlo.',
       () => {
         closeModal();
-        if (onBack) {
-          onBack();
+        
+        if (isInSEB) {
+          closeSEB();
+          setTimeout(() => {
+            if (onBack) {
+              onBack();
+            } else {
+              navigate('/student-exam');
+            }
+          }, 1000);
         } else {
-          navigate('/student-exam');
+          if (onBack) {
+            onBack();
+          } else {
+            navigate('/student-exam');
+          }
         }
       },
       true
@@ -236,7 +331,7 @@ const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simula
 
   // Add page leave confirmation for exam security
   useEffect(() => {
-    if (!exam || error || propExamId) return; // Don't add for embedded mode or errors
+    if (!exam || error || propExamId) return;
 
     const handleBeforeUnload = (e) => {
       e.preventDefault();
@@ -246,28 +341,23 @@ const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simula
 
     const handlePopState = (e) => {
       e.preventDefault();
-      // Show modal for back button press
       showModal(
         'warning',
         'Salir del Examen',
         '¿Estás seguro de que quieres salir del examen? Se perderá todo tu progreso.',
         () => {
           closeModal();
-          // Allow navigation by going back
           window.history.back();
         },
         true
       );
       
-      // Prevent the navigation initially
       window.history.pushState(null, '', window.location.pathname);
     };
 
-    // Add event listeners
     window.addEventListener('beforeunload', handleBeforeUnload);
     window.addEventListener('popstate', handlePopState);
     
-    // Push initial state to handle back button
     window.history.pushState(null, '', window.location.pathname);
 
     return () => {
@@ -286,6 +376,7 @@ const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simula
       </div>
     );
   }
+  
   if (error || !exam) {
     return (
       <div className="container py-5">
@@ -325,6 +416,12 @@ const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simula
                 <span className="badge bg-info text-white ms-3">
                   <i className="fas fa-eye me-1"></i>
                   VISTA PREVIA
+                </span>
+              )}
+              {isInSEB && (
+                <span className="badge bg-success ms-2">
+                  <i className="fas fa-lock me-1"></i>
+                  Modo Seguro (SEB)
                 </span>
               )}
             </div>
