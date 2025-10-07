@@ -120,79 +120,216 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
         <div className="modern-card-body">
           <div className="exam-results-info">
             <h2 className="exam-results-title mb-2">{attempt.exam.titulo}</h2>
+            <div className="d-flex align-items-center gap-3 mb-2">
+              <span className={`badge ${attempt.exam.tipo === 'programming' ? 'bg-primary' : 'bg-secondary'}`}>
+                {attempt.exam.tipo === 'programming' ? 'Examen de Programación' : 'Examen Múltiple Choice'}
+              </span>
+              {attempt.exam.tipo === 'programming' && (
+                <span className="badge bg-info">
+                  {attempt.exam.lenguajeProgramacion === 'python' ? '🐍 Python' : '⚡ JavaScript'}
+                </span>
+              )}
+            </div>
             <p className="exam-results-description text-muted mb-0">
               <i className="fas fa-info-circle me-2"></i>
-              <span className="description-text">Respuestas correctas del examen</span>
+              <span className="description-text">
+                {attempt.exam.tipo === 'programming' 
+                  ? 'Tu solución al problema de programación'
+                  : 'Respuestas correctas del examen'
+                }
+              </span>
             </p>
           </div>
         </div>
       </div>
 
-      {/* Questions and Answers */}
-      <div className="modern-card mb-4">
-        <div className="modern-card-header">
-          <h3 className="modern-card-title">
-            <i className="fas fa-clipboard-list me-2"></i>
-            Respuestas Correctas
-          </h3>
-        </div>
-        <div className="modern-card-body">
-          {attempt.exam.preguntas.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-icon">
-                <i className="fas fa-question-circle"></i>
-              </div>
-              <h4 className="empty-title">No hay preguntas</h4>
-              <p className="empty-subtitle">
-                Este examen no tiene preguntas
-              </p>
+      {/* Contenido según el tipo de examen */}
+      {attempt.exam.tipo === 'programming' ? (
+        /* Vista para exámenes de programación */
+        <div>
+          {/* Enunciado del problema */}
+          <div className="modern-card mb-4">
+            <div className="modern-card-header">
+              <h3 className="modern-card-title">
+                <i className="fas fa-puzzle-piece me-2"></i>
+                Enunciado del Problema
+              </h3>
             </div>
-          ) : (
-            <div className="exam-results-questions-grid">
-              {attempt.exam.preguntas.map((question, index) => (
-                <div key={index} className="exam-results-question-card">
-                  <div className="exam-card fade-in-up" style={{animationDelay: `${index * 0.1}s`}}>
-                    <div className="exam-card-header">
-                      <h5 className="exam-title">
-                        <span className="badge badge-primary me-3">{index + 1}</span>
-                        <span className="question-text">{question.texto || "Sin texto"}</span>
-                      </h5>
-                    </div>
-                    <div className="exam-card-body">
-                      <div className="exam-info">
-                        <h6 className="mb-3">
-                          <i className="fas fa-list-ul me-2"></i>
-                          <span className="options-label">Opciones de respuesta:</span>
-                        </h6>
-                        <div className="exam-results-options-list">
-                          {question.opciones?.map((option, optionIndex) => {
-                            const isCorrect = optionIndex === question.correcta;
-                            
-                            return (
-                              <div key={optionIndex} className={`exam-info-item ${isCorrect ? 'bg-success bg-opacity-10 border-success rounded p-2 mb-2' : ''}`}>
-                                <i className={isCorrect ? "fas fa-check-circle me-2 text-success" : "fas fa-circle me-2 text-muted"} 
-                                   style={{fontSize: isCorrect ? '14px' : '8px'}}></i>
-                                <span className={isCorrect ? "fw-bold text-success" : ""}>
-                                  {option || "Opción vacía"}
-                                  {isCorrect && (
-                                    <span className="ms-2 badge bg-success text-white correct-badge">
-                                      <span className="badge-text">Respuesta Correcta</span>
-                                    </span>
-                                  )}
-                                </span>
-                              </div>
-                            );
-                          })}
+            <div className="modern-card-body">
+              <div className="problem-statement">
+                <pre style={{
+                  whiteSpace: 'pre-wrap',
+                  fontFamily: 'system-ui, -apple-system, sans-serif',
+                  fontSize: '1rem',
+                  lineHeight: '1.6',
+                  margin: 0,
+                  padding: '1.5rem',
+                  backgroundColor: '#f8f9fa',
+                  borderRadius: '0.5rem',
+                  border: '1px solid #dee2e6'
+                }}>
+                  {attempt.exam.enunciadoProgramacion || 'No hay enunciado definido'}
+                </pre>
+              </div>
+            </div>
+          </div>
+
+          {/* Código del estudiante */}
+          <div className="modern-card mb-4">
+            <div className="modern-card-header">
+              <h3 className="modern-card-title">
+                <i className="fas fa-code me-2"></i>
+                Tu Solución
+              </h3>
+            </div>
+            <div className="modern-card-body">
+              {attempt.codigoProgramacion ? (
+                <div className="code-solution">
+                  <div className="code-header mb-2">
+                    <small className="text-muted">
+                      <i className="fas fa-file-code me-1"></i>
+                      main.{attempt.exam.lenguajeProgramacion === 'python' ? 'py' : 'js'}
+                    </small>
+                  </div>
+                  <pre style={{
+                    whiteSpace: 'pre-wrap',
+                    fontFamily: 'Monaco, Consolas, "Courier New", monospace',
+                    fontSize: '0.9rem',
+                    lineHeight: '1.5',
+                    margin: 0,
+                    padding: '1.5rem',
+                    backgroundColor: '#1e1e1e',
+                    color: '#d4d4d4',
+                    borderRadius: '0.5rem',
+                    border: '1px solid #333',
+                    overflow: 'auto',
+                    maxHeight: '500px'
+                  }}>
+                    {attempt.codigoProgramacion}
+                  </pre>
+                </div>
+              ) : (
+                <div className="empty-state">
+                  <div className="empty-icon">
+                    <i className="fas fa-code"></i>
+                  </div>
+                  <h4 className="empty-title">Sin código</h4>
+                  <p className="empty-subtitle">
+                    No se encontró código para este intento
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Información adicional */}
+          <div className="modern-card">
+            <div className="modern-card-header">
+              <h3 className="modern-card-title">
+                <i className="fas fa-info-circle me-2"></i>
+                Información del Intento
+              </h3>
+            </div>
+            <div className="modern-card-body">
+              <div className="row">
+                <div className="col-md-6 mb-3">
+                  <div className="info-item">
+                    <i className="fas fa-calendar me-2 text-primary"></i>
+                    <strong>Iniciado:</strong> {new Date(attempt.startedAt).toLocaleString()}
+                  </div>
+                </div>
+                <div className="col-md-6 mb-3">
+                  <div className="info-item">
+                    <i className="fas fa-flag-checkered me-2 text-success"></i>
+                    <strong>Finalizado:</strong> {attempt.finishedAt ? new Date(attempt.finishedAt).toLocaleString() : 'En progreso'}
+                  </div>
+                </div>
+                <div className="col-md-6 mb-3">
+                  <div className="info-item">
+                    <i className="fas fa-lightbulb me-2 text-warning"></i>
+                    <strong>Intellisense:</strong> {attempt.exam.intellisenseHabilitado ? 'Habilitado' : 'Deshabilitado'}
+                  </div>
+                </div>
+                <div className="col-md-6 mb-3">
+                  <div className="info-item">
+                    <i className="fas fa-check-circle me-2 text-info"></i>
+                    <strong>Estado:</strong> 
+                    <span className={`ms-2 badge ${attempt.estado === 'finalizado' ? 'bg-success' : 'bg-warning'}`}>
+                      {attempt.estado === 'finalizado' ? 'Completado' : 'En progreso'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* Vista para exámenes de múltiple choice */
+        <div className="modern-card mb-4">
+          <div className="modern-card-header">
+            <h3 className="modern-card-title">
+              <i className="fas fa-clipboard-list me-2"></i>
+              Respuestas Correctas
+            </h3>
+          </div>
+          <div className="modern-card-body">
+            {!attempt.exam.preguntas || attempt.exam.preguntas.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-icon">
+                  <i className="fas fa-question-circle"></i>
+                </div>
+                <h4 className="empty-title">No hay preguntas</h4>
+                <p className="empty-subtitle">
+                  Este examen no tiene preguntas
+                </p>
+              </div>
+            ) : (
+              <div className="exam-results-questions-grid">
+                {attempt.exam.preguntas.map((question, index) => (
+                  <div key={index} className="exam-results-question-card">
+                    <div className="exam-card fade-in-up" style={{animationDelay: `${index * 0.1}s`}}>
+                      <div className="exam-card-header">
+                        <h5 className="exam-title">
+                          <span className="badge badge-primary me-3">{index + 1}</span>
+                          <span className="question-text">{question.texto || "Sin texto"}</span>
+                        </h5>
+                      </div>
+                      <div className="exam-card-body">
+                        <div className="exam-info">
+                          <h6 className="mb-3">
+                            <i className="fas fa-list-ul me-2"></i>
+                            <span className="options-label">Opciones de respuesta:</span>
+                          </h6>
+                          <div className="exam-results-options-list">
+                            {question.opciones?.map((option, optionIndex) => {
+                              const isCorrect = optionIndex === question.correcta;
+                              
+                              return (
+                                <div key={optionIndex} className={`exam-info-item ${isCorrect ? 'bg-success bg-opacity-10 border-success rounded p-2 mb-2' : ''}`}>
+                                  <i className={isCorrect ? "fas fa-check-circle me-2 text-success" : "fas fa-circle me-2 text-muted"} 
+                                     style={{fontSize: isCorrect ? '14px' : '8px'}}></i>
+                                  <span className={isCorrect ? "fw-bold text-success" : ""}>
+                                    {option || "Opción vacía"}
+                                    {isCorrect && (
+                                      <span className="ms-2 badge bg-success text-white correct-badge">
+                                        <span className="badge-text">Respuesta Correcta</span>
+                                      </span>
+                                    )}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
 
     </div>
