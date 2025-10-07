@@ -21,7 +21,8 @@ export default function ExamWindowsPage() {
     duracion: 120,
     modalidad: 'remoto',
     cupoMaximo: 30,
-    notas: ''
+    notas: '',
+    sinTiempo: false
   });
   const [validationErrors, setValidationErrors] = useState({});
   const [modal, setModal] = useState({
@@ -393,7 +394,8 @@ export default function ExamWindowsPage() {
       duracion: 120,
       modalidad: 'remoto',
       cupoMaximo: 30,
-      notas: ''
+      notas: '',
+      sinTiempo: false
     });
     setEditingWindow(null);
     setValidationErrors({});
@@ -436,11 +438,12 @@ export default function ExamWindowsPage() {
   const handleEditWindow = (window) => {
     setFormData({
       examId: window.examId,
-      fechaInicio: formatDateTimeLocal(window.fechaInicio),
-      duracion: window.duracion,
+      fechaInicio: window.fechaInicio ? formatDateTimeLocal(window.fechaInicio) : '',
+      duracion: window.duracion || 120,
       modalidad: window.modalidad,
       cupoMaximo: window.cupoMaximo,
-      notas: window.notas || ''
+      notas: window.notas || '',
+      sinTiempo: window.sinTiempo || false
     });
     setEditingWindow(window);
     setShowCreateModal(true);
@@ -456,17 +459,20 @@ export default function ExamWindowsPage() {
       fieldErrors.examId = true;
     }
     
-    if (!formData.fechaInicio) {
-      errors.push('Debe seleccionar una fecha y hora de inicio');
-      fieldErrors.fechaInicio = true;
-    }
-    
-    if (!formData.duracion || formData.duracion <= 0) {
-      errors.push('La duración debe ser mayor a 0 minutos');
-      fieldErrors.duracion = true;
-    } else if (formData.duracion > 9999) {
-      errors.push('La duración no puede ser mayor a 9999 minutos');
-      fieldErrors.duracion = true;
+    // Solo validar fecha y duración si NO es sin tiempo
+    if (!formData.sinTiempo) {
+      if (!formData.fechaInicio) {
+        errors.push('Debe seleccionar una fecha y hora de inicio');
+        fieldErrors.fechaInicio = true;
+      }
+      
+      if (!formData.duracion || formData.duracion <= 0) {
+        errors.push('La duración debe ser mayor a 0 minutos');
+        fieldErrors.duracion = true;
+      } else if (formData.duracion > 9999) {
+        errors.push('La duración no puede ser mayor a 9999 minutos');
+        fieldErrors.duracion = true;
+      }
     }
     
     if (!formData.modalidad) {
@@ -496,8 +502,8 @@ export default function ExamWindowsPage() {
       }
     }
     
-    // Validar que la fecha no sea en el pasado
-    if (formData.fechaInicio) {
+    // Validar que la fecha no sea en el pasado (solo para ventanas con tiempo)
+    if (!formData.sinTiempo && formData.fechaInicio) {
       const fechaInicio = new Date(formData.fechaInicio);
       const ahora = new Date();
       // Permitir fecha pasada cuando se está editando una ventana EN CURSO
@@ -771,23 +777,32 @@ export default function ExamWindowsPage() {
             </div>
           )}
           <div className="exam-info" style={{ flex: '1' }}>
-            <div className="exam-info-item">
-              <i className="fas fa-calendar"></i>
-                <span><strong>Fecha:</strong> {new Date(window.fechaInicio).toLocaleDateString()}</span>
-            </div>
-            <div className="exam-info-item">
-              <i className="fas fa-clock"></i>
-                <span><strong>Hora de inicio:</strong> {new Date(window.fechaInicio).toLocaleTimeString()}</span>
-            </div>
-            <div className="exam-info-item">
-              <i className="fas fa-hourglass-half"></i>
-                <span><strong>Duración:</strong> {window.duracion} min</span>
-            </div>
-            {window.estado === 'en_curso' && (
+            {window.sinTiempo ? (
               <div className="exam-info-item">
-                <i className="fas fa-flag-checkered"></i>
-                <span><strong>Termina a las:</strong> {calculateEndTime(window.fechaInicio, window.duracion)}</span>
+                <i className="fas fa-infinity"></i>
+                <span><strong>Tipo:</strong> <span style={{ color: '#7c3aed', fontWeight: 'bold' }}>Sin límite de tiempo</span></span>
               </div>
+            ) : (
+              <>
+                <div className="exam-info-item">
+                  <i className="fas fa-calendar"></i>
+                  <span><strong>Fecha:</strong> {window.fechaInicio ? new Date(window.fechaInicio).toLocaleDateString() : 'Sin fecha'}</span>
+                </div>
+                <div className="exam-info-item">
+                  <i className="fas fa-clock"></i>
+                  <span><strong>Hora de inicio:</strong> {window.fechaInicio ? new Date(window.fechaInicio).toLocaleTimeString() : 'Sin hora'}</span>
+                </div>
+                <div className="exam-info-item">
+                  <i className="fas fa-hourglass-half"></i>
+                  <span><strong>Duración:</strong> {window.duracion ? `${window.duracion} min` : 'Sin duración'}</span>
+                </div>
+                {window.estado === 'en_curso' && window.fechaInicio && window.duracion && (
+                  <div className="exam-info-item">
+                    <i className="fas fa-flag-checkered"></i>
+                    <span><strong>Termina a las:</strong> {calculateEndTime(window.fechaInicio, window.duracion)}</span>
+                  </div>
+                )}
+              </>
             )}
             <div className="exam-info-item">
               <i className="fas fa-laptop"></i>
@@ -1160,9 +1175,10 @@ export default function ExamWindowsPage() {
               </div>
               <form onSubmit={handleSaveWindow} onClick={(e) => e.stopPropagation()}>
                 <div className="modern-card-body" style={{ padding: '1.5rem' }}>
-                  {/* Primera fila: Examen y Fecha */}
-                  <div className="row mb-3">
-                    <div className="col-md-6">
+                  
+                  {/* Selección de Examen */}
+                  <div className="row mb-4">
+                    <div className="col-12">
                       <label className="form-label" style={{ 
                         fontWeight: '600', 
                         color: 'var(--text-color-2)', 
@@ -1196,160 +1212,229 @@ export default function ExamWindowsPage() {
                         ))}
                       </select>
                     </div>
-                    <div className="col-md-6">
-                      <label className="form-label" style={{ 
-                        fontWeight: '600', 
-                        color: 'var(--text-color-2)', 
-                        marginBottom: '0.4rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        fontSize: '0.9rem'
-                      }}>
-                        <i className="fas fa-calendar-day text-primary"></i>
-                        Fecha y Hora de Inicio *
-                      </label>
-                      <input 
-                        type="datetime-local" 
-                        className="form-control modern-input"
-                        name="fechaInicio"
-                        value={formData.fechaInicio}
-                        onChange={handleInputChange}
-                        required
-                        disabled={!!editingWindow && editingWindow.estado === 'en_curso'}
-                        style={{
-                          borderRadius: '8px',
-                          border: `1px solid ${validationErrors.fechaInicio ? '#dc3545' : 'var(--border-color)'}`,
-                          padding: '0.6rem',
-                          fontSize: '0.9rem',
-                          boxShadow: validationErrors.fechaInicio ? '0 0 0 0.2rem rgba(220, 53, 69, 0.25)' : 'none'
-                        }}
-                      />
-                    </div>
                   </div>
 
-                  {/* Segunda fila: Duración, Cupo y Modalidad */}
-                  <div className="row mb-3">
-                    <div className="col-md-4">
-                      <label className="form-label" style={{ 
-                        fontWeight: '600', 
-                        color: 'var(--text-color-2)', 
-                        marginBottom: '0.4rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        fontSize: '0.9rem'
-                      }}>
-                        <i className="fas fa-clock text-primary"></i>
-                        Duración (min) *
-                      </label>
-                      <input 
-                        type="number" 
-                        className="form-control modern-input"
-                        name="duracion"
-                        value={formData.duracion}
-                        onChange={handleInputChange}
-                        min="1"
-                        max="9999"
-                        required
-                        style={{
-                          borderRadius: '8px',
-                          border: `1px solid ${validationErrors.duracion ? '#dc3545' : 'var(--border-color)'}`,
-                          padding: '0.6rem',
-                          boxShadow: validationErrors.duracion ? '0 0 0 0.2rem rgba(220, 53, 69, 0.25)' : 'none',
-                          fontSize: '0.9rem'
-                        }}
-                      />
-                      {editingWindow && editingWindow.estado === 'en_curso' && formData.duracion && (
-                        <div className="mt-2 p-2" style={{
-                          backgroundColor: validateEndTimeNotPast(editingWindow.fechaInicio, formData.duracion) ? '#e3f2fd' : '#ffebee',
-                          borderRadius: '6px',
-                          border: `1px solid ${validateEndTimeNotPast(editingWindow.fechaInicio, formData.duracion) ? '#2196f3' : '#f44336'}`
-                        }}>
-                          <small style={{ color: validateEndTimeNotPast(editingWindow.fechaInicio, formData.duracion) ? '#1565c0' : '#c62828' }}>
-                            <i className={`fas me-1 ${validateEndTimeNotPast(editingWindow.fechaInicio, formData.duracion) ? 'fa-info-circle' : 'fa-exclamation-triangle'}`}></i>
-                            <strong>
-                              {validateEndTimeNotPast(editingWindow.fechaInicio, formData.duracion) 
-                                ? 'Nueva hora de finalización:' 
-                                : 'ADVERTENCIA - Hora ya pasada:'}
-                            </strong> {calculateEndTime(editingWindow.fechaInicio, formData.duracion)}
-                          </small>
+                  {/* Toggle para tipo de ventana */}
+                  <div className="mb-4">
+                    <div className="card" style={{ 
+                      backgroundColor: formData.sinTiempo ? '#f0f4ff' : '#f8f9fa', 
+                      borderColor: formData.sinTiempo ? '#4f46e5' : '#e9ecef',
+                      borderWidth: '2px',
+                      transition: 'all 0.3s ease'
+                    }}>
+                      <div className="card-body p-3">
+                        <div className="d-flex align-items-center justify-content-between">
+                          <div className="d-flex align-items-center">
+                            <div className="form-check form-switch me-3">
+                              <input 
+                                className="form-check-input" 
+                                type="checkbox" 
+                                id="sinTiempo"
+                                name="sinTiempo"
+                                checked={formData.sinTiempo}
+                                onChange={(e) => setFormData(prev => ({ ...prev, sinTiempo: e.target.checked }))}
+                                disabled={!!editingWindow && (editingWindow.estado === 'en_curso' || editingWindow.estado === 'finalizada')}
+                                style={{ 
+                                  width: '3rem', 
+                                  height: '1.5rem',
+                                  backgroundColor: formData.sinTiempo ? '#4f46e5' : '#6c757d',
+                                  borderColor: formData.sinTiempo ? '#4f46e5' : '#6c757d'
+                                }}
+                              />
+                            </div>
+                            <div>
+                              <label className="form-check-label mb-0" htmlFor="sinTiempo" style={{ fontWeight: '600', fontSize: '1rem', cursor: 'pointer' }}>
+                                <i className={`fas ${formData.sinTiempo ? 'fa-infinity text-primary' : 'fa-clock text-secondary'} me-2`}></i>
+                                {formData.sinTiempo ? 'Ventana sin límite de tiempo' : 'Ventana con horario específico'}
+                              </label>
+                              <div style={{ fontSize: '0.85rem', color: '#6c757d', marginTop: '0.25rem' }}>
+                                {formData.sinTiempo 
+                                  ? 'Los estudiantes accederán solo cuando esté activa, sin horarios específicos'
+                                  : 'Configurar fecha, hora de inicio y duración específica para la ventana'
+                                }
+                              </div>
+                            </div>
+                          </div>
+                          <div style={{ fontSize: '2rem', opacity: 0.3 }}>
+                            <i className={`fas ${formData.sinTiempo ? 'fa-infinity' : 'fa-calendar-alt'}`}></i>
+                          </div>
                         </div>
-                      )}
-                    </div>
-                    <div className="col-md-4">
-                      <label className="form-label" style={{ 
-                        fontWeight: '600', 
-                        color: 'var(--text-color-2)', 
-                        marginBottom: '0.4rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        fontSize: '0.9rem'
-                      }}>
-                        <i className="fas fa-users text-primary"></i>
-                        Cupo Máximo *
-                      </label>
-                      <input 
-                        type="number" 
-                        className="form-control modern-input"
-                        name="cupoMaximo"
-                        value={formData.cupoMaximo}
-                        onChange={handleInputChange}
-                        min={editingWindow
-                          ? (typeof editingWindow?.inscritosCount === 'number'
-                              ? editingWindow.inscritosCount
-                              : (Array.isArray(editingWindow?.inscripciones)
-                                  ? editingWindow.inscripciones.filter(i => i && (i.cancelledAt == null && i.canceledAt == null)).length
-                                  : 1))
-                          : 1}
-                        max="9999"
-                        required
-                        disabled={!!editingWindow && editingWindow.estado === 'en_curso'}
-                        style={{
-                          borderRadius: '8px',
-                          border: `1px solid ${validationErrors.cupoMaximo ? '#dc3545' : 'var(--border-color)'}`,
-                          padding: '0.6rem',
-                          boxShadow: validationErrors.cupoMaximo ? '0 0 0 0.2rem rgba(220, 53, 69, 0.25)' : 'none',
-                          fontSize: '0.9rem'
-                        }}
-                      />
-                    </div>
-                    <div className="col-md-4">
-                      <label className="form-label" style={{ 
-                        fontWeight: '600', 
-                        color: 'var(--text-color-2)', 
-                        marginBottom: '0.4rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        fontSize: '0.9rem'
-                      }}>
-                        <i className="fas fa-laptop text-primary"></i>
-                        Modalidad *
-                      </label>
-                      <select 
-                        className="form-select modern-input" 
-                        name="modalidad" 
-                        value={formData.modalidad}
-                        onChange={handleInputChange}
-                        required
-                        disabled={!!editingWindow && editingWindow.estado === 'en_curso'}
-                        style={{
-                          borderRadius: '8px',
-                          border: `1px solid ${validationErrors.modalidad ? '#dc3545' : 'var(--border-color)'}`,
-                          padding: '0.6rem',
-                          fontSize: '0.9rem',
-                          boxShadow: validationErrors.modalidad ? '0 0 0 0.2rem rgba(220, 53, 69, 0.25)' : 'none'
-                        }}
-                      >
-                        <option value="remoto">🌐 Remoto</option>
-                        <option value="presencial">🏢 Presencial</option>
-                      </select>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Tercera fila: Notas */}
+                  {/* Configuración de horarios (solo para ventanas con tiempo) */}
+                  {!formData.sinTiempo && (
+                    <div className="mb-4">
+                      <h6 style={{ color: 'var(--text-color-2)', marginBottom: '1rem', fontWeight: '600' }}>
+                        <i className="fas fa-clock text-primary me-2"></i>
+                        Configuración de Horarios
+                      </h6>
+                      <div className="row">
+                        <div className="col-md-6 mb-3">
+                          <label className="form-label" style={{ 
+                            fontWeight: '600', 
+                            color: 'var(--text-color-2)', 
+                            marginBottom: '0.4rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            fontSize: '0.9rem'
+                          }}>
+                            <i className="fas fa-calendar-day text-primary"></i>
+                            Fecha y Hora de Inicio *
+                          </label>
+                          <input 
+                            type="datetime-local" 
+                            className="form-control modern-input"
+                            name="fechaInicio"
+                            value={formData.fechaInicio}
+                            onChange={handleInputChange}
+                            required={!formData.sinTiempo}
+                            disabled={!!editingWindow && editingWindow.estado === 'en_curso'}
+                            style={{
+                              borderRadius: '8px',
+                              border: `1px solid ${validationErrors.fechaInicio ? '#dc3545' : 'var(--border-color)'}`,
+                              padding: '0.6rem',
+                              fontSize: '0.9rem',
+                              boxShadow: validationErrors.fechaInicio ? '0 0 0 0.2rem rgba(220, 53, 69, 0.25)' : 'none'
+                            }}
+                          />
+                        </div>
+                        <div className="col-md-6 mb-3">
+                          <label className="form-label" style={{ 
+                            fontWeight: '600', 
+                            color: 'var(--text-color-2)', 
+                            marginBottom: '0.4rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            fontSize: '0.9rem'
+                          }}>
+                            <i className="fas fa-hourglass-half text-primary"></i>
+                            Duración (minutos) *
+                          </label>
+                          <input 
+                            type="number" 
+                            className="form-control modern-input"
+                            name="duracion"
+                            value={formData.duracion}
+                            onChange={handleInputChange}
+                            min="1"
+                            max="9999"
+                            required={!formData.sinTiempo}
+                            style={{
+                              borderRadius: '8px',
+                              border: `1px solid ${validationErrors.duracion ? '#dc3545' : 'var(--border-color)'}`,
+                              padding: '0.6rem',
+                              boxShadow: validationErrors.duracion ? '0 0 0 0.2rem rgba(220, 53, 69, 0.25)' : 'none',
+                              fontSize: '0.9rem'
+                            }}
+                          />
+                          {editingWindow && editingWindow.estado === 'en_curso' && formData.duracion && (
+                            <div className="mt-2 p-2" style={{
+                              backgroundColor: validateEndTimeNotPast(editingWindow.fechaInicio, formData.duracion) ? '#e3f2fd' : '#ffebee',
+                              borderRadius: '6px',
+                              border: `1px solid ${validateEndTimeNotPast(editingWindow.fechaInicio, formData.duracion) ? '#2196f3' : '#f44336'}`
+                            }}>
+                              <small style={{ color: validateEndTimeNotPast(editingWindow.fechaInicio, formData.duracion) ? '#1565c0' : '#c62828' }}>
+                                <i className={`fas me-1 ${validateEndTimeNotPast(editingWindow.fechaInicio, formData.duracion) ? 'fa-info-circle' : 'fa-exclamation-triangle'}`}></i>
+                                <strong>
+                                  {validateEndTimeNotPast(editingWindow.fechaInicio, formData.duracion) 
+                                    ? 'Nueva hora de finalización:' 
+                                    : 'ADVERTENCIA - Hora ya pasada:'}
+                                </strong> {calculateEndTime(editingWindow.fechaInicio, formData.duracion)}
+                              </small>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+
+
+                  {/* Configuración general */}
+                  <div className="mb-4">
+                    <h6 style={{ color: 'var(--text-color-2)', marginBottom: '1rem', fontWeight: '600' }}>
+                      <i className="fas fa-cog text-primary me-2"></i>
+                      Configuración General
+                    </h6>
+                    <div className="row">
+                      <div className="col-md-6 mb-3">
+                        <label className="form-label" style={{ 
+                          fontWeight: '600', 
+                          color: 'var(--text-color-2)', 
+                          marginBottom: '0.4rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          fontSize: '0.9rem'
+                        }}>
+                          <i className="fas fa-users text-primary"></i>
+                          Cupo Máximo *
+                        </label>
+                        <input 
+                          type="number" 
+                          className="form-control modern-input"
+                          name="cupoMaximo"
+                          value={formData.cupoMaximo}
+                          onChange={handleInputChange}
+                          min={editingWindow
+                            ? (typeof editingWindow?.inscritosCount === 'number'
+                                ? editingWindow.inscritosCount
+                                : (Array.isArray(editingWindow?.inscripciones)
+                                    ? editingWindow.inscripciones.filter(i => i && (i.cancelledAt == null && i.canceledAt == null)).length
+                                    : 1))
+                            : 1}
+                          max="9999"
+                          required
+                          disabled={!!editingWindow && editingWindow.estado === 'en_curso'}
+                          style={{
+                            borderRadius: '8px',
+                            border: `1px solid ${validationErrors.cupoMaximo ? '#dc3545' : 'var(--border-color)'}`,
+                            padding: '0.6rem',
+                            boxShadow: validationErrors.cupoMaximo ? '0 0 0 0.2rem rgba(220, 53, 69, 0.25)' : 'none',
+                            fontSize: '0.9rem'
+                          }}
+                        />
+                      </div>
+                      <div className="col-md-6 mb-3">
+                        <label className="form-label" style={{ 
+                          fontWeight: '600', 
+                          color: 'var(--text-color-2)', 
+                          marginBottom: '0.4rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          fontSize: '0.9rem'
+                        }}>
+                          <i className="fas fa-laptop text-primary"></i>
+                          Modalidad *
+                        </label>
+                        <select 
+                          className="form-select modern-input" 
+                          name="modalidad" 
+                          value={formData.modalidad}
+                          onChange={handleInputChange}
+                          required
+                          disabled={!!editingWindow && editingWindow.estado === 'en_curso'}
+                          style={{
+                            borderRadius: '8px',
+                            border: `1px solid ${validationErrors.modalidad ? '#dc3545' : 'var(--border-color)'}`,
+                            padding: '0.6rem',
+                            fontSize: '0.9rem',
+                            boxShadow: validationErrors.modalidad ? '0 0 0 0.2rem rgba(220, 53, 69, 0.25)' : 'none'
+                          }}
+                        >
+                          <option value="remoto">🌐 Remoto</option>
+                          <option value="presencial">🏢 Presencial</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Notas adicionales */}
                   <div className="mb-3">
                     <label className="form-label" style={{ 
                       fontWeight: '600', 
@@ -1361,7 +1446,7 @@ export default function ExamWindowsPage() {
                       fontSize: '0.9rem'
                     }}>
                       <i className="fas fa-sticky-note text-primary"></i>
-                      Notas/Instrucciones
+                      Notas/Instrucciones Adicionales
                     </label>
                     <textarea 
                       className="form-control modern-input"
@@ -1371,15 +1456,18 @@ export default function ExamWindowsPage() {
                         handleInputChange(e);
                         adjustTextareaHeight(e.target);
                       }}
-                      rows="2"
-                      placeholder="Instrucciones adicionales para los estudiantes..."
+                      rows="3"
+                      placeholder={formData.sinTiempo 
+                        ? "Instrucciones especiales para la ventana sin tiempo (opcional)..." 
+                        : "Instrucciones adicionales para los estudiantes (opcional)..."
+                      }
                       style={{
                         borderRadius: '8px',
                         border: '1px solid var(--border-color)',
                         padding: '0.6rem',
                         fontSize: '0.9rem',
                         resize: 'none',
-                        minHeight: '60px',
+                        minHeight: '80px',
                         maxHeight: '200px',
                         overflowY: 'hidden'
                       }}
