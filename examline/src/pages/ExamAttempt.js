@@ -164,6 +164,14 @@ const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simula
         const examData = await getExamById(examId, windowId);
         setExam(examData);
 
+        // Redireccionar si es un examen de programación
+        if (examData.tipo === 'programming') {
+          const params = new URLSearchParams();
+          if (windowId) params.append('windowId', windowId);
+          navigate(`/programming-exam/${examId}?${params.toString()}`);
+          return;
+        }
+
         // Crear o obtener intento existente
         const attemptResponse = await fetch(`${API_BASE_URL}/exam-attempts/start`, {
           method: 'POST',

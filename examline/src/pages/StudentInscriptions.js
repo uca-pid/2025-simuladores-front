@@ -277,6 +277,16 @@ export default function StudentInscriptionsPage({
     }
   };
 
+  const navigateToExam = (examId, windowId, examType) => {
+    const params = `windowId=${windowId}`;
+    
+    if (examType === 'programming') {
+      navigate(`/programming-exam/${examId}?${params}`);
+    } else {
+      navigate(`/exam-attempt/${examId}?${params}`);
+    }
+  };
+
   if (loading) {
     return (
       <div className="container py-5">
@@ -598,10 +608,10 @@ export default function StudentInscriptionsPage({
                           ) : canTake ? (
                             <button 
                               className="modern-btn modern-btn-primary w-100"
-                              onClick={() => navigate(`/exam-attempt/${window.examId}?windowId=${window.id}`)}
+                              onClick={() => navigateToExam(window.examId, window.id, window.exam.tipo)}
                             >
                               <i className="fas fa-play me-2"></i>
-                              Rendir Examen
+                              {window.exam.tipo === 'programming' ? 'Programar' : 'Rendir Examen'}
                             </button>
                           ) : timeStatus.text === 'Finalizado' ? (
                             <button className="modern-btn modern-btn-secondary w-100" disabled>
