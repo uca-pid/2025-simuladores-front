@@ -22,7 +22,8 @@ export default function ExamWindowsPage() {
     modalidad: 'remoto',
     cupoMaximo: 30,
     notas: '',
-    sinTiempo: false
+    sinTiempo: false,
+    requierePresente: false
   });
   const [validationErrors, setValidationErrors] = useState({});
   const [modal, setModal] = useState({
@@ -395,7 +396,8 @@ export default function ExamWindowsPage() {
       modalidad: 'remoto',
       cupoMaximo: 30,
       notas: '',
-      sinTiempo: false
+      sinTiempo: false,
+      requierePresente: false
     });
     setEditingWindow(null);
     setValidationErrors({});
@@ -443,7 +445,8 @@ export default function ExamWindowsPage() {
       modalidad: window.modalidad,
       cupoMaximo: window.cupoMaximo,
       notas: window.notas || '',
-      sinTiempo: window.sinTiempo || false
+      sinTiempo: window.sinTiempo || false,
+      requierePresente: window.requierePresente || false
     });
     setEditingWindow(window);
     setShowCreateModal(true);
@@ -1257,6 +1260,55 @@ export default function ExamWindowsPage() {
                           </div>
                           <div style={{ fontSize: '2rem', opacity: 0.3 }}>
                             <i className={`fas ${formData.sinTiempo ? 'fa-infinity' : 'fa-calendar-alt'}`}></i>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Toggle para sistema de presentismo */}
+                  <div className="mb-4">
+                    <div className="card" style={{ 
+                      backgroundColor: formData.requierePresente ? '#fff5f5' : '#f8f9fa', 
+                      borderColor: formData.requierePresente ? '#f56565' : '#e9ecef',
+                      borderWidth: '2px',
+                      transition: 'all 0.3s ease'
+                    }}>
+                      <div className="card-body p-3">
+                        <div className="d-flex align-items-center justify-content-between">
+                          <div className="d-flex align-items-center">
+                            <div className="form-check form-switch me-3">
+                              <input 
+                                className="form-check-input" 
+                                type="checkbox" 
+                                id="requierePresente"
+                                name="requierePresente"
+                                checked={formData.requierePresente}
+                                onChange={(e) => setFormData(prev => ({ ...prev, requierePresente: e.target.checked }))}
+                                disabled={!!editingWindow && editingWindow.estado === 'finalizada'}
+                                style={{ 
+                                  width: '3rem', 
+                                  height: '1.5rem',
+                                  backgroundColor: formData.requierePresente ? '#f56565' : '#6c757d',
+                                  borderColor: formData.requierePresente ? '#f56565' : '#6c757d'
+                                }}
+                              />
+                            </div>
+                            <div>
+                              <label className="form-check-label mb-0" htmlFor="requierePresente" style={{ fontWeight: '600', fontSize: '1rem', cursor: 'pointer' }}>
+                                <i className={`fas ${formData.requierePresente ? 'fa-user-check text-danger' : 'fa-user-slash text-secondary'} me-2`}></i>
+                                {formData.requierePresente ? 'Sistema de presentismo activado' : 'Sistema de presentismo desactivado'}
+                              </label>
+                              <div style={{ fontSize: '0.85rem', color: '#6c757d', marginTop: '0.25rem' }}>
+                                {formData.requierePresente 
+                                  ? 'Los estudiantes deben ser marcados como presentes para acceder al examen'
+                                  : 'Los estudiantes pueden acceder al examen libremente sin control de asistencia'
+                                }
+                              </div>
+                            </div>
+                          </div>
+                          <div style={{ fontSize: '2rem', opacity: 0.3 }}>
+                            <i className={`fas ${formData.requierePresente ? 'fa-user-check' : 'fa-unlock'}`}></i>
                           </div>
                         </div>
                       </div>
