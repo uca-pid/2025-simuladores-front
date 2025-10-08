@@ -181,24 +181,31 @@ const isRunningSEB = () => {
 };
 
 // Usar la función
-const handleOpenExam = (examId, windowId, token) => {
+const handleOpenExam = (examId, windowId, token, window) => {
   const backendUrl = `http://localhost:4000/exam-start/download/${examId}/${windowId}/${token}`;
   
-  if (isRunningSEB()) {
-    console.log('Ya estás en SEB, navegando directamente...');
-    // Si ya estás en SEB, solo navega a la URL del examen
-   navigate(`/exam-attempt/${examId}?windowId=${windowId}`);
+  // Verificar si la ventana requiere SEB
+  const requiresSEB = window?.usaSEB || false;
+  
+  if (requiresSEB) {
+    // La ventana requiere SEB
+    if (isRunningSEB()) {
+      console.log('Ya estás en SEB y la ventana lo requiere, navegando directamente...');
+      navigate(`/exam-attempt/${examId}?windowId=${windowId}`);
+    } else {
+      console.log('La ventana requiere SEB, descargando archivo .seb...');
+      // Descargar el .seb automáticamente
+      const link = document.createElement("a");
+      link.href = backendUrl;
+      link.download = `examen_${examId}.seb`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   } else {
-    console.log('No estás en SEB, descargando archivo .seb...');
-    alert("Opening exam with URL: " + backendUrl);
-    
-    // Descargar el .seb automáticamente
-    const link = document.createElement("a");
-    link.href = backendUrl;
-    link.download = `examen_${examId}.seb`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // La ventana NO requiere SEB, permitir navegador normal
+    console.log('La ventana no requiere SEB, acceso normal...');
+    navigate(`/exam-attempt/${examId}?windowId=${windowId}`);
   }
 };
 
@@ -484,6 +491,16 @@ const handleOpenExam = (examId, windowId, token) => {
                             <i className="fas fa-laptop"></i>
                             <span><strong>Modalidad:</strong> {window.modalidad ? window.modalidad.charAt(0).toUpperCase() + window.modalidad.slice(1) : ''}</span>
                           </div>
+                          {window.usaSEB && (
+                            <div className="exam-info-item">
+                              <i className="fas fa-shield-alt text-warning"></i>
+                              <span><strong>Seguridad:</strong> 
+                                <span className="ms-1 badge bg-warning text-dark">
+                                  🔒 Requiere Safe Exam Browser
+                                </span>
+                              </span>
+                            </div>
+                          )}
                           <div className="exam-info-item">
                             <i className="fas fa-users"></i>
                             <span><strong>Inscritos:</strong> {window.cupoMaximo - window.cupoDisponible}/{window.cupoMaximo}</span>
@@ -647,7 +664,7 @@ const handleOpenExam = (examId, windowId, token) => {
                           ) : canTake ? (
                             <button 
                               className="modern-btn modern-btn-primary w-100"
-                              onClick={() =>handleOpenExam(window.examId, window.id, token)}
+                              onClick={() => handleOpenExam(window.examId, window.id, token, window)}
                             >
                               <i className="fas fa-play me-2"></i>
                               Rendir Examen
