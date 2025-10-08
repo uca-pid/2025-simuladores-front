@@ -38,23 +38,23 @@ const Principal = () => {
   const handleVerExamen = (examId) => navigate(`/examen/${examId}`);
 
   return (
-    <div className="container py-5">
+    <div className="container-fluid container-lg py-5 px-3 px-md-4">
       <UserHeader />
 
       {/* Instructivo colapsable */}
       <div className="modern-card mb-4">
         <div className="modern-card-header">
-          <div className="d-flex justify-content-between align-items-center">
+          <div className="instructivo-header">
             <h3 className="modern-card-title mb-0">
               <i className="fas fa-info-circle me-2"></i>
-              Instructivo de Uso
+              <span className="title-text">Instructivo de Uso</span>
             </h3>
             <button
-              className="modern-btn modern-btn-secondary"
+              className="modern-btn modern-btn-secondary modern-btn-sm"
               onClick={() => setShowInstructivo(!showInstructivo)}
             >
               <i className={`fas fa-chevron-${showInstructivo ? 'up' : 'down'}`}></i>
-              {showInstructivo ? 'Ocultar' : 'Ver instructivo'}
+              <span className="btn-text">{showInstructivo ? 'Ocultar' : 'Ver instructivo'}</span>
             </button>
           </div>
         </div>
@@ -70,7 +70,9 @@ const Principal = () => {
                     <div className="step-content">
                       <h5 className="step-title">1. Crear Exámenes</h5>
                       <p className="step-description">
-                        Haz clic en "Crear Examen" para diseñar evaluaciones. Completa el título del examen, agrega preguntas de múltiple opción (mínimo 4 opciones) y marca la respuesta correcta. Puedes agregar tantas preguntas como necesites usando el botón "+".
+                        Haz clic en "Crear Examen" para diseñar evaluaciones. Puedes crear dos tipos: 
+                        <strong>Múltiple Choice</strong> (agrega preguntas con 4 opciones y marca la correcta) o 
+                        <strong>Programación</strong> (define un problema, selecciona el lenguaje Python/JavaScript y configura intellisense).
                       </p>
                     </div>
                   </div>
@@ -109,23 +111,30 @@ const Principal = () => {
 
       <div className="modern-card mb-4">
         <div className="modern-card-header">
-          <div className="d-flex justify-content-between align-items-center">
-            <h2 className="page-title mb-0">Panel de Profesor</h2>
-            <div className="d-flex gap-2">
-              <button 
-                className="modern-btn modern-btn-secondary" 
-                onClick={() => navigate("/exam-windows")}
-              >
-                <i className="fas fa-calendar-alt"></i>
-                Ventanas de Examen
-              </button>
-              <button 
-                className="modern-btn modern-btn-primary" 
-                onClick={handleCrearExamen}
-              >
-                <i className="fas fa-plus"></i>
-                Crear Examen
-              </button>
+          <div className="profesor-panel-header">
+            <div className="panel-title-section">
+              <h2 className="page-title mb-0">
+                <i className="fas fa-chalkboard-teacher me-2"></i>
+                <span className="title-text">Panel de Profesor</span>
+              </h2>
+            </div>
+            <div className="panel-actions-section">
+              <div className="d-flex gap-2 flex-wrap justify-content-end">
+                <button 
+                  className="modern-btn modern-btn-secondary modern-btn-sm" 
+                  onClick={() => navigate("/exam-windows")}
+                >
+                  <i className="fas fa-calendar-alt me-2"></i>
+                  <span className="btn-text">Ventanas de Examen</span>
+                </button>
+                <button 
+                  className="modern-btn modern-btn-primary modern-btn-sm" 
+                  onClick={handleCrearExamen}
+                >
+                  <i className="fas fa-plus me-2"></i>
+                  <span className="btn-text">Crear Examen</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -164,15 +173,15 @@ const Principal = () => {
               </button>
             </div>
           ) : (
-            <div className="row g-4">
+            <div className="exams-grid">
               {(Array.isArray(exams) ? exams : []).map((exam, index) => (
-                <div key={exam.id} className="col-lg-6 col-xl-4">
+                <div key={exam.id} className="exam-grid-item">
                   <div className={`exam-card fade-in-up`} style={{animationDelay: `${index * 0.1}s`}}>
                     <div className="exam-card-header">
                       <h5 className="exam-title">{exam.titulo}</h5>
                       <span className="exam-badge">
                         <i className="fas fa-check-circle"></i>
-                        Activo
+                        <span className="badge-text">Activo</span>
                       </span>
                     </div>
                     <div className="exam-card-body">
@@ -182,16 +191,29 @@ const Principal = () => {
                           <span>Código: {exam.id}</span>
                         </div>
                         <div className="exam-info-item">
-                          <i className="fas fa-question-circle"></i>
-                          <span>Preguntas: {exam.preguntas?.length || 0}</span>
+                          <i className="fas fa-tag"></i>
+                          <span>Tipo: {exam.tipo === 'programming' ? 'Programación' : 'Múltiple Choice'}</span>
                         </div>
+                        {exam.tipo === 'programming' ? (
+                          <div className="exam-info-item">
+                            <i className="fas fa-code"></i>
+                            <span>Lenguaje: {exam.lenguajeProgramacion === 'python' ? 'Python' : 'JavaScript'}</span>
+                          </div>
+                        ) : (
+                          <div className="exam-info-item">
+                            <i className="fas fa-question-circle"></i>
+                            <span>Preguntas: {exam.preguntas?.length || 0}</span>
+                          </div>
+                        )}
                       </div>
                       <button
-                        className="modern-btn modern-btn-primary w-100"
+                        className="modern-btn modern-btn-primary w-100 view-exam-btn"
                         onClick={() => handleVerExamen(exam.id)}
                       >
-                        <i className="fas fa-eye"></i>
-                        Ver preguntas
+                        <i className="fas fa-eye me-2"></i>
+                        <span className="btn-text">
+                          {exam.tipo === 'programming' ? 'Ver examen' : 'Ver preguntas'}
+                        </span>
                       </button>
                     </div>
                   </div>

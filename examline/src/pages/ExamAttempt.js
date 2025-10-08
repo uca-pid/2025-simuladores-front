@@ -276,6 +276,14 @@ const closeSEB = () => {
         const examData = await getExamById(examId, windowId);
         setExam(examData);
 
+        // Redireccionar si es un examen de programación
+        if (examData.tipo === 'programming') {
+          const params = new URLSearchParams();
+          if (windowId) params.append('windowId', windowId);
+          navigate(`/programming-exam/${examId}?${params.toString()}`);
+          return;
+        }
+
         // Crear o obtener intento existente
         const attemptResponse = await fetch(`${API_BASE_URL}/exam-attempts/start`, {
           method: 'POST',
@@ -401,21 +409,27 @@ const closeSEB = () => {
     <div className="container py-5">
       <div className="modern-card mb-4">
         <div className="modern-card-header">
-          <div className="d-flex justify-content-between align-items-center">
-            <div className="d-flex align-items-center">
+          <div className="exam-attempt-header">
+            <div className="header-content-section">
               <h1 className="page-title mb-0">
                 <i className="fas fa-clipboard-list me-3"></i>
-                {exam.titulo || "Sin título"}
+                <span className="title-text">{exam.titulo || "Sin título"}</span>
               </h1>
-              {!propExamId ? (
-                <span className="badge bg-warning text-dark ms-3">
-                  <i className="fas fa-exclamation-triangle me-1"></i>
-                  EXAMEN EN CURSO
-                </span>
-              ) : (
-                <span className="badge bg-info text-white ms-3">
-                  <i className="fas fa-eye me-1"></i>
-                  VISTA PREVIA
+              <div className="header-badges mt-2">
+                {!propExamId ? (
+                  <span className="badge bg-warning text-dark">
+                    <i className="fas fa-exclamation-triangle me-1"></i>
+                    <span className="badge-text">EXAMEN EN CURSO</span>
+                  </span>
+                ) : (
+                  <span className="badge bg-info text-white">
+                    <i className="fas fa-eye me-1"></i>
+                    <span className="badge-text">VISTA PREVIA</span>
+                  </span>
+                )}
+                <span className="badge badge-primary">
+                  <i className="fas fa-question-circle me-2"></i>
+                  <span className="count-text">{exam.preguntas?.length || 0} preguntas</span>
                 </span>
               )}
               {isInSEB && (
@@ -424,11 +438,8 @@ const closeSEB = () => {
                   Modo Seguro (SEB)
                 </span>
               )}
+              </div>
             </div>
-            <span className="badge badge-primary">
-              <i className="fas fa-question-circle me-2"></i>
-              {exam.preguntas?.length || 0} preguntas
-            </span>
           </div>
         </div>
       </div>
@@ -449,28 +460,30 @@ const closeSEB = () => {
         </div>
       ) : (
         <>
-          <div className="row g-4">
+          <div className="exam-attempt-questions-grid">
             {exam.preguntas.map((p, i) => (
-              <div key={i} className="col-lg-6">
+              <div key={i} className="exam-attempt-question-card">
                 <div className={`exam-card fade-in-up`} style={{animationDelay: `${i * 0.1}s`}}>
                   <div className="exam-card-header">
                     <h5 className="exam-title">
                       <span className="badge badge-primary me-3">{i + 1}</span>
-                      {p.texto || "Sin texto"}
+                      <span className="question-text">{p.texto || "Sin texto"}</span>
                     </h5>
                   </div>
                   <div className="exam-card-body">
                     <div className="exam-info">
                       <h6 className="mb-3">
                         <i className="fas fa-list-ul me-2"></i>
-                        Opciones de respuesta:
+                        <span className="options-label">Opciones de respuesta:</span>
                       </h6>
-                      {p.opciones?.map((o, j) => (
-                        <div key={j} className="exam-info-item">
-                          <i className="fas fa-circle me-2" style={{fontSize: '8px'}}></i>
-                          <span>{o || "Opción vacía"}</span>
-                        </div>
-                      ))}
+                      <div className="exam-options-list">
+                        {p.opciones?.map((o, j) => (
+                          <div key={j} className="exam-info-item">
+                            <i className="fas fa-circle me-2" style={{fontSize: '8px'}}></i>
+                            <span>{o || "Opción vacía"}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -481,43 +494,45 @@ const closeSEB = () => {
           {/* Botón Terminar intento */}
           <div className="modern-card mt-4">
             <div className="modern-card-body text-center">
-              <h5 className="mb-3">
-                <i className="fas fa-flag-checkered me-2"></i>
-                ¿Terminaste el examen?
-              </h5>
-              <p className="text-muted mb-4">
-                Una vez que finalices el intento, no podrás volver a entrar al examen. Asegúrate de haber respondido todas las preguntas.
-              </p>
-              <div className="d-flex gap-3 justify-content-center">
-                <button 
-                  className="modern-btn modern-btn-primary modern-btn-lg" 
-                  onClick={handleExamCompletion}
-                  disabled={submitting}
-                >
-                  {submitting ? (
-                    <>
-                      <div className="spinner-border spinner-border-sm me-2" role="status"></div>
-                      Finalizando...
-                    </>
-                  ) : (
-                    <>
-                      <i className="fas fa-check me-2"></i>
-                      Finalizar Intento
-                    </>
+              <div className="exam-completion-section">
+                <h5 className="completion-title mb-3">
+                  <i className="fas fa-flag-checkered me-2"></i>
+                  <span className="completion-text">¿Terminaste el examen?</span>
+                </h5>
+                <p className="completion-description text-muted mb-4">
+                  Una vez que finalices el intento, no podrás volver a entrar al examen. Asegúrate de haber respondido todas las preguntas.
+                </p>
+                <div className="exam-attempt-actions">
+                  <button 
+                    className="modern-btn modern-btn-primary modern-btn-lg" 
+                    onClick={handleExamCompletion}
+                    disabled={submitting}
+                  >
+                    {submitting ? (
+                      <>
+                        <div className="spinner-border spinner-border-sm me-2" role="status"></div>
+                        <span className="btn-text">Finalizando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-check me-2"></i>
+                        <span className="btn-text">Finalizar Intento</span>
+                      </>
+                    )}
+                  </button>
+                  {!propExamId && (
+                    <button className="modern-btn modern-btn-outline-danger modern-btn-lg" onClick={handleLeaveExam}>
+                      <i className="fas fa-times me-2"></i>
+                      <span className="btn-text">Salir sin finalizar</span>
+                    </button>
                   )}
-                </button>
-                {!propExamId && (
-                  <button className="modern-btn modern-btn-outline-danger modern-btn-lg" onClick={handleLeaveExam}>
-                    <i className="fas fa-times me-2"></i>
-                    Salir sin finalizar
-                  </button>
-                )}
-                {propExamId && (
-                  <button className="modern-btn modern-btn-secondary modern-btn-lg" onClick={handleExamCompletion}>
-                    <i className="fas fa-arrow-left me-2"></i>
-                    Volver al inicio
-                  </button>
-                )}
+                  {propExamId && (
+                    <button className="modern-btn modern-btn-secondary modern-btn-lg" onClick={handleExamCompletion}>
+                      <i className="fas fa-arrow-left me-2"></i>
+                      <span className="btn-text">Volver al inicio</span>
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
