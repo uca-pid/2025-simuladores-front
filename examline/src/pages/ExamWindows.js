@@ -1230,55 +1230,6 @@ export default function ExamWindowsPage() {
                     </div>
                   </div>
 
-                  {/* Toggle para tipo de ventana */}
-                  <div className="mb-4">
-                    <div className="card" style={{ 
-                      backgroundColor: formData.sinTiempo ? '#f0f4ff' : '#f8f9fa', 
-                      borderColor: formData.sinTiempo ? '#4f46e5' : '#e9ecef',
-                      borderWidth: '2px',
-                      transition: 'all 0.3s ease'
-                    }}>
-                      <div className="card-body p-3">
-                        <div className="d-flex align-items-center justify-content-between">
-                          <div className="d-flex align-items-center">
-                            <div className="form-check form-switch me-3">
-                              <input 
-                                className="form-check-input" 
-                                type="checkbox" 
-                                id="sinTiempo"
-                                name="sinTiempo"
-                                checked={formData.sinTiempo}
-                                onChange={(e) => setFormData(prev => ({ ...prev, sinTiempo: e.target.checked }))}
-                                disabled={!!editingWindow && (editingWindow.estado === 'en_curso' || editingWindow.estado === 'finalizada')}
-                                style={{ 
-                                  width: '3rem', 
-                                  height: '1.5rem',
-                                  backgroundColor: formData.sinTiempo ? '#4f46e5' : '#6c757d',
-                                  borderColor: formData.sinTiempo ? '#4f46e5' : '#6c757d'
-                                }}
-                              />
-                            </div>
-                            <div>
-                              <label className="form-check-label mb-0" htmlFor="sinTiempo" style={{ fontWeight: '600', fontSize: '1rem', cursor: 'pointer' }}>
-                                <i className={`fas ${formData.sinTiempo ? 'fa-infinity text-primary' : 'fa-clock text-secondary'} me-2`}></i>
-                                {formData.sinTiempo ? 'Ventana sin límite de tiempo' : 'Ventana con horario específico'}
-                              </label>
-                              <div style={{ fontSize: '0.85rem', color: '#6c757d', marginTop: '0.25rem' }}>
-                                {formData.sinTiempo 
-                                  ? 'Los estudiantes accederán solo cuando esté activa, sin horarios específicos'
-                                  : 'Configurar fecha, hora de inicio y duración específica para la ventana'
-                                }
-                              </div>
-                            </div>
-                          </div>
-                          <div style={{ fontSize: '2rem', opacity: 0.3 }}>
-                            <i className={`fas ${formData.sinTiempo ? 'fa-infinity' : 'fa-calendar-alt'}`}></i>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
                   {/* Toggle para sistema de presentismo */}
                   <div className="mb-4">
                     <div className="card" style={{ 
@@ -1322,6 +1273,104 @@ export default function ExamWindowsPage() {
                           </div>
                           <div style={{ fontSize: '2rem', opacity: 0.3 }}>
                             <i className={`fas ${formData.requierePresente ? 'fa-user-check' : 'fa-unlock'}`}></i>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Toggle para seguridad SEB */}
+                  <div className="mb-4">
+                    <div className="card" style={{ 
+                      backgroundColor: formData.usaSEB ? '#f0fff4' : '#f8f9fa', 
+                      borderColor: formData.usaSEB ? '#28a745' : '#e9ecef',
+                      borderWidth: '2px',
+                      transition: 'all 0.3s ease'
+                    }}>
+                      <div className="card-body p-3">
+                        <div className="d-flex align-items-center justify-content-between">
+                          <div className="d-flex align-items-center">
+                            <div className="form-check form-switch me-3">
+                              <input 
+                                className="form-check-input" 
+                                type="checkbox" 
+                                id="usaSEB"
+                                name="usaSEB"
+                                checked={formData.usaSEB}
+                                onChange={(e) => setFormData(prev => ({ ...prev, usaSEB: e.target.checked }))}
+                                disabled={!!editingWindow && editingWindow.estado === 'en_curso'}
+                                style={{ 
+                                  width: '3rem', 
+                                  height: '1.5rem',
+                                  backgroundColor: formData.usaSEB ? '#28a745' : '#6c757d',
+                                  borderColor: formData.usaSEB ? '#28a745' : '#6c757d'
+                                }}
+                              />
+                            </div>
+                            <div>
+                              <label className="form-check-label mb-0" htmlFor="usaSEB" style={{ fontWeight: '600', fontSize: '1rem', cursor: 'pointer' }}>
+                                <i className={`fas ${formData.usaSEB ? 'fa-shield-alt text-success' : 'fa-shield text-secondary'} me-2`}></i>
+                                {formData.usaSEB ? 'Ventana segura activada (SEB)' : 'Ventana estándar'}
+                              </label>
+                              <div style={{ fontSize: '0.85rem', color: '#6c757d', marginTop: '0.25rem' }}>
+                                {formData.usaSEB 
+                                  ? 'Los estudiantes deberán usar Safe Exam Browser para acceder a esta ventana'
+                                  : 'Los estudiantes podrán acceder usando cualquier navegador web'
+                                }
+                              </div>
+                            </div>
+                          </div>
+                          <div style={{ fontSize: '2rem', opacity: 0.3 }}>
+                            <i className={`fas ${formData.usaSEB ? 'fa-shield-alt' : 'fa-globe'}`}></i>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Toggle para tipo de ventana */}
+                  <div className="mb-4">
+                    <div className="card" style={{ 
+                      backgroundColor: formData.sinTiempo ? '#f0f4ff' : '#f8f9fa', 
+                      borderColor: formData.sinTiempo ? '#4f46e5' : '#e9ecef',
+                      borderWidth: '2px',
+                      transition: 'all 0.3s ease'
+                    }}>
+                      <div className="card-body p-3">
+                        <div className="d-flex align-items-center justify-content-between">
+                          <div className="d-flex align-items-center">
+                            <div className="form-check form-switch me-3">
+                              <input 
+                                className="form-check-input" 
+                                type="checkbox" 
+                                id="sinTiempo"
+                                name="sinTiempo"
+                                checked={formData.sinTiempo}
+                                onChange={(e) => setFormData(prev => ({ ...prev, sinTiempo: e.target.checked }))}
+                                disabled={!!editingWindow && (editingWindow.estado === 'en_curso' || editingWindow.estado === 'finalizada')}
+                                style={{ 
+                                  width: '3rem', 
+                                  height: '1.5rem',
+                                  backgroundColor: formData.sinTiempo ? '#4f46e5' : '#6c757d',
+                                  borderColor: formData.sinTiempo ? '#4f46e5' : '#6c757d'
+                                }}
+                              />
+                            </div>
+                            <div>
+                              <label className="form-check-label mb-0" htmlFor="sinTiempo" style={{ fontWeight: '600', fontSize: '1rem', cursor: 'pointer' }}>
+                                <i className={`fas ${formData.sinTiempo ? 'fa-infinity text-primary' : 'fa-clock text-secondary'} me-2`}></i>
+                                {formData.sinTiempo ? 'Ventana sin límite de tiempo' : 'Ventana con horario específico'}
+                              </label>
+                              <div style={{ fontSize: '0.85rem', color: '#6c757d', marginTop: '0.25rem' }}>
+                                {formData.sinTiempo 
+                                  ? 'Los estudiantes accederán solo cuando esté activa, sin horarios específicos'
+                                  : 'Configurar fecha, hora de inicio y duración específica para la ventana'
+                                }
+                              </div>
+                            </div>
+                          </div>
+                          <div style={{ fontSize: '2rem', opacity: 0.3 }}>
+                            <i className={`fas ${formData.sinTiempo ? 'fa-infinity' : 'fa-calendar-alt'}`}></i>
                           </div>
                         </div>
                       </div>
@@ -1499,60 +1548,6 @@ export default function ExamWindowsPage() {
                     </div>
                   </div>
 
-                  {/* Tercera fila: Seguridad SEB */}
-                  <div className="row mb-3">
-                    <div className="col-12">
-                      <div className="form-check" style={{ 
-                        padding: '1rem',
-                        backgroundColor: formData.usaSEB ? '#e8f5e8' : '#f8f9fa',
-                        border: `2px solid ${formData.usaSEB ? '#28a745' : '#e0e0e0'}`,
-                        borderRadius: '12px',
-                        transition: 'all 0.3s ease'
-                      }}>
-                        <input 
-                          className="form-check-input" 
-                          type="checkbox" 
-                          name="usaSEB"
-                          id="usaSEB"
-                          checked={formData.usaSEB}
-                          onChange={handleInputChange}
-                          disabled={!!editingWindow && editingWindow.estado === 'en_curso'}
-                          style={{
-                            width: '20px',
-                            height: '20px',
-                            marginTop: '0.1rem',
-                            cursor: 'pointer'
-                          }}
-                        />
-                        <label className="form-check-label" htmlFor="usaSEB" style={{
-                          marginLeft: '0.75rem',
-                          fontWeight: '600',
-                          color: formData.usaSEB ? '#155724' : 'var(--text-color-2)',
-                          fontSize: '0.95rem',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          cursor: 'pointer'
-                        }}>
-                          <i className={`fas ${formData.usaSEB ? 'fa-shield-alt text-success' : 'fa-shield text-muted'}`}></i>
-                          Ventana Segura (Safe Exam Browser)
-                        </label>
-                        <div style={{
-                          marginLeft: '2.25rem',
-                          marginTop: '0.5rem',
-                          fontSize: '0.85rem',
-                          color: formData.usaSEB ? '#155724' : '#6c757d'
-                        }}>
-                          {formData.usaSEB 
-                            ? '🔒 Los estudiantes deberán usar Safe Exam Browser para acceder a esta ventana de examen'
-                            : '🌐 Los estudiantes podrán acceder usando cualquier navegador web'
-                          }
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Cuarta fila: Notas */}
                   {/* Notas adicionales */}
                   <div className="mb-3">
                     <label className="form-label" style={{ 
