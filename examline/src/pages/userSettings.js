@@ -174,20 +174,24 @@ export default function UserSettingsPage() {
   }
 
   return (
-    <div className="container py-5">
+    <div className="container-fluid container-lg py-5 px-3 px-md-4">
       <div className="modern-card mb-4">
         <div className="modern-card-header">
-          <div className="d-flex justify-content-between align-items-center">
-            <h1 className="page-title mb-0">
-              <i className="fas fa-user-cog me-3"></i>
-              Configuración de Usuario
-            </h1>
-            <div className="d-flex gap-2">
-              <BackToMainButton />
-              <button className="modern-btn modern-btn-danger" onClick={handleDelete}>
-                <i className="fas fa-trash me-2"></i>
-                Eliminar cuenta
-              </button>
+          <div className="user-settings-header">
+            <div className="header-title-section">
+              <h1 className="page-title mb-0">
+                <i className="fas fa-user-cog me-3"></i>
+                <span className="title-text">Configuración de Usuario</span>
+              </h1>
+            </div>
+            <div className="header-actions-section">
+              <div className="d-flex gap-2 flex-wrap justify-content-end">
+                <BackToMainButton className="modern-btn modern-btn-secondary modern-btn-sm" />
+                <button className="modern-btn modern-btn-danger modern-btn-sm" onClick={handleDelete}>
+                  <i className="fas fa-trash me-2"></i>
+                  Eliminar cuenta
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -204,7 +208,7 @@ export default function UserSettingsPage() {
           <form onSubmit={handleSubmit}>
             <div className="row g-4">
               {/* Nombre */}
-              <div className="col-md-6">
+              <div className="col-lg-6 col-md-12">
                 <label className="form-label fw-semibold">
                   <i className="fas fa-user me-2"></i>
                   Nombre
@@ -221,7 +225,7 @@ export default function UserSettingsPage() {
               </div>
 
               {/* Email (solo lectura) */}
-              <div className="col-md-6">
+              <div className="col-lg-6 col-md-12">
                 <label className="form-label fw-semibold">
                   <i className="fas fa-envelope me-2"></i>
                   Email
@@ -237,7 +241,7 @@ export default function UserSettingsPage() {
               </div>
 
               {/* Contraseña actual */}
-              <div className="col-md-6">
+              <div className="col-lg-6 col-md-12">
                 <label className="form-label fw-semibold">
                   <i className="fas fa-key me-2"></i>
                   Contraseña actual
@@ -254,7 +258,7 @@ export default function UserSettingsPage() {
               </div>
 
               {/* Nueva contraseña */}
-              <div className="col-md-6">
+              <div className="col-lg-6 col-md-12">
                 <label className="form-label fw-semibold">
                   <i className="fas fa-lock me-2"></i>
                   Nueva contraseña
@@ -272,8 +276,8 @@ export default function UserSettingsPage() {
               </div>
             </div>
 
-            <div className="mt-4 d-flex justify-content-end">
-              <button type="submit" className="modern-btn modern-btn-primary modern-btn-lg">
+            <div className="mt-4 d-flex justify-content-center justify-content-md-end">
+              <button type="submit" className="modern-btn modern-btn-primary modern-btn-lg save-changes-btn">
                 <i className="fas fa-save me-2"></i>
                 Guardar cambios
               </button>

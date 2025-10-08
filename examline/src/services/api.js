@@ -154,12 +154,12 @@ export async function updateUser(id, userData) {
 }
 
 // Exam endpoints
-export async function createExam({ titulo, preguntas }) {
+export async function createExam(examData) {
   try {
     const res = await fetch(`${API_BASE_URL}/exams/create`, {
       method: "POST",
       headers: getAuthHeaders(),
-      body: JSON.stringify({ titulo, preguntas }),
+      body: JSON.stringify(examData),
     });
 
     return await handleResponse(res);

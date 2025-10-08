@@ -10,6 +10,7 @@ import UserSettingsPage from "./pages/userSettings";
 import StudentExamPage from "./pages/StudentExamPage"; // 👈 NUEVO
 import ExamAttempt from "./pages/ExamAttempt";
 import ExamResults from "./pages/ExamResults";
+import ProgrammingExamView from "./pages/ProgrammingExamView";
 import ExamWindows from "./pages/ExamWindows";
 import StudentInscriptions from "./pages/StudentInscriptions";
 import WindowInscriptions from "./pages/WindowInscriptions";
@@ -45,6 +46,11 @@ function App() {
           <Route path="/exam-attempt/:examId" element={
             <StudentRoute>
               <ExamAttempt />
+            </StudentRoute>
+          } />
+          <Route path="/programming-exam/:examId" element={
+            <StudentRoute>
+              <ProgrammingExamView />
             </StudentRoute>
           } />
           <Route path="/exam-results/:attemptId" element={
