@@ -22,7 +22,7 @@ export default function ExamWindowsPage() {
     modalidad: 'remoto',
     cupoMaximo: 30,
     notas: '',
-    usaSEB: false
+    usaSEB: false,
     sinTiempo: false,
     requierePresente: false
   });
@@ -398,7 +398,7 @@ export default function ExamWindowsPage() {
       modalidad: 'remoto',
       cupoMaximo: 30,
       notas: '',
-      usaSEB: false
+      usaSEB: false,
       sinTiempo: false,
       requierePresente: false
     });
@@ -448,7 +448,7 @@ export default function ExamWindowsPage() {
       modalidad: window.modalidad,
       cupoMaximo: window.cupoMaximo,
       notas: window.notas || '',
-      usaSEB: window.usaSEB || false
+      usaSEB: window.usaSEB || false,
       sinTiempo: window.sinTiempo || false,
       requierePresente: window.requierePresente || false
     });
