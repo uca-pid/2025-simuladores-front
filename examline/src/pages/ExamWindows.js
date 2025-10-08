@@ -576,7 +576,7 @@ export default function ExamWindowsPage() {
     }
   };
 
-  // Eliminado: handleDeleteWindow (se quitó el botón Eliminar de las cards)
+  // Eliminado: handleDeleteWindow (se quitó el botón Eliminar de las cards)z
 
   const getStatusBadge = (estado) => {
     const badges = {
