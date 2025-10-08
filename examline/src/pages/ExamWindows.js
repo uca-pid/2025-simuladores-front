@@ -22,6 +22,7 @@ export default function ExamWindowsPage() {
     modalidad: 'remoto',
     cupoMaximo: 30,
     notas: '',
+    usaSEB: false
     sinTiempo: false,
     requierePresente: false
   });
@@ -379,8 +380,9 @@ export default function ExamWindowsPage() {
   };
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    const inputValue = type === 'checkbox' ? checked : value;
+    setFormData(prev => ({ ...prev, [name]: inputValue }));
     
     // Limpiar error de validación para este campo
     if (validationErrors[name]) {
@@ -396,6 +398,7 @@ export default function ExamWindowsPage() {
       modalidad: 'remoto',
       cupoMaximo: 30,
       notas: '',
+      usaSEB: false
       sinTiempo: false,
       requierePresente: false
     });
@@ -445,6 +448,7 @@ export default function ExamWindowsPage() {
       modalidad: window.modalidad,
       cupoMaximo: window.cupoMaximo,
       notas: window.notas || '',
+      usaSEB: window.usaSEB || false
       sinTiempo: window.sinTiempo || false,
       requierePresente: window.requierePresente || false
     });
@@ -608,6 +612,7 @@ export default function ExamWindowsPage() {
     }
   };
 
+  // Eliminado: handleDeleteWindow (se quitó el botón Eliminar de las cards)z
   const handleToggleActive = async (windowId, currentActive) => {
     const action = currentActive ? 'desactivar' : 'activar';
     try {
@@ -810,6 +815,14 @@ export default function ExamWindowsPage() {
             <div className="exam-info-item">
               <i className="fas fa-laptop"></i>
                 <span><strong>Modalidad:</strong> {window.modalidad ? window.modalidad.charAt(0).toUpperCase() + window.modalidad.slice(1) : ''}</span>
+            </div>
+            <div className="exam-info-item">
+              <i className={`fas ${window.usaSEB ? 'fa-shield-alt text-success' : 'fa-shield text-muted'}`}></i>
+                <span><strong>Seguridad:</strong> 
+                  <span className={`ms-1 badge ${window.usaSEB ? 'bg-success' : 'bg-secondary'}`}>
+                    {window.usaSEB ? '🔒 SEB Requerido' : '🌐 Navegador Normal'}
+                  </span>
+                </span>
             </div>
             <div className="exam-info-item">
               <i className="fas fa-users"></i>
@@ -1486,6 +1499,60 @@ export default function ExamWindowsPage() {
                     </div>
                   </div>
 
+                  {/* Tercera fila: Seguridad SEB */}
+                  <div className="row mb-3">
+                    <div className="col-12">
+                      <div className="form-check" style={{ 
+                        padding: '1rem',
+                        backgroundColor: formData.usaSEB ? '#e8f5e8' : '#f8f9fa',
+                        border: `2px solid ${formData.usaSEB ? '#28a745' : '#e0e0e0'}`,
+                        borderRadius: '12px',
+                        transition: 'all 0.3s ease'
+                      }}>
+                        <input 
+                          className="form-check-input" 
+                          type="checkbox" 
+                          name="usaSEB"
+                          id="usaSEB"
+                          checked={formData.usaSEB}
+                          onChange={handleInputChange}
+                          disabled={!!editingWindow && editingWindow.estado === 'en_curso'}
+                          style={{
+                            width: '20px',
+                            height: '20px',
+                            marginTop: '0.1rem',
+                            cursor: 'pointer'
+                          }}
+                        />
+                        <label className="form-check-label" htmlFor="usaSEB" style={{
+                          marginLeft: '0.75rem',
+                          fontWeight: '600',
+                          color: formData.usaSEB ? '#155724' : 'var(--text-color-2)',
+                          fontSize: '0.95rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          cursor: 'pointer'
+                        }}>
+                          <i className={`fas ${formData.usaSEB ? 'fa-shield-alt text-success' : 'fa-shield text-muted'}`}></i>
+                          Ventana Segura (Safe Exam Browser)
+                        </label>
+                        <div style={{
+                          marginLeft: '2.25rem',
+                          marginTop: '0.5rem',
+                          fontSize: '0.85rem',
+                          color: formData.usaSEB ? '#155724' : '#6c757d'
+                        }}>
+                          {formData.usaSEB 
+                            ? '🔒 Los estudiantes deberán usar Safe Exam Browser para acceder a esta ventana de examen'
+                            : '🌐 Los estudiantes podrán acceder usando cualquier navegador web'
+                          }
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Cuarta fila: Notas */}
                   {/* Notas adicionales */}
                   <div className="mb-3">
                     <label className="form-label" style={{ 

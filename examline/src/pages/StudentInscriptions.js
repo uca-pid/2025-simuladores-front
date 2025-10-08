@@ -160,6 +160,54 @@ export default function StudentInscriptionsPage({
   const closeModal = () => {
     setModal(prev => ({ ...prev, show: false }));
   };
+const isRunningSEB = () => {
+  // Método 1: Verificar el User Agent
+  const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+  if (userAgent.includes('SEB')) {
+    return true;
+  }
+  
+  // Método 2: Verificar variables globales de SEB
+  if (window.SafeExamBrowser) {
+    return true;
+  }
+  
+  // Método 3: Verificar propiedades específicas de SEB
+  if (navigator.userAgent.includes('SafeExamBrowser')) {
+    return true;
+  }
+  
+  return false;
+};
+
+// Usar la función
+const handleOpenExam = (examId, windowId, token, window) => {
+  const backendUrl = `http://localhost:4000/exam-start/download/${examId}/${windowId}/${token}`;
+  
+  // Verificar si la ventana requiere SEB
+  const requiresSEB = window?.usaSEB || false;
+  
+  if (requiresSEB) {
+    // La ventana requiere SEB
+    if (isRunningSEB()) {
+      console.log('Ya estás en SEB y la ventana lo requiere, navegando directamente...');
+      navigate(`/exam-attempt/${examId}?windowId=${windowId}`);
+    } else {
+      console.log('La ventana requiere SEB, descargando archivo .seb...');
+      // Descargar el .seb automáticamente
+      const link = document.createElement("a");
+      link.href = backendUrl;
+      link.download = `examen_${examId}.seb`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  } else {
+    // La ventana NO requiere SEB, permitir navegador normal
+    console.log('La ventana no requiere SEB, acceso normal...');
+    navigate(`/exam-attempt/${examId}?windowId=${windowId}`);
+  }
+};
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -449,6 +497,16 @@ export default function StudentInscriptionsPage({
                             <i className="fas fa-laptop"></i>
                             <span><strong>Modalidad:</strong> {window.modalidad ? window.modalidad.charAt(0).toUpperCase() + window.modalidad.slice(1) : ''}</span>
                           </div>
+                          {window.usaSEB && (
+                            <div className="exam-info-item">
+                              <i className="fas fa-shield-alt text-warning"></i>
+                              <span><strong>Seguridad:</strong> 
+                                <span className="ms-1 badge bg-warning text-dark">
+                                  🔒 Requiere Safe Exam Browser
+                                </span>
+                              </span>
+                            </div>
+                          )}
                           <div className="exam-info-item">
                             <i className="fas fa-users"></i>
                             <span><strong>Inscritos:</strong> {window.cupoMaximo - window.cupoDisponible}/{window.cupoMaximo}</span>
@@ -620,6 +678,7 @@ export default function StudentInscriptionsPage({
                           ) : canTake ? (
                             <button 
                               className="modern-btn modern-btn-primary w-100"
+                              onClick={() => handleOpenExam(window.examId, window.id, token, window)}
                               onClick={() => navigateToExam(window.examId, window.id, window.exam.tipo)}
                             >
                               <i className="fas fa-play me-2"></i>
