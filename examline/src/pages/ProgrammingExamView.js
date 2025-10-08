@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import { getExamById } from '../services/api';
+import Modal from '../components/Modal';
 
 const ProgrammingExamView = () => {
   const { examId } = useParams();
@@ -22,6 +23,9 @@ const ProgrammingExamView = () => {
   const [showFileManager, setShowFileManager] = useState(false);
   const [newFileName, setNewFileName] = useState('');
   const [fileOperationLoading, setFileOperationLoading] = useState(false);
+  
+  // Estado para el modal de confirmación
+  const [showFinishModal, setShowFinishModal] = useState(false);
 
   // Obtener windowId de la URL
   const searchParams = new URLSearchParams(location.search);
@@ -179,15 +183,16 @@ const ProgrammingExamView = () => {
     }
   }, [attempt]);
 
+  // Función para mostrar el modal de confirmación
+  const handleFinishExamClick = () => {
+    setShowFinishModal(true);
+  };
+
   // Función para finalizar examen
   const finishExam = async () => {
     if (!attempt) return;
     
-    const confirmFinish = window.confirm(
-      '¿Estás seguro de que quieres finalizar el examen? Se guardará automáticamente el código actual. No podrás hacer más cambios después.'
-    );
-    
-    if (!confirmFinish) return;
+    setShowFinishModal(false);
     
     try {
       setLoading(true);
@@ -483,7 +488,7 @@ const ProgrammingExamView = () => {
                   
                   <button 
                     className="btn-action btn-finish" 
-                    onClick={finishExam}
+                    onClick={handleFinishExamClick}
                     disabled={loading}
                   >
                     <i className="fas fa-check-circle me-2"></i>
@@ -1016,6 +1021,19 @@ const ProgrammingExamView = () => {
           background: #45a049 !important;
         }
       `}</style>
+
+      {/* Modal de confirmación para finalizar examen */}
+      <Modal
+        show={showFinishModal}
+        onClose={() => setShowFinishModal(false)}
+        onConfirm={finishExam}
+        title="Finalizar Examen"
+        message="¿Estás seguro de que quieres finalizar el examen? Se guardará automáticamente el código actual. No podrás hacer más cambios después."
+        type="confirm"
+        confirmText="Finalizar"
+        cancelText="Cancelar"
+        showCancel={true}
+      />
     </div>
   );
 };
