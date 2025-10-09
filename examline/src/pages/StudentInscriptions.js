@@ -229,10 +229,15 @@ const openExam = (examId, windowId, token, window) => {
   };
 
   const handleInscription = (window) => {
+    // Generar mensaje apropiado según si es ventana eterna o no
+    const mensaje = window.sinTiempo 
+      ? `¿Deseas inscribirte al examen "${window.exam.titulo}"? Esta ventana está disponible permanentemente.`
+      : `¿Deseas inscribirte al examen "${window.exam.titulo}" programado para el ${new Date(window.fechaInicio).toLocaleString()}?`;
+
     showModal(
       'confirm',
       'Confirmar Inscripción',
-      `¿Deseas inscribirte al examen "${window.exam.titulo}" programado para el ${new Date(window.fechaInicio).toLocaleString()}?`,
+      mensaje,
       async () => {
         try {
           const response = await fetch(`${API_BASE_URL}/inscriptions`, {

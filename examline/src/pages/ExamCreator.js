@@ -369,21 +369,6 @@ const ExamCreator = () => {
       </div>
         )}
 
-        {/* Botón de publicar examen */}
-        <div className="modern-card mb-4">
-          <div className="modern-card-body">
-            <div className="text-center">
-              <button 
-                className="modern-btn modern-btn-primary"
-                onClick={handlePublicarExamen}
-              >
-                <i className="fas fa-paper-plane me-2"></i>
-                <span className="button-text">Publicar Examen</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
       {/* Lista de preguntas - Solo para múltiple choice */}
       {tipoExamen === "multiple_choice" && (
         <div className="modern-card">
@@ -439,6 +424,21 @@ const ExamCreator = () => {
         </div>
       </div>
       )}
+
+      {/* Botón de publicar examen - al final */}
+      <div className="modern-card">
+        <div className="modern-card-body">
+          <div className="text-center">
+            <button 
+              className="modern-btn modern-btn-primary"
+              onClick={handlePublicarExamen}
+            >
+              <i className="fas fa-paper-plane me-2"></i>
+              <span className="button-text">Publicar Examen</span>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
