@@ -52,40 +52,13 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
     setModal(prev => ({ ...prev, show: false }));
   };
 
-  // 🚪 Función para cerrar SEB
+  // 🚪 Función para redireccionar al terminar examen
 const closeSEB = () => {
   try {
-    console.log('Intentando cerrar SEB - Método 1: seb://quit');
-    window.location.href = 'seb://quit';
-    
-    // Método alternativo después de 500ms
-    setTimeout(() => {
-      console.log('Intentando cerrar SEB - Método 2: sebs://quit');
-      window.location.href = 'sebs://quit';
-    }, 500);
-    
-    // Método 3: Usar el API de SEB si está disponible
-    setTimeout(() => {
-      if (window.SafeExamBrowser && window.SafeExamBrowser.security) {
-        console.log('Intentando cerrar SEB - Método 3: SafeExamBrowser API');
-        window.SafeExamBrowser.security.closeApplication();
-      }
-    }, 1000);
-    
-    // Método 4: Ctrl+Q programático
-    setTimeout(() => {
-      console.log('Intentando cerrar SEB - Método 4: KeyboardEvent');
-      const event = new KeyboardEvent('keydown', {
-        key: 'q',
-        code: 'KeyQ',
-        ctrlKey: true,
-        bubbles: true
-      });
-      document.dispatchEvent(event);
-    }, 1500);
-    
+    console.log('Redirigiendo a Google.com al terminar el examen');
+    window.location.href = 'https://ferrocarriloeste.com.ar/';
   } catch (error) {
-    console.log('Error al cerrar SEB:', error);
+    console.log('Error al redireccionar:', error);
   }
 };
 
