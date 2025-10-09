@@ -131,7 +131,7 @@ export default function UserSettingsPage() {
 
   const handleDelete = async () => {
     showModal(
-      'confirm',
+      'error',
       'Confirmar eliminación',
       '¿Seguro que deseas eliminar tu cuenta? Esta acción no se puede deshacer.',
       async () => {
@@ -294,7 +294,7 @@ export default function UserSettingsPage() {
         message={modal.message}
         type={modal.type}
         showCancel={modal.showCancel}
-        confirmText={modal.type === 'confirm' ? 'Eliminar' : 'Aceptar'}
+        confirmText={modal.type === 'error' ? 'Eliminar cuenta' : modal.type === 'confirm' ? 'Confirmar' : 'Aceptar'}
         cancelText="Cancelar"
       />
     </div>

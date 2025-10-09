@@ -296,18 +296,31 @@ const handleOpenExam = (examId, windowId, token, window) => {
   const canTakeExam = (inscription) => {
     const window = inscription.examWindow;
     const now = new Date();
-    const windowStart = new Date(window.fechaInicio);
-    const windowEnd = new Date(windowStart.getTime() + (window.duracion * 60 * 1000));
     
     // Verificar si la ventana requiere presentismo
     const requierePresente = window.requierePresente === true;
+    
+    // Si es una ventana infinita (sin tiempo), solo verificar presentismo y que esté activa/programada
+    if (window.sinTiempo) {
+      return (window.estado === 'programada' || window.estado === 'en_curso') &&
+             (!requierePresente || inscription.presente === true);
+    }
+    
+    // Para ventanas con tiempo, lógica original
+    const windowStart = new Date(window.fechaInicio);
+    const windowEnd = new Date(windowStart.getTime() + (window.duracion * 60 * 1000));
     
     return now >= windowStart && now <= windowEnd && 
            window.estado === 'en_curso' && 
            (!requierePresente || inscription.presente === true);
   };
 
-  const getTimeStatus = (fechaInicio, duracion) => {
+  const getTimeStatus = (fechaInicio, duracion, sinTiempo) => {
+    // Si es una ventana infinita (sin tiempo)
+    if (sinTiempo) {
+      return { text: 'Disponible', class: 'text-success' };
+    }
+    
     const now = new Date();
     const start = new Date(fechaInicio);
     const end = new Date(start.getTime() + (duracion * 60 * 1000));
@@ -468,7 +481,7 @@ const handleOpenExam = (examId, windowId, token, window) => {
           ) : (
             <div className="row g-4">
               {availableWindows.map((window, index) => {
-                const timeStatus = getTimeStatus(window.fechaInicio, window.duracion);
+                const timeStatus = getTimeStatus(window.fechaInicio, window.duracion, window.sinTiempo);
                 return (
                   <div key={window.id} className="col-md-6 col-lg-4">
                     <div className={`exam-card fade-in-up`} style={{animationDelay: `${index * 0.1}s`}}>
@@ -481,18 +494,31 @@ const handleOpenExam = (examId, windowId, token, window) => {
                       </div>
                       <div className="exam-card-body">
                         <div className="exam-info">
-                          <div className="exam-info-item">
-                            <i className="fas fa-calendar"></i>
-                            <span><strong>Fecha:</strong> {new Date(window.fechaInicio).toLocaleDateString()}</span>
-                          </div>
-                          <div className="exam-info-item">
-                            <i className="fas fa-clock"></i>
-                            <span><strong>Hora de inicio:</strong> {new Date(window.fechaInicio).toLocaleTimeString()}</span>
-                          </div>
-                          <div className="exam-info-item">
-                            <i className="fas fa-hourglass-half"></i>
-                            <span><strong>Duración:</strong> {window.duracion} min</span>
-                          </div>
+                          {window.sinTiempo ? (
+                            <div className="exam-info-item">
+                              <i className="fas fa-infinity text-success"></i>
+                              <span><strong>Ventana:</strong> 
+                                <span className="ms-1 badge bg-success text-white">
+                                  🕐 Disponible siempre
+                                </span>
+                              </span>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="exam-info-item">
+                                <i className="fas fa-calendar"></i>
+                                <span><strong>Fecha:</strong> {new Date(window.fechaInicio).toLocaleDateString()}</span>
+                              </div>
+                              <div className="exam-info-item">
+                                <i className="fas fa-clock"></i>
+                                <span><strong>Hora de inicio:</strong> {new Date(window.fechaInicio).toLocaleTimeString()}</span>
+                              </div>
+                              <div className="exam-info-item">
+                                <i className="fas fa-hourglass-half"></i>
+                                <span><strong>Duración:</strong> {window.duracion} min</span>
+                              </div>
+                            </>
+                          )}
                           <div className="exam-info-item">
                             <i className="fas fa-laptop"></i>
                             <span><strong>Modalidad:</strong> {window.modalidad ? window.modalidad.charAt(0).toUpperCase() + window.modalidad.slice(1) : ''}</span>
@@ -592,7 +618,7 @@ const handleOpenExam = (examId, windowId, token, window) => {
             <div className="row g-4">
               {myInscriptions.map((inscription, index) => {
                 const window = inscription.examWindow;
-                const timeStatus = getTimeStatus(window.fechaInicio, window.duracion);
+                const timeStatus = getTimeStatus(window.fechaInicio, window.duracion, window.sinTiempo);
                 const canTake = canTakeExam(inscription);
                 
                 return (
@@ -635,18 +661,31 @@ const handleOpenExam = (examId, windowId, token, window) => {
                       </div>
                       <div className="exam-card-body">
                         <div className="exam-info">
-                          <div className="exam-info-item">
-                            <i className="fas fa-calendar"></i>
-                            <span><strong>Fecha:</strong> {new Date(window.fechaInicio).toLocaleDateString()}</span>
-                          </div>
-                          <div className="exam-info-item">
-                            <i className="fas fa-clock"></i>
-                            <span><strong>Hora de inicio:</strong> {new Date(window.fechaInicio).toLocaleTimeString()}</span>
-                          </div>
-                          <div className="exam-info-item">
-                            <i className="fas fa-hourglass-half"></i>
-                            <span><strong>Duración:</strong> {window.duracion} min</span>
-                          </div>
+                          {window.sinTiempo ? (
+                            <div className="exam-info-item">
+                              <i className="fas fa-infinity text-success"></i>
+                              <span><strong>Ventana:</strong> 
+                                <span className="ms-1 badge bg-success text-white">
+                                  🕐 Disponible siempre
+                                </span>
+                              </span>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="exam-info-item">
+                                <i className="fas fa-calendar"></i>
+                                <span><strong>Fecha:</strong> {new Date(window.fechaInicio).toLocaleDateString()}</span>
+                              </div>
+                              <div className="exam-info-item">
+                                <i className="fas fa-clock"></i>
+                                <span><strong>Hora de inicio:</strong> {new Date(window.fechaInicio).toLocaleTimeString()}</span>
+                              </div>
+                              <div className="exam-info-item">
+                                <i className="fas fa-hourglass-half"></i>
+                                <span><strong>Duración:</strong> {window.duracion} min</span>
+                              </div>
+                            </>
+                          )}
                           <div className="exam-info-item">
                             <i className="fas fa-laptop"></i>
                             <span><strong>Modalidad:</strong> {window.modalidad ? window.modalidad.charAt(0).toUpperCase() + window.modalidad.slice(1) : ''}</span>
@@ -678,11 +717,16 @@ const handleOpenExam = (examId, windowId, token, window) => {
                           ) : canTake ? (
                             <button 
                               className="modern-btn modern-btn-primary w-100"
-                              onClick={() => handleOpenExam(window.examId, window.id, token, window)}
                               onClick={() => navigateToExam(window.examId, window.id, window.exam.tipo)}
                             >
                               <i className="fas fa-play me-2"></i>
                               {window.exam.tipo === 'programming' ? 'Programar' : 'Rendir Examen'}
+                            </button>
+                          ) : window.sinTiempo ? (
+                            // Para ventanas sin tiempo, mostrar el estado de habilitación
+                            <button className="modern-btn modern-btn-warning w-100" disabled>
+                              <i className="fas fa-user-times me-2"></i>
+                              {window.requierePresente ? 'Esperando habilitación del profesor' : 'No disponible'}
                             </button>
                           ) : timeStatus.text === 'Finalizado' ? (
                             <button className="modern-btn modern-btn-secondary w-100" disabled>

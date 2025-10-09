@@ -27,7 +27,7 @@ const Modal = ({
       case 'warning':
         return <i className={`${iconClass} fa-exclamation-triangle`} style={{...iconStyle, color: 'var(--warning-color)'}}></i>;
       case 'confirm':
-        return <i className={`${iconClass} fa-question-circle`} style={{...iconStyle, color: 'var(--primary-color)'}}></i>;
+        return <i className={`${iconClass} fa-question-circle`} style={{...iconStyle, color: '#667eea'}}></i>;
       default:
         return <i className={`${iconClass} fa-info-circle`} style={{...iconStyle, color: 'var(--info-color)'}}></i>;
     }
@@ -42,7 +42,7 @@ const Modal = ({
       case 'warning':
         return 'border-warning';
       case 'confirm':
-        return 'border-primary';
+        return 'border-confirm';
       default:
         return 'border-info';
     }
@@ -92,6 +92,7 @@ const Modal = ({
                     type === 'error' ? 'responsive-btn-danger' :
                     type === 'success' ? 'responsive-btn-primary' :
                     type === 'warning' ? 'responsive-btn-primary' :
+                    type === 'confirm' ? 'responsive-btn-confirm' :
                     'responsive-btn-primary'
                   }`}
                   onClick={onConfirm || onClose}
@@ -167,6 +168,10 @@ const Modal = ({
 
         .responsive-modal-content.border-info {
           border-top-color: var(--info-color, #17a2b8);
+        }
+
+        .responsive-modal-content.border-confirm {
+          border-top-color: #667eea;
         }
 
         .responsive-modal-body {
@@ -255,6 +260,16 @@ const Modal = ({
         .responsive-btn-danger:hover {
           transform: translateY(-2px);
           box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+        }
+
+        .responsive-btn-confirm {
+          background: linear-gradient(45deg, #667eea, #764ba2);
+          color: white;
+        }
+
+        .responsive-btn-confirm:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
         }
 
         /* Tablet styles */
