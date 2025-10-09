@@ -181,7 +181,7 @@ const isRunningSEB = () => {
 };
 
 const openExam = (examId, windowId, token, window) => {
-  const backendUrl = `http://localhost:4000/exam-start/download/${examId}/${windowId}/${token}`;
+  const backendUrl = `${API_BASE_URL}/exam-start/download/${examId}/${windowId}/${token}`;
   const requiresSEB = window?.usaSEB || false;
   const examType = window?.exam?.tipo || "normal";
   const params = `windowId=${windowId}`;
