@@ -180,21 +180,26 @@ const isRunningSEB = () => {
   return false;
 };
 
-// Usar la función
-const handleOpenExam = (examId, windowId, token, window) => {
+const openExam = (examId, windowId, token, window) => {
   const backendUrl = `http://localhost:4000/exam-start/download/${examId}/${windowId}/${token}`;
-  
-  // Verificar si la ventana requiere SEB
   const requiresSEB = window?.usaSEB || false;
-  
-  if (requiresSEB) {
-    // La ventana requiere SEB
-    if (isRunningSEB()) {
-      console.log('Ya estás en SEB y la ventana lo requiere, navegando directamente...');
-      navigate(`/exam-attempt/${examId}?windowId=${windowId}`);
+  const examType = window?.exam?.tipo || "normal";
+  const params = `windowId=${windowId}`;
+
+  const goToExam = () => {
+    if (examType === "programming") {
+      navigate(`/programming-exam/${examId}?${params}`);
     } else {
-      console.log('La ventana requiere SEB, descargando archivo .seb...');
-      // Descargar el .seb automáticamente
+      navigate(`/exam-attempt/${examId}?${params}`);
+    }
+  };
+
+  if (requiresSEB) {
+    // Si requiere SEB
+    if (isRunningSEB()) {
+      goToExam();
+    } else {
+      // Descargar archivo .seb
       const link = document.createElement("a");
       link.href = backendUrl;
       link.download = `examen_${examId}.seb`;
@@ -203,11 +208,11 @@ const handleOpenExam = (examId, windowId, token, window) => {
       document.body.removeChild(link);
     }
   } else {
-    // La ventana NO requiere SEB, permitir navegador normal
-    console.log('La ventana no requiere SEB, acceso normal...');
-    navigate(`/exam-attempt/${examId}?windowId=${windowId}`);
+    // Si NO requiere SEB
+    goToExam();
   }
 };
+
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -339,16 +344,6 @@ const handleOpenExam = (examId, windowId, token, window) => {
       return { text: 'En curso', class: 'text-success' };
     } else {
       return { text: 'Finalizado', class: 'text-secondary' };
-    }
-  };
-
-  const navigateToExam = (examId, windowId, examType) => {
-    const params = `windowId=${windowId}`;
-    
-    if (examType === 'programming') {
-      navigate(`/programming-exam/${examId}?${params}`);
-    } else {
-      navigate(`/exam-attempt/${examId}?${params}`);
     }
   };
 

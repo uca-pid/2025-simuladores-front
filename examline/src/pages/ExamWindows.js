@@ -562,6 +562,10 @@ export default function ExamWindowsPage() {
       }
       // Para nuevas ventanas o edición libre, usar la fecha del formulario directamente
 
+      // Debug: verificar qué se está enviando
+      console.log('📤 Payload que se enviará:', payload);
+      console.log('🔒 usaSEB value:', payload.usaSEB);
+
       // Si se está editando y el nuevo cupo es exactamente igual a los inscriptos activos actuales,
       // cerrar inscripciones automáticamente (estado = cerrada_inscripciones)
       if (editingWindow && !isEditingEnCurso) {
@@ -1297,7 +1301,7 @@ export default function ExamWindowsPage() {
                                 id="usaSEB"
                                 name="usaSEB"
                                 checked={formData.usaSEB}
-                                onChange={(e) => setFormData(prev => ({ ...prev, usaSEB: e.target.checked }))}
+                                onChange={handleInputChange}
                                 disabled={!!editingWindow && editingWindow.estado === 'en_curso'}
                                 style={{ 
                                   width: '3rem', 
