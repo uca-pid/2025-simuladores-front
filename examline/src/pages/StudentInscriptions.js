@@ -712,7 +712,7 @@ const openExam = (examId, windowId, token, window) => {
                           ) : canTake ? (
                             <button 
                               className="modern-btn modern-btn-primary w-100"
-                              onClick={() => navigateToExam(window.examId, window.id, window.exam.tipo)}
+                              onClick={() => openExam(window.examId, window.id, token, window)}
                             >
                               <i className="fas fa-play me-2"></i>
                               {window.exam.tipo === 'programming' ? 'Programar' : 'Rendir Examen'}
