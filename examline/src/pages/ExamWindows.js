@@ -27,6 +27,7 @@ export default function ExamWindowsPage() {
     requierePresente: false
   });
   const [validationErrors, setValidationErrors] = useState({});
+  const [isSavingWindow, setIsSavingWindow] = useState(false);
   const [modal, setModal] = useState({
     show: false,
     type: 'info',
@@ -404,6 +405,7 @@ export default function ExamWindowsPage() {
     });
     setEditingWindow(null);
     setValidationErrors({});
+    setIsSavingWindow(false);
   };
 
   const handleCreateWindow = () => {
@@ -538,6 +540,8 @@ export default function ExamWindowsPage() {
   const handleSaveWindow = async (e) => {
     e.preventDefault();
     
+    if (isSavingWindow) return; // Prevenir múltiples envíos
+    
     // Validar formulario
     const validationErrors = validateForm();
     if (validationErrors.length > 0) {
@@ -545,6 +549,7 @@ export default function ExamWindowsPage() {
       return;
     }
     
+    setIsSavingWindow(true);
     try {
       const url = editingWindow 
         ? `${API_BASE_URL}/exam-windows/${editingWindow.id}`
@@ -613,6 +618,8 @@ export default function ExamWindowsPage() {
     } catch (error) {
       console.error('Error guardando ventana:', error);
       showModal('error', 'Error', 'Error de conexión');
+    } finally {
+      setIsSavingWindow(false);
     }
   };
 
@@ -1627,6 +1634,7 @@ export default function ExamWindowsPage() {
                     className="modern-btn modern-btn-secondary"
                     onClick={() => setShowCreateModal(false)}
                     style={{ minWidth: '120px' }}
+                    disabled={isSavingWindow}
                   >
                     <i className="fas fa-times me-2"></i>
                     Cancelar
@@ -1635,9 +1643,19 @@ export default function ExamWindowsPage() {
                     type="submit" 
                     className="modern-btn modern-btn-primary"
                     style={{ minWidth: '120px' }}
+                    disabled={isSavingWindow}
                   >
-                    <i className={`fas ${editingWindow ? 'fa-edit' : 'fa-plus'} me-2`}></i>
-                    {editingWindow ? 'Actualizar' : 'Crear'} Ventana
+                    {isSavingWindow ? (
+                      <>
+                        <div className="spinner-border spinner-border-sm me-2" role="status"></div>
+                        <span>{editingWindow ? 'Actualizando...' : 'Creando...'}</span>
+                      </>
+                    ) : (
+                      <>
+                        <i className={`fas ${editingWindow ? 'fa-edit' : 'fa-plus'} me-2`}></i>
+                        {editingWindow ? 'Actualizar' : 'Crear'} Ventana
+                      </>
+                    )}
                   </button>
                 </div>
               </form>

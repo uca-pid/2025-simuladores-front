@@ -25,6 +25,7 @@ const ExamCreator = () => {
   const [codigoInicial, setCodigoInicial] = useState("");
   
   const [error, setError] = useState("");
+  const [isPublishing, setIsPublishing] = useState(false);
 
   // Agregar pregunta al listado
   const handleAgregarPregunta = () => {
@@ -47,6 +48,8 @@ const ExamCreator = () => {
 
   // Publicar examen
   const handlePublicarExamen = async () => {
+    if (isPublishing) return; // Prevenir múltiples clicks
+    
     if (!titulo) {
       setError("Ingrese un título para el examen");
       return;
@@ -65,6 +68,7 @@ const ExamCreator = () => {
       }
     }
 
+    setIsPublishing(true);
     try {
       const examData = {
         titulo,
@@ -88,6 +92,8 @@ const ExamCreator = () => {
     } catch (err) {
       console.error(err);
       setError(err.message);
+    } finally {
+      setIsPublishing(false);
     }
   };
 
@@ -432,9 +438,19 @@ const ExamCreator = () => {
             <button 
               className="modern-btn modern-btn-primary"
               onClick={handlePublicarExamen}
+              disabled={isPublishing}
             >
-              <i className="fas fa-paper-plane me-2"></i>
-              <span className="button-text">Publicar Examen</span>
+              {isPublishing ? (
+                <>
+                  <div className="spinner-border spinner-border-sm me-2" role="status"></div>
+                  <span className="button-text">Publicando...</span>
+                </>
+              ) : (
+                <>
+                  <i className="fas fa-paper-plane me-2"></i>
+                  <span className="button-text">Publicar Examen</span>
+                </>
+              )}
             </button>
           </div>
         </div>
