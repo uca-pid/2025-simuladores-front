@@ -27,6 +27,7 @@ export default function ExamWindowsPage() {
     requierePresente: false
   });
   const [validationErrors, setValidationErrors] = useState({});
+  const [isSavingWindow, setIsSavingWindow] = useState(false);
   const [modal, setModal] = useState({
     show: false,
     type: 'info',
@@ -404,6 +405,7 @@ export default function ExamWindowsPage() {
     });
     setEditingWindow(null);
     setValidationErrors({});
+    setIsSavingWindow(false);
   };
 
   const handleCreateWindow = () => {
@@ -441,6 +443,7 @@ export default function ExamWindowsPage() {
   };
 
   const handleEditWindow = (window) => {
+    const isInfinite = window.sinTiempo || false;
     setFormData({
       examId: window.examId,
       fechaInicio: window.fechaInicio ? formatDateTimeLocal(window.fechaInicio) : '',
@@ -449,8 +452,9 @@ export default function ExamWindowsPage() {
       cupoMaximo: window.cupoMaximo,
       notas: window.notas || '',
       usaSEB: window.usaSEB || false,
-      sinTiempo: window.sinTiempo || false,
-      requierePresente: window.requierePresente || false
+      sinTiempo: isInfinite,
+      // Si es ventana infinita, forzar que no tenga presentismo
+      requierePresente: isInfinite ? false : (window.requierePresente || false)
     });
     setEditingWindow(window);
     setShowCreateModal(true);
@@ -536,6 +540,8 @@ export default function ExamWindowsPage() {
   const handleSaveWindow = async (e) => {
     e.preventDefault();
     
+    if (isSavingWindow) return; // Prevenir múltiples envíos
+    
     // Validar formulario
     const validationErrors = validateForm();
     if (validationErrors.length > 0) {
@@ -543,6 +549,7 @@ export default function ExamWindowsPage() {
       return;
     }
     
+    setIsSavingWindow(true);
     try {
       const url = editingWindow 
         ? `${API_BASE_URL}/exam-windows/${editingWindow.id}`
@@ -611,6 +618,8 @@ export default function ExamWindowsPage() {
     } catch (error) {
       console.error('Error guardando ventana:', error);
       showModal('error', 'Error', 'Error de conexión');
+    } finally {
+      setIsSavingWindow(false);
     }
   };
 
@@ -1235,10 +1244,11 @@ export default function ExamWindowsPage() {
                   {/* Toggle para sistema de presentismo */}
                   <div className="mb-4">
                     <div className="card" style={{ 
-                      backgroundColor: formData.requierePresente ? '#fff5f5' : '#f8f9fa', 
-                      borderColor: formData.requierePresente ? '#f56565' : '#e9ecef',
+                      backgroundColor: formData.sinTiempo ? '#f5f5f5' : formData.requierePresente ? '#fff5f5' : '#f8f9fa', 
+                      borderColor: formData.sinTiempo ? '#d3d3d3' : formData.requierePresente ? '#f56565' : '#e9ecef',
                       borderWidth: '2px',
-                      transition: 'all 0.3s ease'
+                      transition: 'all 0.3s ease',
+                      opacity: formData.sinTiempo ? 0.7 : 1
                     }}>
                       <div className="card-body p-3">
                         <div className="d-flex align-items-center justify-content-between">
@@ -1251,24 +1261,27 @@ export default function ExamWindowsPage() {
                                 name="requierePresente"
                                 checked={formData.requierePresente}
                                 onChange={(e) => setFormData(prev => ({ ...prev, requierePresente: e.target.checked }))}
-                                disabled={!!editingWindow && editingWindow.estado === 'finalizada'}
+                                disabled={formData.sinTiempo || (!!editingWindow && editingWindow.estado === 'finalizada')}
                                 style={{ 
                                   width: '3rem', 
                                   height: '1.5rem',
                                   backgroundColor: formData.requierePresente ? '#f56565' : '#6c757d',
-                                  borderColor: formData.requierePresente ? '#f56565' : '#6c757d'
+                                  borderColor: formData.requierePresente ? '#f56565' : '#6c757d',
+                                  opacity: formData.sinTiempo ? 0.5 : 1
                                 }}
                               />
                             </div>
                             <div>
-                              <label className="form-check-label mb-0" htmlFor="requierePresente" style={{ fontWeight: '600', fontSize: '1rem', cursor: 'pointer' }}>
+                              <label className="form-check-label mb-0" htmlFor="requierePresente" style={{ fontWeight: '600', fontSize: '1rem', cursor: formData.sinTiempo ? 'not-allowed' : 'pointer', opacity: formData.sinTiempo ? 0.7 : 1 }}>
                                 <i className={`fas ${formData.requierePresente ? 'fa-user-check text-danger' : 'fa-user-slash text-secondary'} me-2`}></i>
                                 {formData.requierePresente ? 'Sistema de presentismo activado' : 'Sistema de presentismo desactivado'}
                               </label>
                               <div style={{ fontSize: '0.85rem', color: '#6c757d', marginTop: '0.25rem' }}>
-                                {formData.requierePresente 
-                                  ? 'Los estudiantes deben ser marcados como presentes para acceder al examen'
-                                  : 'Los estudiantes pueden acceder al examen libremente sin control de asistencia'
+                                {formData.sinTiempo 
+                                  ? 'Las ventanas infinitas no requieren control de asistencia - Sistema automáticamente desactivado'
+                                  : formData.requierePresente 
+                                    ? 'Los estudiantes deben ser marcados como presentes para acceder al examen'
+                                    : 'Los estudiantes pueden acceder al examen libremente sin control de asistencia'
                                 }
                               </div>
                             </div>
@@ -1349,14 +1362,21 @@ export default function ExamWindowsPage() {
                                 name="sinTiempo"
                                 checked={formData.sinTiempo}
                                 onChange={(e) => {
-                                  setFormData(prev => ({ ...prev, sinTiempo: e.target.checked }));
+                                  const isInfinite = e.target.checked;
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    sinTiempo: isInfinite,
+                                    // Forzar desactivar presentismo si es ventana infinita
+                                    requierePresente: isInfinite ? false : prev.requierePresente
+                                  }));
                                   
                                   // Limpiar errores de validación relacionados
                                   setValidationErrors(prev => ({
                                     ...prev,
                                     sinTiempo: false,
                                     fechaInicio: false,
-                                    duracion: false
+                                    duracion: false,
+                                    requierePresente: false
                                   }));
                                 }}
                                 disabled={!!editingWindow && (editingWindow.estado === 'en_curso' || editingWindow.estado === 'finalizada')}
@@ -1614,6 +1634,7 @@ export default function ExamWindowsPage() {
                     className="modern-btn modern-btn-secondary"
                     onClick={() => setShowCreateModal(false)}
                     style={{ minWidth: '120px' }}
+                    disabled={isSavingWindow}
                   >
                     <i className="fas fa-times me-2"></i>
                     Cancelar
@@ -1622,9 +1643,19 @@ export default function ExamWindowsPage() {
                     type="submit" 
                     className="modern-btn modern-btn-primary"
                     style={{ minWidth: '120px' }}
+                    disabled={isSavingWindow}
                   >
-                    <i className={`fas ${editingWindow ? 'fa-edit' : 'fa-plus'} me-2`}></i>
-                    {editingWindow ? 'Actualizar' : 'Crear'} Ventana
+                    {isSavingWindow ? (
+                      <>
+                        <div className="spinner-border spinner-border-sm me-2" role="status"></div>
+                        <span>{editingWindow ? 'Actualizando...' : 'Creando...'}</span>
+                      </>
+                    ) : (
+                      <>
+                        <i className={`fas ${editingWindow ? 'fa-edit' : 'fa-plus'} me-2`}></i>
+                        {editingWindow ? 'Actualizar' : 'Crear'} Ventana
+                      </>
+                    )}
                   </button>
                 </div>
               </form>

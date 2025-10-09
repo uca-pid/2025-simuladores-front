@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import BackToMainButton from "../components/BackToMainButton";
+import Modal from "../components/Modal";
 import { useAuth } from "../contexts/AuthContext";
 import { createExam } from "../services/api";
 
@@ -25,6 +26,25 @@ const ExamCreator = () => {
   const [codigoInicial, setCodigoInicial] = useState("");
   
   const [error, setError] = useState("");
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [modal, setModal] = useState({
+    show: false,
+    type: 'info',
+    title: '',
+    message: '',
+    onConfirm: null,
+    showCancel: false
+  });
+
+  // Función para mostrar modal
+  const showModal = (type, title, message, onConfirm = null, showCancel = false) => {
+    setModal({ show: true, type, title, message, onConfirm, showCancel });
+  };
+
+  // Función para cerrar modal
+  const closeModal = () => {
+    setModal(prev => ({ ...prev, show: false }));
+  };
 
   // Agregar pregunta al listado
   const handleAgregarPregunta = () => {
@@ -45,26 +65,9 @@ const ExamCreator = () => {
     setError("");
   };
 
-  // Publicar examen
-  const handlePublicarExamen = async () => {
-    if (!titulo) {
-      setError("Ingrese un título para el examen");
-      return;
-    }
-
-    // Validaciones específicas según el tipo
-    if (tipoExamen === "multiple_choice") {
-      if (preguntas.length === 0) {
-        setError("Agregue al menos una pregunta");
-        return;
-      }
-    } else if (tipoExamen === "programming") {
-      if (!enunciadoProgramacion.trim()) {
-        setError("Ingrese el enunciado para el examen de programación");
-        return;
-      }
-    }
-
+  // Función que realmente publica el examen
+  const proceedWithPublishing = async () => {
+    setIsPublishing(true);
     try {
       const examData = {
         titulo,
@@ -88,7 +91,47 @@ const ExamCreator = () => {
     } catch (err) {
       console.error(err);
       setError(err.message);
+    } finally {
+      setIsPublishing(false);
     }
+  };
+
+  // Publicar examen
+  const handlePublicarExamen = async () => {
+    if (isPublishing) return; // Prevenir múltiples clicks
+    
+    if (!titulo) {
+      setError("Ingrese un título para el examen");
+      return;
+    }
+
+    // Validaciones específicas según el tipo
+    if (tipoExamen === "multiple_choice") {
+      if (preguntas.length === 0) {
+        showModal(
+          'error',
+          '❌ No se puede publicar el examen',
+          'No se puede publicar un examen sin preguntas. Por favor, agrega al menos una pregunta antes de continuar.',
+          null,
+          false
+        );
+        return;
+      }
+    } else if (tipoExamen === "programming") {
+      if (!enunciadoProgramacion.trim()) {
+        showModal(
+          'error',
+          '❌ No se puede publicar el examen',
+          'No se puede publicar un examen de programación sin consigna. Por favor, ingresa el enunciado del problema antes de continuar.',
+          null,
+          false
+        );
+        return;
+      }
+    }
+
+    // Si llegamos aquí, todo está bien, publicar directamente
+    proceedWithPublishing();
   };
 
   return (
@@ -432,13 +475,36 @@ const ExamCreator = () => {
             <button 
               className="modern-btn modern-btn-primary"
               onClick={handlePublicarExamen}
+              disabled={isPublishing}
             >
-              <i className="fas fa-paper-plane me-2"></i>
-              <span className="button-text">Publicar Examen</span>
+              {isPublishing ? (
+                <>
+                  <div className="spinner-border spinner-border-sm me-2" role="status"></div>
+                  <span className="button-text">Publicando...</span>
+                </>
+              ) : (
+                <>
+                  <i className="fas fa-paper-plane me-2"></i>
+                  <span className="button-text">Publicar Examen</span>
+                </>
+              )}
             </button>
           </div>
         </div>
       </div>
+
+      {/* Modal Component */}
+      <Modal
+        show={modal.show}
+        onClose={closeModal}
+        onConfirm={modal.onConfirm}
+        title={modal.title}
+        message={modal.message}
+        type={modal.type}
+        showCancel={modal.showCancel}
+        confirmText="Entendido"
+        cancelText="Cancelar"
+      />
     </div>
   );
 };
