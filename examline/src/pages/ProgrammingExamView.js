@@ -16,6 +16,7 @@ const ProgrammingExamView = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [lastSaved, setLastSaved] = useState(null);
+  const [isInSEB, setIsInSEB] = useState(false);
   
   // Estados para manejo de archivos
   const [files, setFiles] = useState([]);
@@ -30,6 +31,30 @@ const ProgrammingExamView = () => {
   // Obtener windowId de la URL
   const searchParams = new URLSearchParams(location.search);
   const windowId = searchParams.get('windowId');
+
+  // Detectar si estamos en SEB y función de cierre
+  useEffect(() => {
+    const checkSEB = () => {
+      const userAgent = navigator.userAgent || '';
+      return userAgent.includes('SEB') || 
+             userAgent.includes('SafeExamBrowser') || 
+             window.SafeExamBrowser !== undefined;
+    };
+    
+    const inSEB = checkSEB();
+    setIsInSEB(inSEB);
+    console.log('Ejecutando en SEB:', inSEB);
+  }, []);
+
+  // 🚪 Función para redireccionar al terminar examen
+  const closeSEB = () => {
+    try {
+      console.log('Redirigiendo desde examen de programación');
+      window.location.href = 'https://ferrocarriloeste.com.ar/';
+    } catch (error) {
+      console.log('Error al redireccionar:', error);
+    }
+  };
 
   // Configuración del editor Monaco optimizada para reducir ResizeObserver errors
   const editorOptions = {
@@ -217,7 +242,14 @@ const ProgrammingExamView = () => {
           codigoProgramacion: code
         })
       });
-      navigate('/student-exam');
+
+      // Manejar cierre según si está en SEB o no
+      if (isInSEB) {
+        console.log('Examen de programación finalizado en SEB - cerrando...');
+        closeSEB();
+      } else {
+        navigate('/student-exam');
+      }
     } catch (err) {
       console.error('Error finishing exam:', err);
       setError(err.message || 'Error finalizando examen');
@@ -430,6 +462,7 @@ const ProgrammingExamView = () => {
               <small className="exam-subtitle">
                 {exam.lenguajeProgramacion === 'python' ? '🐍 Python' : '⚡ JavaScript'} • 
                 {exam.intellisenseHabilitado ? ' ✨ Intellisense activo' : ' 🔒 Intellisense desactivado'}
+                {isInSEB && ' • 🔒 Modo Seguro (SEB)'}
               </small>
             </div>
             <div className="col-auto">

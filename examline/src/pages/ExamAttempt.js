@@ -404,7 +404,6 @@ const closeSEB = () => {
                   <i className="fas fa-question-circle me-2"></i>
                   <span className="count-text">{exam.preguntas?.length || 0} preguntas</span>
                 </span>
-              )}
               {isInSEB && (
                 <span className="badge bg-success ms-2">
                   <i className="fas fa-lock me-1"></i>
