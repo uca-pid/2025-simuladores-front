@@ -441,10 +441,6 @@ export default function ExamWindowsPage() {
   };
 
   const handleEditWindow = (window) => {
-    console.log('🔍 Editando ventana:', window);
-    console.log('🔍 sinTiempo original:', window.sinTiempo);
-    console.log('🔍 fechaInicio original:', window.fechaInicio);
-    
     setFormData({
       examId: window.examId,
       fechaInicio: window.fechaInicio ? formatDateTimeLocal(window.fechaInicio) : '',
@@ -540,20 +536,12 @@ export default function ExamWindowsPage() {
   const handleSaveWindow = async (e) => {
     e.preventDefault();
     
-    // Debug: mostrar estado del formulario antes de validar
-    console.log('🔍 Estado del formulario antes de guardar:', formData);
-    console.log('🔍 Editando ventana:', editingWindow);
-    console.log('🔍 ¿Es ventana infinita?', formData.sinTiempo);
-    
     // Validar formulario
     const validationErrors = validateForm();
     if (validationErrors.length > 0) {
-      console.log('❌ Errores de validación:', validationErrors);
       showModal('error', 'Datos inválidos', validationErrors.join('\n'));
       return;
     }
-    
-    console.log('✅ Validación pasada, preparando payload...');
     
     try {
       const url = editingWindow 
@@ -574,20 +562,7 @@ export default function ExamWindowsPage() {
       }
       // Para nuevas ventanas o edición libre, usar la fecha del formulario directamente
       
-      // Debugging específico para conversión de ventana infinita a ventana con tiempo
-      if (editingWindow && editingWindow.sinTiempo && !payload.sinTiempo) {
-        console.log('🔄 CONVERSIÓN: Ventana infinita → Ventana con tiempo');
-        console.log('📅 Nueva fecha ingresada:', payload.fechaInicio);
-        console.log('🕐 Nueva duración:', payload.duracion);
-        console.log('📋 Datos originales ventana:', editingWindow);
-      }
 
-      // Debug: verificar qué se está enviando
-      console.log('📤 Payload que se enviará:', payload);
-      console.log('🔒 usaSEB value:', payload.usaSEB);
-      console.log('⏰ sinTiempo value:', payload.sinTiempo);
-      console.log('📅 fechaInicio value:', payload.fechaInicio);
-      console.log('🕐 duracion value:', payload.duracion);
 
       // Si se está editando y el nuevo cupo es exactamente igual a los inscriptos activos actuales,
       // cerrar inscripciones automáticamente (estado = cerrada_inscripciones)
@@ -624,8 +599,6 @@ export default function ExamWindowsPage() {
       });
 
       if (response.ok) {
-        const responseData = await response.json();
-        console.log('✅ Respuesta exitosa del servidor:', responseData);
         showModal('success', '¡Éxito!', 
           `Ventana ${editingWindow ? 'actualizada' : 'creada'} correctamente`);
         setShowCreateModal(false);
@@ -633,7 +606,6 @@ export default function ExamWindowsPage() {
         loadData();
       } else {
         const errorData = await response.json();
-        console.log('❌ Error del servidor:', response.status, errorData);
         showModal('error', 'Error', errorData.error || 'Error al guardar la ventana');
       }
     } catch (error) {
