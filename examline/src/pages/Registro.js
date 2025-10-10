@@ -111,7 +111,7 @@ const Registro = () => {
   };  
   return (
     <div className="d-flex align-items-center justify-content-center min-vh-100 py-4" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
-      <div className="modern-card" style={{ maxWidth: "800px", width: "100%" }}>
+      <div className="modern-card registro-card" style={{ maxWidth: "800px", width: "100%" }}>
         <div className="row g-0">
           {/* Columna izquierda: Logo y título */}
           <div className="col-md-4 d-flex flex-column justify-content-center align-items-center p-4" style={{ background: 'white' }}>
@@ -269,24 +269,24 @@ const Registro = () => {
               <div className="d-grid mb-3">
                 <button 
                   type="submit" 
-                  className="modern-btn modern-btn-primary"
+                  className="modern-btn modern-btn-primary registro-submit-btn"
                   disabled={isLoading || isOnCooldown}
                   style={{ padding: '0.7rem 1.5rem', fontSize: '0.9rem' }}
                 >
                   {isLoading ? (
                     <>
                       <div className="modern-spinner" style={{ width: '14px', height: '14px', marginRight: '0.4rem' }}></div>
-                      Registrando...
+                      <span className="btn-text">Registrando...</span>
                     </>
                   ) : isOnCooldown ? (
                     <>
                       <i className="fas fa-clock me-2"></i>
-                      Espera...
+                      <span className="btn-text">Espera...</span>
                     </>
                   ) : (
                     <>
                       <i className="fas fa-user-plus me-2"></i>
-                      Crear Cuenta
+                      <span className="btn-text">Crear Cuenta</span>
                     </>
                   )}
                 </button>

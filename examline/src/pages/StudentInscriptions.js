@@ -160,6 +160,59 @@ export default function StudentInscriptionsPage({
   const closeModal = () => {
     setModal(prev => ({ ...prev, show: false }));
   };
+const isRunningSEB = () => {
+  // Método 1: Verificar el User Agent
+  const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+  if (userAgent.includes('SEB')) {
+    return true;
+  }
+  
+  // Método 2: Verificar variables globales de SEB
+  if (window.SafeExamBrowser) {
+    return true;
+  }
+  
+  // Método 3: Verificar propiedades específicas de SEB
+  if (navigator.userAgent.includes('SafeExamBrowser')) {
+    return true;
+  }
+  
+  return false;
+};
+
+const openExam = (examId, windowId, token, window) => {
+  const backendUrl = `${API_BASE_URL}/exam-start/download/${examId}/${windowId}/${token}`;
+  const requiresSEB = window?.usaSEB || false;
+  const examType = window?.exam?.tipo || "normal";
+  const params = `windowId=${windowId}`;
+
+  const goToExam = () => {
+    if (examType === "programming") {
+      navigate(`/programming-exam/${examId}?${params}`);
+    } else {
+      navigate(`/exam-attempt/${examId}?${params}`);
+    }
+  };
+
+  if (requiresSEB) {
+    // Si requiere SEB
+    if (isRunningSEB()) {
+      goToExam();
+    } else {
+      // Descargar archivo .seb
+      const link = document.createElement("a");
+      link.href = backendUrl;
+      link.download = `examen_${examId}.seb`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  } else {
+    // Si NO requiere SEB
+    goToExam();
+  }
+};
+
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -176,10 +229,15 @@ export default function StudentInscriptionsPage({
   };
 
   const handleInscription = (window) => {
+    // Generar mensaje apropiado según si es ventana eterna o no
+    const mensaje = window.sinTiempo 
+      ? `¿Deseas inscribirte al examen "${window.exam.titulo}"? Esta ventana está disponible permanentemente.`
+      : `¿Deseas inscribirte al examen "${window.exam.titulo}" programado para el ${new Date(window.fechaInicio).toLocaleString()}?`;
+
     showModal(
       'confirm',
       'Confirmar Inscripción',
-      `¿Deseas inscribirte al examen "${window.exam.titulo}" programado para el ${new Date(window.fechaInicio).toLocaleString()}?`,
+      mensaje,
       async () => {
         try {
           const response = await fetch(`${API_BASE_URL}/inscriptions`, {
@@ -248,14 +306,31 @@ export default function StudentInscriptionsPage({
   const canTakeExam = (inscription) => {
     const window = inscription.examWindow;
     const now = new Date();
+    
+    // Verificar si la ventana requiere presentismo
+    const requierePresente = window.requierePresente === true;
+    
+    // Si es una ventana infinita (sin tiempo), solo verificar presentismo y que esté activa/programada
+    if (window.sinTiempo) {
+      return (window.estado === 'programada' || window.estado === 'en_curso') &&
+             (!requierePresente || inscription.presente === true);
+    }
+    
+    // Para ventanas con tiempo, lógica original
     const windowStart = new Date(window.fechaInicio);
     const windowEnd = new Date(windowStart.getTime() + (window.duracion * 60 * 1000));
     
     return now >= windowStart && now <= windowEnd && 
-           window.estado === 'en_curso' && inscription.presente === true;
+           window.estado === 'en_curso' && 
+           (!requierePresente || inscription.presente === true);
   };
 
-  const getTimeStatus = (fechaInicio, duracion) => {
+  const getTimeStatus = (fechaInicio, duracion, sinTiempo) => {
+    // Si es una ventana infinita (sin tiempo)
+    if (sinTiempo) {
+      return { text: 'Disponible', class: 'text-success' };
+    }
+    
     const now = new Date();
     const start = new Date(fechaInicio);
     const end = new Date(start.getTime() + (duracion * 60 * 1000));
@@ -288,7 +363,7 @@ export default function StudentInscriptionsPage({
     );
   }
 
-  const containerClass = embedded ? "" : "container py-5";
+  const containerClass = embedded ? "" : "container-fluid container-lg py-5 px-3 px-md-4";
   
   return (
     <div className={containerClass}>
@@ -306,30 +381,22 @@ export default function StudentInscriptionsPage({
       {/* Tabs */}
       <div className="modern-card mb-4">
         <div className="modern-card-body p-0">
-          <div className="d-flex">
+          <div className="student-exam-tabs">
             <button 
-              className={`flex-fill border-0 py-3 px-4 ${activeTab === 'available' ? 'text-white' : 'bg-transparent'}`}
-              style={{
-                borderRadius: activeTab === 'available' ? '12px 0 0 12px' : '0',
-                background: activeTab === 'available' ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'transparent',
-                transition: 'all 0.2s ease'
-              }}
+              className={`student-tab-button ${activeTab === 'available' ? 'active' : ''}`}
               onClick={() => setActiveTab('available')}
             >
               <i className="fas fa-calendar-check me-2"></i>
-              Exámenes Disponibles ({availableWindows.length})
+              <span className="tab-text">Exámenes Disponibles</span>
+              <span className="tab-count">({availableWindows.length})</span>
             </button>
             <button 
-              className={`flex-fill border-0 py-3 px-4 ${activeTab === 'myInscriptions' ? 'text-white' : 'bg-transparent'}`}
-              style={{
-                borderRadius: activeTab === 'myInscriptions' ? '0 12px 12px 0' : '0',
-                background: activeTab === 'myInscriptions' ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'transparent',
-                transition: 'all 0.2s ease'
-              }}
+              className={`student-tab-button ${activeTab === 'myInscriptions' ? 'active' : ''}`}
               onClick={() => setActiveTab('myInscriptions')}
             >
               <i className="fas fa-user-graduate me-2"></i>
-              Mis Inscripciones ({myInscriptions.length})
+              <span className="tab-text">Mis Inscripciones</span>
+              <span className="tab-count">({myInscriptions.length})</span>
             </button>
           </div>
         </div>
@@ -348,7 +415,7 @@ export default function StudentInscriptionsPage({
             </div>
             <div className="modern-card-body">
               <div className="row g-3">
-                <div className="col-md-3">
+                <div className="col-lg-3 col-md-6">
                   <label className="form-label fw-semibold">Título</label>
                   <input 
                     type="text" 
@@ -359,7 +426,7 @@ export default function StudentInscriptionsPage({
                     placeholder="Buscar por título del examen"
                   />
                 </div>
-                <div className="col-md-3">
+                <div className="col-lg-3 col-md-6">
                   <label className="form-label fw-semibold">Profesor</label>
                   <input 
                     type="text" 
@@ -370,7 +437,7 @@ export default function StudentInscriptionsPage({
                     placeholder="Buscar por profesor"
                   />
                 </div>
-                <div className="col-md-3">
+                <div className="col-lg-3 col-md-6">
                   <label className="form-label fw-semibold">Fecha</label>
                   <input 
                     type="date" 
@@ -380,20 +447,20 @@ export default function StudentInscriptionsPage({
                     onChange={handleFilterChange}
                   />
                 </div>
-                <div className="col-md-3 d-flex align-items-end gap-2">
+                <div className="col-lg-3 col-md-6 d-flex align-items-end gap-2 student-filters-actions">
                   <button 
-                    className="modern-btn modern-btn-primary"
+                    className="modern-btn modern-btn-primary flex-fill"
                     onClick={applyFilters}
                   >
                     <i className="fas fa-search me-2"></i>
-                    Filtrar
+                    <span className="btn-text">Filtrar</span>
                   </button>
                   <button 
-                    className="modern-btn modern-btn-secondary"
+                    className="modern-btn modern-btn-secondary flex-fill"
                     onClick={clearFilters}
                   >
                     <i className="fas fa-times me-2"></i>
-                    Limpiar
+                    <span className="btn-text">Limpiar</span>
                   </button>
                 </div>
               </div>
@@ -414,7 +481,7 @@ export default function StudentInscriptionsPage({
           ) : (
             <div className="row g-4">
               {availableWindows.map((window, index) => {
-                const timeStatus = getTimeStatus(window.fechaInicio, window.duracion);
+                const timeStatus = getTimeStatus(window.fechaInicio, window.duracion, window.sinTiempo);
                 return (
                   <div key={window.id} className="col-md-6 col-lg-4">
                     <div className={`exam-card fade-in-up`} style={{animationDelay: `${index * 0.1}s`}}>
@@ -427,22 +494,45 @@ export default function StudentInscriptionsPage({
                       </div>
                       <div className="exam-card-body">
                         <div className="exam-info">
-                          <div className="exam-info-item">
-                            <i className="fas fa-calendar"></i>
-                            <span><strong>Fecha:</strong> {new Date(window.fechaInicio).toLocaleDateString()}</span>
-                          </div>
-                          <div className="exam-info-item">
-                            <i className="fas fa-clock"></i>
-                            <span><strong>Hora de inicio:</strong> {new Date(window.fechaInicio).toLocaleTimeString()}</span>
-                          </div>
-                          <div className="exam-info-item">
-                            <i className="fas fa-hourglass-half"></i>
-                            <span><strong>Duración:</strong> {window.duracion} min</span>
-                          </div>
+                          {window.sinTiempo ? (
+                            <div className="exam-info-item">
+                              <i className="fas fa-infinity text-success"></i>
+                              <span><strong>Ventana:</strong> 
+                                <span className="ms-1 badge bg-success text-white">
+                                  🕐 Disponible siempre
+                                </span>
+                              </span>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="exam-info-item">
+                                <i className="fas fa-calendar"></i>
+                                <span><strong>Fecha:</strong> {new Date(window.fechaInicio).toLocaleDateString()}</span>
+                              </div>
+                              <div className="exam-info-item">
+                                <i className="fas fa-clock"></i>
+                                <span><strong>Hora de inicio:</strong> {new Date(window.fechaInicio).toLocaleTimeString()}</span>
+                              </div>
+                              <div className="exam-info-item">
+                                <i className="fas fa-hourglass-half"></i>
+                                <span><strong>Duración:</strong> {window.duracion} min</span>
+                              </div>
+                            </>
+                          )}
                           <div className="exam-info-item">
                             <i className="fas fa-laptop"></i>
                             <span><strong>Modalidad:</strong> {window.modalidad ? window.modalidad.charAt(0).toUpperCase() + window.modalidad.slice(1) : ''}</span>
                           </div>
+                          {window.usaSEB && (
+                            <div className="exam-info-item">
+                              <i className="fas fa-shield-alt text-warning"></i>
+                              <span><strong>Seguridad:</strong> 
+                                <span className="ms-1 badge bg-warning text-dark">
+                                  🔒 Requiere Safe Exam Browser
+                                </span>
+                              </span>
+                            </div>
+                          )}
                           <div className="exam-info-item">
                             <i className="fas fa-users"></i>
                             <span><strong>Inscritos:</strong> {window.cupoMaximo - window.cupoDisponible}/{window.cupoMaximo}</span>
@@ -528,7 +618,7 @@ export default function StudentInscriptionsPage({
             <div className="row g-4">
               {myInscriptions.map((inscription, index) => {
                 const window = inscription.examWindow;
-                const timeStatus = getTimeStatus(window.fechaInicio, window.duracion);
+                const timeStatus = getTimeStatus(window.fechaInicio, window.duracion, window.sinTiempo);
                 const canTake = canTakeExam(inscription);
                 
                 return (
@@ -543,38 +633,59 @@ export default function StudentInscriptionsPage({
                               Prof. {window.exam.profesor.nombre}
                             </span>
                           </div>
-                          {inscription.presente === true && (
-                            <span className="badge" style={{
-                              backgroundColor: '#10b981',
-                              color: 'white',
-                              fontSize: '0.75rem',
-                              fontWeight: '600',
-                              padding: '0.375rem 0.75rem',
-                              borderRadius: '0.5rem',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.25rem'
-                            }}>
-                              <i className="fas fa-check-circle"></i>
-                              Habilitado
-                            </span>
-                          )}
+                          {(() => {
+                            const requierePresente = window.requierePresente === true;
+                            const estaHabilitado = !requierePresente || inscription.presente === true;
+                            
+                            if (estaHabilitado) {
+                              return (
+                                <span className="badge" style={{
+                                  backgroundColor: requierePresente ? '#10b981' : '#3b82f6',
+                                  color: 'white',
+                                  fontSize: '0.75rem',
+                                  fontWeight: '600',
+                                  padding: '0.375rem 0.75rem',
+                                  borderRadius: '0.5rem',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.25rem'
+                                }}>
+                                  <i className={`fas ${requierePresente ? 'fa-check-circle' : 'fa-unlock'}`}></i>
+                                  {requierePresente ? 'Habilitado' : 'Acceso libre'}
+                                </span>
+                              );
+                            }
+                            return null;
+                          })()}
                         </div>
                       </div>
                       <div className="exam-card-body">
                         <div className="exam-info">
-                          <div className="exam-info-item">
-                            <i className="fas fa-calendar"></i>
-                            <span><strong>Fecha:</strong> {new Date(window.fechaInicio).toLocaleDateString()}</span>
-                          </div>
-                          <div className="exam-info-item">
-                            <i className="fas fa-clock"></i>
-                            <span><strong>Hora de inicio:</strong> {new Date(window.fechaInicio).toLocaleTimeString()}</span>
-                          </div>
-                          <div className="exam-info-item">
-                            <i className="fas fa-hourglass-half"></i>
-                            <span><strong>Duración:</strong> {window.duracion} min</span>
-                          </div>
+                          {window.sinTiempo ? (
+                            <div className="exam-info-item">
+                              <i className="fas fa-infinity text-success"></i>
+                              <span><strong>Ventana:</strong> 
+                                <span className="ms-1 badge bg-success text-white">
+                                  🕐 Disponible siempre
+                                </span>
+                              </span>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="exam-info-item">
+                                <i className="fas fa-calendar"></i>
+                                <span><strong>Fecha:</strong> {new Date(window.fechaInicio).toLocaleDateString()}</span>
+                              </div>
+                              <div className="exam-info-item">
+                                <i className="fas fa-clock"></i>
+                                <span><strong>Hora de inicio:</strong> {new Date(window.fechaInicio).toLocaleTimeString()}</span>
+                              </div>
+                              <div className="exam-info-item">
+                                <i className="fas fa-hourglass-half"></i>
+                                <span><strong>Duración:</strong> {window.duracion} min</span>
+                              </div>
+                            </>
+                          )}
                           <div className="exam-info-item">
                             <i className="fas fa-laptop"></i>
                             <span><strong>Modalidad:</strong> {window.modalidad ? window.modalidad.charAt(0).toUpperCase() + window.modalidad.slice(1) : ''}</span>
@@ -606,10 +717,16 @@ export default function StudentInscriptionsPage({
                           ) : canTake ? (
                             <button 
                               className="modern-btn modern-btn-primary w-100"
-                              onClick={() => navigate(`/exam-attempt/${window.examId}?windowId=${window.id}`)}
+                              onClick={() => openExam(window.examId, window.id, token, window)}
                             >
                               <i className="fas fa-play me-2"></i>
-                              Rendir Examen
+                              {window.exam.tipo === 'programming' ? 'Programar' : 'Rendir Examen'}
+                            </button>
+                          ) : window.sinTiempo ? (
+                            // Para ventanas sin tiempo, mostrar el estado de habilitación
+                            <button className="modern-btn modern-btn-warning w-100" disabled>
+                              <i className="fas fa-user-times me-2"></i>
+                              {window.requierePresente ? 'Esperando habilitación del profesor' : 'No disponible'}
                             </button>
                           ) : timeStatus.text === 'Finalizado' ? (
                             <button className="modern-btn modern-btn-secondary w-100" disabled>

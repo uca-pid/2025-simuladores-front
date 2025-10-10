@@ -17,6 +17,7 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [isInSEB, setIsInSEB] = useState(false);
   const [modal, setModal] = useState({
     show: false,
     type: 'info',
@@ -26,7 +27,21 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
     showCancel: false
   });
 
-const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
+  const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
+
+  // Detectar si estamos en SEB
+  useEffect(() => {
+    const checkSEB = () => {
+      const userAgent = navigator.userAgent || '';
+      return userAgent.includes('SEB') || 
+             userAgent.includes('SafeExamBrowser') || 
+             window.SafeExamBrowser !== undefined;
+    };
+    
+    const inSEB = checkSEB();
+    setIsInSEB(inSEB);
+    console.log('Ejecutando en SEB:', inSEB);
+  }, []);
 
   // Modal helper functions
   const showModal = (type, title, message, onConfirm = null, showCancel = false) => {
@@ -37,14 +52,31 @@ const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simula
     setModal(prev => ({ ...prev, show: false }));
   };
 
+  // 🚪 Función para redireccionar al terminar examen
+const closeSEB = () => {
+  try {
+    console.log('Redirigiendo a Google.com al terminar el examen');
+    window.location.href = 'https://ferrocarriloeste.com.ar/';
+  } catch (error) {
+    console.log('Error al redireccionar:', error);
+  }
+};
+
   // 🔒 Validación inicial de seguridad para estudiantes
   useEffect(() => {
-    // Verificar que estudiantes tengan windowId
+    const params = new URLSearchParams(window.location.search);
+    const tokenFromUrl = params.get('token');
+    
+    if (tokenFromUrl) {
+      console.log('Token recibido desde URL, guardando en localStorage');
+      localStorage.setItem('token', tokenFromUrl);
+    }
+
     const token = localStorage.getItem('token');
-    if (token && !propExamId) { // Solo para acceso directo (no componente embebido)
+    if (token && !propExamId) {
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
-        if (payload.rol === 'student' && !windowId) {
+        if (payload.rol === 'student' && !windowId && !tokenFromUrl) {
           setError('Acceso no autorizado: Debes acceder desde tus inscripciones');
           setLoading(false);
           return;
@@ -57,23 +89,42 @@ const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simula
 
   // Handle back navigation for errors only
   const handleErrorBack = () => {
-    if (onBack) {
-      // When used as embedded component (from StudentExamPage)
-      onBack();
+    if (isInSEB) {
+      closeSEB();
+      setTimeout(() => {
+        if (onBack) {
+          onBack();
+        } else {
+          navigate('/student-exam');
+        }
+      }, 1000);
     } else {
-      // When accessed directly, go to student main page
-      navigate('/student-exam');
+      if (onBack) {
+        onBack();
+      } else {
+        navigate('/student-exam');
+      }
     }
   };
 
   // Handle exam completion - finish attempt and return
   const handleExamCompletion = () => {
     if (!attempt) {
-      // Si no hay intento, simplemente navegar de vuelta
-      if (onBack) {
-        onBack();
+      if (isInSEB) {
+        closeSEB();
+        setTimeout(() => {
+          if (onBack) {
+            onBack();
+          } else {
+            navigate('/student-exam');
+          }
+        }, 1000);
       } else {
-        navigate('/student-exam');
+        if (onBack) {
+          onBack();
+        } else {
+          navigate('/student-exam');
+        }
       }
       return;
     }
@@ -96,12 +147,34 @@ const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simula
           });
 
           if (response.ok) {
-            showModal('success', '¡Intento Finalizado!', 'Has terminado el examen exitosamente.', () => {
+            const successMessage = isInSEB 
+              ? 'Has terminado el examen exitosamente. SEB se cerrará automáticamente.'
+              : 'Has terminado el examen exitosamente.';
+
+            showModal('success', '¡Intento Finalizado!', successMessage, () => {
               closeModal();
-              if (onBack) {
-                onBack();
+              
+              if (isInSEB) {
+                // Cerrar SEB después de 1.5 segundos
+                setTimeout(() => {
+                  closeSEB();
+                  
+                  // Fallback si no cierra
+                  setTimeout(() => {
+                    if (onBack) {
+                      onBack();
+                    } else {
+                      navigate('/student-exam');
+                    }
+                  }, 1000);
+                }, 1500);
               } else {
-                navigate('/student-exam');
+                // Navegación normal si no está en SEB
+                if (onBack) {
+                  onBack();
+                } else {
+                  navigate('/student-exam');
+                }
               }
             });
           } else {
@@ -127,10 +200,22 @@ const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simula
       '¿Estás seguro de que quieres salir del examen? Se perderá todo tu progreso y no podrás volver a intentarlo.',
       () => {
         closeModal();
-        if (onBack) {
-          onBack();
+        
+        if (isInSEB) {
+          closeSEB();
+          setTimeout(() => {
+            if (onBack) {
+              onBack();
+            } else {
+              navigate('/student-exam');
+            }
+          }, 1000);
         } else {
-          navigate('/student-exam');
+          if (onBack) {
+            onBack();
+          } else {
+            navigate('/student-exam');
+          }
         }
       },
       true
@@ -163,6 +248,14 @@ const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simula
         // Cargar examen para validaciones de seguridad
         const examData = await getExamById(examId, windowId);
         setExam(examData);
+
+        // Redireccionar si es un examen de programación
+        if (examData.tipo === 'programming') {
+          const params = new URLSearchParams();
+          if (windowId) params.append('windowId', windowId);
+          navigate(`/programming-exam/${examId}?${params.toString()}`);
+          return;
+        }
 
         // Crear o obtener intento existente
         const attemptResponse = await fetch(`${API_BASE_URL}/exam-attempts/start`, {
@@ -219,7 +312,7 @@ const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simula
 
   // Add page leave confirmation for exam security
   useEffect(() => {
-    if (!exam || error || propExamId) return; // Don't add for embedded mode or errors
+    if (!exam || error || propExamId) return;
 
     const handleBeforeUnload = (e) => {
       e.preventDefault();
@@ -229,28 +322,23 @@ const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simula
 
     const handlePopState = (e) => {
       e.preventDefault();
-      // Show modal for back button press
       showModal(
         'warning',
         'Salir del Examen',
         '¿Estás seguro de que quieres salir del examen? Se perderá todo tu progreso.',
         () => {
           closeModal();
-          // Allow navigation by going back
           window.history.back();
         },
         true
       );
       
-      // Prevent the navigation initially
       window.history.pushState(null, '', window.location.pathname);
     };
 
-    // Add event listeners
     window.addEventListener('beforeunload', handleBeforeUnload);
     window.addEventListener('popstate', handlePopState);
     
-    // Push initial state to handle back button
     window.history.pushState(null, '', window.location.pathname);
 
     return () => {
@@ -269,6 +357,7 @@ const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simula
       </div>
     );
   }
+  
   if (error || !exam) {
     return (
       <div className="container py-5">
@@ -293,28 +382,36 @@ const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simula
     <div className="container py-5">
       <div className="modern-card mb-4">
         <div className="modern-card-header">
-          <div className="d-flex justify-content-between align-items-center">
-            <div className="d-flex align-items-center">
+          <div className="exam-attempt-header">
+            <div className="header-content-section">
               <h1 className="page-title mb-0">
                 <i className="fas fa-clipboard-list me-3"></i>
-                {exam.titulo || "Sin título"}
+                <span className="title-text">{exam.titulo || "Sin título"}</span>
               </h1>
-              {!propExamId ? (
-                <span className="badge bg-warning text-dark ms-3">
-                  <i className="fas fa-exclamation-triangle me-1"></i>
-                  EXAMEN EN CURSO
+              <div className="header-badges mt-2">
+                {!propExamId ? (
+                  <span className="badge bg-warning text-dark">
+                    <i className="fas fa-exclamation-triangle me-1"></i>
+                    <span className="badge-text">EXAMEN EN CURSO</span>
+                  </span>
+                ) : (
+                  <span className="badge bg-info text-white">
+                    <i className="fas fa-eye me-1"></i>
+                    <span className="badge-text">VISTA PREVIA</span>
+                  </span>
+                )}
+                <span className="badge badge-primary">
+                  <i className="fas fa-question-circle me-2"></i>
+                  <span className="count-text">{exam.preguntas?.length || 0} preguntas</span>
                 </span>
-              ) : (
-                <span className="badge bg-info text-white ms-3">
-                  <i className="fas fa-eye me-1"></i>
-                  VISTA PREVIA
+              {isInSEB && (
+                <span className="badge bg-success ms-2">
+                  <i className="fas fa-lock me-1"></i>
+                  Modo Seguro (SEB)
                 </span>
               )}
+              </div>
             </div>
-            <span className="badge badge-primary">
-              <i className="fas fa-question-circle me-2"></i>
-              {exam.preguntas?.length || 0} preguntas
-            </span>
           </div>
         </div>
       </div>
@@ -335,28 +432,30 @@ const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simula
         </div>
       ) : (
         <>
-          <div className="row g-4">
+          <div className="exam-attempt-questions-grid">
             {exam.preguntas.map((p, i) => (
-              <div key={i} className="col-lg-6">
+              <div key={i} className="exam-attempt-question-card">
                 <div className={`exam-card fade-in-up`} style={{animationDelay: `${i * 0.1}s`}}>
                   <div className="exam-card-header">
                     <h5 className="exam-title">
                       <span className="badge badge-primary me-3">{i + 1}</span>
-                      {p.texto || "Sin texto"}
+                      <span className="question-text">{p.texto || "Sin texto"}</span>
                     </h5>
                   </div>
                   <div className="exam-card-body">
                     <div className="exam-info">
                       <h6 className="mb-3">
                         <i className="fas fa-list-ul me-2"></i>
-                        Opciones de respuesta:
+                        <span className="options-label">Opciones de respuesta:</span>
                       </h6>
-                      {p.opciones?.map((o, j) => (
-                        <div key={j} className="exam-info-item">
-                          <i className="fas fa-circle me-2" style={{fontSize: '8px'}}></i>
-                          <span>{o || "Opción vacía"}</span>
-                        </div>
-                      ))}
+                      <div className="exam-options-list">
+                        {p.opciones?.map((o, j) => (
+                          <div key={j} className="exam-info-item">
+                            <i className="fas fa-circle me-2" style={{fontSize: '8px'}}></i>
+                            <span>{o || "Opción vacía"}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -367,43 +466,45 @@ const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simula
           {/* Botón Terminar intento */}
           <div className="modern-card mt-4">
             <div className="modern-card-body text-center">
-              <h5 className="mb-3">
-                <i className="fas fa-flag-checkered me-2"></i>
-                ¿Terminaste el examen?
-              </h5>
-              <p className="text-muted mb-4">
-                Una vez que finalices el intento, no podrás volver a entrar al examen. Asegúrate de haber respondido todas las preguntas.
-              </p>
-              <div className="d-flex gap-3 justify-content-center">
-                <button 
-                  className="modern-btn modern-btn-primary modern-btn-lg" 
-                  onClick={handleExamCompletion}
-                  disabled={submitting}
-                >
-                  {submitting ? (
-                    <>
-                      <div className="spinner-border spinner-border-sm me-2" role="status"></div>
-                      Finalizando...
-                    </>
-                  ) : (
-                    <>
-                      <i className="fas fa-check me-2"></i>
-                      Finalizar Intento
-                    </>
+              <div className="exam-completion-section">
+                <h5 className="completion-title mb-3">
+                  <i className="fas fa-flag-checkered me-2"></i>
+                  <span className="completion-text">¿Terminaste el examen?</span>
+                </h5>
+                <p className="completion-description text-muted mb-4">
+                  Una vez que finalices el intento, no podrás volver a entrar al examen. Asegúrate de haber respondido todas las preguntas.
+                </p>
+                <div className="exam-attempt-actions">
+                  <button 
+                    className="modern-btn modern-btn-primary modern-btn-lg" 
+                    onClick={handleExamCompletion}
+                    disabled={submitting}
+                  >
+                    {submitting ? (
+                      <>
+                        <div className="spinner-border spinner-border-sm me-2" role="status"></div>
+                        <span className="btn-text">Finalizando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-check me-2"></i>
+                        <span className="btn-text">Finalizar Intento</span>
+                      </>
+                    )}
+                  </button>
+                  {!propExamId && (
+                    <button className="modern-btn modern-btn-outline-danger modern-btn-lg" onClick={handleLeaveExam}>
+                      <i className="fas fa-times me-2"></i>
+                      <span className="btn-text">Salir sin finalizar</span>
+                    </button>
                   )}
-                </button>
-                {!propExamId && (
-                  <button className="modern-btn modern-btn-outline-danger modern-btn-lg" onClick={handleLeaveExam}>
-                    <i className="fas fa-times me-2"></i>
-                    Salir sin finalizar
-                  </button>
-                )}
-                {propExamId && (
-                  <button className="modern-btn modern-btn-secondary modern-btn-lg" onClick={handleExamCompletion}>
-                    <i className="fas fa-arrow-left me-2"></i>
-                    Volver al inicio
-                  </button>
-                )}
+                  {propExamId && (
+                    <button className="modern-btn modern-btn-secondary modern-btn-lg" onClick={handleExamCompletion}>
+                      <i className="fas fa-arrow-left me-2"></i>
+                      <span className="btn-text">Volver al inicio</span>
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
