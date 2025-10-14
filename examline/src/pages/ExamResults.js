@@ -174,21 +174,113 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
             </div>
           </div>
 
-          {/* Código del estudiante */}
+          {/* Archivos guardados del estudiante */}
           <div className="modern-card mb-4">
             <div className="modern-card-header">
               <h3 className="modern-card-title">
-                <i className="fas fa-code me-2"></i>
-                Tu Solución
+                <i className="fas fa-folder-open me-2"></i>
+                Archivos de tu Solución
               </h3>
             </div>
             <div className="modern-card-body">
-              {attempt.codigoProgramacion ? (
+              {attempt.examFiles && attempt.examFiles.length > 0 ? (
+                <div style={{ marginTop: '0.5rem' }}>
+                  <div className="mb-3" style={{
+                    padding: '0.75rem 1rem',
+                    background: 'rgba(13, 110, 253, 0.1)',
+                    border: '1px solid rgba(13, 110, 253, 0.2)',
+                    borderRadius: '0.5rem'
+                  }}>
+                    <small className="text-muted">
+                      <i className="fas fa-info-circle me-1"></i>
+                      Se encontraron {attempt.examFiles.length} archivo{attempt.examFiles.length !== 1 ? 's' : ''} guardado{attempt.examFiles.length !== 1 ? 's' : ''}
+                    </small>
+                  </div>
+                  
+                  {attempt.examFiles.map((file, index) => (
+                    <div key={file.id} className="mb-4" style={{
+                      border: '1px solid #dee2e6',
+                      borderRadius: '0.75rem',
+                      overflow: 'hidden',
+                      background: 'white',
+                      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
+                    }}>
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '1rem 1.25rem',
+                        background: '#f8f9fa',
+                        borderBottom: '1px solid #dee2e6'
+                      }}>
+                        <div>
+                          <h5 style={{
+                            color: '#2d3748',
+                            fontWeight: '600',
+                            fontSize: '1.1rem',
+                            margin: '0 0 0.25rem 0'
+                          }}>
+                            <i className="fas fa-file-code me-2"></i>
+                            {file.filename}
+                          </h5>
+                          <small className="text-muted">
+                            <i className="fas fa-clock me-1"></i>
+                            Última modificación: {new Date(file.updatedAt).toLocaleString()}
+                          </small>
+                        </div>
+                        <div>
+                          <span className="badge bg-primary" style={{
+                            fontSize: '0.75rem',
+                            padding: '0.25rem 0.5rem'
+                          }}>
+                            Archivo {index + 1}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div style={{ padding: 0 }}>
+                        {file.content ? (
+                          <pre style={{
+                            whiteSpace: 'pre-wrap',
+                            fontFamily: 'Monaco, Consolas, "Courier New", monospace',
+                            fontSize: '0.85rem',
+                            lineHeight: '1.4',
+                            margin: 0,
+                            padding: '1.25rem',
+                            backgroundColor: '#1e1e1e',
+                            color: '#d4d4d4',
+                            borderRadius: 0,
+                            border: 'none',
+                            overflow: 'auto',
+                            maxHeight: '400px'
+                          }}>
+                            {file.content}
+                          </pre>
+                        ) : (
+                          <div style={{
+                            padding: '2rem',
+                            textAlign: 'center',
+                            background: '#f8f9fa',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontStyle: 'italic'
+                          }}>
+                            <i className="fas fa-file-alt text-muted"></i>
+                            <span className="text-muted ms-2">Archivo vacío</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : attempt.codigoProgramacion ? (
+                /* Fallback al código antiguo si no hay archivos guardados */
                 <div className="code-solution">
                   <div className="code-header mb-2">
                     <small className="text-muted">
                       <i className="fas fa-file-code me-1"></i>
-                      main.{attempt.exam.lenguajeProgramacion === 'python' ? 'py' : 'js'}
+                      Código Final (método anterior)
                     </small>
                   </div>
                   <pre style={{
@@ -213,9 +305,9 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
                   <div className="empty-icon">
                     <i className="fas fa-code"></i>
                   </div>
-                  <h4 className="empty-title">Sin código</h4>
+                  <h4 className="empty-title">Sin archivos</h4>
                   <p className="empty-subtitle">
-                    No se encontró código para este intento
+                    No se encontraron archivos guardados para este intento
                   </p>
                 </div>
               )}
@@ -330,7 +422,6 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
           </div>
         </div>
       )}
-
 
     </div>
   );
