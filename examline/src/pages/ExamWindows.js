@@ -992,8 +992,16 @@ export default function ExamWindowsPage() {
         <div className="modern-card-body p-0">
           <div className="exam-windows-tabs">
             {(() => {
-              const enCurso = examWindows.filter(w => w.estado === 'en_curso');
-              const programadasYCerradas = examWindows.filter(w => w.estado === 'programada' || w.estado === 'cerrada_inscripciones');
+              // Las ventanas eternas (sinTiempo: true) con estado 'programada' aparecen en "En curso"
+              const enCurso = examWindows.filter(w => 
+                w.estado === 'en_curso' || 
+                (w.sinTiempo && w.estado === 'programada')
+              );
+              // Las ventanas programadas NO incluyen las eternas
+              const programadasYCerradas = examWindows.filter(w => 
+                (w.estado === 'programada' && !w.sinTiempo) || 
+                w.estado === 'cerrada_inscripciones'
+              );
               const finalizadas = examWindows.filter(w => w.estado === 'finalizada');
 
               return (
@@ -1031,8 +1039,16 @@ export default function ExamWindowsPage() {
 
       {/* Tab Content */}
       {(() => {
-        const enCurso = examWindows.filter(w => w.estado === 'en_curso');
-        const programadasYCerradas = examWindows.filter(w => w.estado === 'programada' || w.estado === 'cerrada_inscripciones');
+        // Las ventanas eternas (sinTiempo: true) con estado 'programada' aparecen en "En curso"
+        const enCurso = examWindows.filter(w => 
+          w.estado === 'en_curso' || 
+          (w.sinTiempo && w.estado === 'programada')
+        );
+        // Las ventanas programadas NO incluyen las eternas
+        const programadasYCerradas = examWindows.filter(w => 
+          (w.estado === 'programada' && !w.sinTiempo) || 
+          w.estado === 'cerrada_inscripciones'
+        );
         const finalizadas = examWindows.filter(w => w.estado === 'finalizada');
         const total = examWindows.length;
 
