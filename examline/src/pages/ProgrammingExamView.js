@@ -222,12 +222,11 @@ const ProgrammingExamView = () => {
     try {
       setLoading(true);
       
-      // Primero guardar el código actual con un nombre por defecto
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const defaultFileName = `FINAL_SUBMISSION_${timestamp}.${exam?.lenguajeProgramacion === 'python' ? 'py' : 'js'}`;
-      
-      // Guardar archivo final
-      await saveCurrentFile(defaultFileName, code);
+      // Guardar el código actual en el archivo que está siendo editado
+      if (code) {
+        const fileName = currentFileName || `main.${exam?.lenguajeProgramacion === 'python' ? 'py' : 'js'}`;
+        await saveCurrentFile(fileName, code);
+      }
       
       const token = localStorage.getItem('token');
       const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
