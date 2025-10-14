@@ -23,6 +23,7 @@ export default function ExamWindowsPage() {
     cupoMaximo: 30,
     notas: '',
     usaSEB: false,
+    kioskMode: 0,
     sinTiempo: false,
     requierePresente: false
   });
@@ -401,7 +402,8 @@ export default function ExamWindowsPage() {
       notas: '',
       usaSEB: false,
       sinTiempo: false,
-      requierePresente: false
+      requierePresente: false,
+      kioskomode: 0
     });
     setEditingWindow(null);
     setValidationErrors({});
@@ -835,6 +837,15 @@ export default function ExamWindowsPage() {
                   </span>
                 </span>
             </div>
+            <div className="exam-info-item mt-2">
+  <i className={`fas ${window.kioskMode ? 'fa-desktop text-primary' : 'fa-laptop text-muted'}`}></i>
+  <span>
+    <strong>Modo:</strong>
+    <span className={`ms-1 badge ${window.kioskMode ? 'bg-primary' : 'bg-secondary'}`}>
+      {window.kioskMode ? '🖥️ Kiosko' : '💻 Normal'}
+    </span>
+  </span>
+</div>
             <div className="exam-info-item">
               <i className="fas fa-users"></i>
                 <span><strong>Inscritos:</strong> {getInscritosCount(window)}/{window.cupoMaximo}</span>
