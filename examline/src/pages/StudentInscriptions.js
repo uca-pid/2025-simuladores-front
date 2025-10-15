@@ -157,6 +157,24 @@ export default function StudentInscriptionsPage({
     loadData();
   }, [user, navigate, loadData]);
 
+  useEffect(() => {
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === 'visible') {
+      if (sessionStorage.getItem('openedSEB') === 'true') {
+        sessionStorage.removeItem('openedSEB'); // limpiamos la bandera
+        window.location.reload();
+      }
+    }
+  };
+
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+
+  return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+}, []);
+
+
+
+
   const closeModal = () => {
     setModal(prev => ({ ...prev, show: false }));
   };
@@ -199,6 +217,8 @@ const openExam = async (examId, windowId, token, window) => {
     return;
   }
 
+  sessionStorage.setItem('openedSEB', 'true');
+
   if (isRunningSEB()) {
     // Si ya está corriendo SEB
     goToExam();
@@ -220,7 +240,7 @@ const openExam = async (examId, windowId, token, window) => {
     // 2️⃣ Crear un <a> invisible con seb:// y hacer click
     const link = document.createElement("a");
     link.href = data.sebUrl; // seb://localhost:4000/examenes/examen_1.seb
-    link.target = "_blank";
+    // link.target = "_blank";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
