@@ -180,8 +180,7 @@ const isRunningSEB = () => {
   return false;
 };
 
-const openExam = (examId, windowId, token, window) => {
-  const backendUrl = `${API_BASE_URL}/exam-start/download/${examId}/${windowId}/${token}`;
+const openExam = async (examId, windowId, token, window) => {
   const requiresSEB = window?.usaSEB || false;
   const examType = window?.exam?.tipo || "normal";
   const params = `windowId=${windowId}`;
@@ -194,24 +193,42 @@ const openExam = (examId, windowId, token, window) => {
     }
   };
 
-  if (requiresSEB) {
-    // Si requiere SEB
-    if (isRunningSEB()) {
-      goToExam();
-    } else {
-      // Descargar archivo .seb
-      const link = document.createElement("a");
-      link.href = backendUrl;
-      link.download = `examen_${examId}.seb`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-  } else {
-    // Si NO requiere SEB
+  if (!requiresSEB) {
+    // Si no requiere SEB
     goToExam();
+    return;
+  }
+
+  if (isRunningSEB()) {
+    // Si ya está corriendo SEB
+    goToExam();
+    return;
+  }
+
+  try {
+    // 1️⃣ Generar el .seb en el backend
+    const res = await fetch(
+      `${API_BASE_URL}/exam-start/download/${examId}/${windowId}/${token}`
+    );
+    const data = await res.json();
+
+    if (!data.sebUrl) {
+      console.error("No se pudo generar el .seb");
+      return;
+    }
+
+    // 2️⃣ Crear un <a> invisible con seb:// y hacer click
+    const link = document.createElement("a");
+    link.href = data.sebUrl; // seb://localhost:4000/examenes/examen_1.seb
+    link.target = "_blank";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } catch (error) {
+    console.error("Error generando o abriendo el .seb:", error);
   }
 };
+
 
 
   const handleFilterChange = (e) => {

@@ -72,7 +72,7 @@ const Principal = () => {
                       <p className="step-description">
                         Haz clic en "Crear Examen" para diseñar evaluaciones. Puedes crear dos tipos: 
                         <strong>Múltiple Choice</strong> (agrega preguntas con 4 opciones y marca la correcta) o 
-                        <strong>Programación</strong> (define un problema, selecciona el lenguaje Python/JavaScript y configura intellisense).
+                        <strong> Programación</strong> (define un problema, selecciona el lenguaje Python/JavaScript y configura intellisense).
                       </p>
                     </div>
                   </div>
@@ -85,7 +85,7 @@ const Principal = () => {
                     <div className="step-content">
                       <h5 className="step-title">2. Programar Ventanas</h5>
                       <p className="step-description">
-                        Ve a "Ventanas de Examen" para crear fechas específicas. Selecciona un examen, define fecha y hora de inicio/fin, establece el cupo máximo de estudiantes y guarda. Los estudiantes podrán inscribirse según disponibilidad.
+                        Ve a "Ventanas de Examen" para crear fechas específicas. Selecciona un examen, define fecha y hora de inicio/fin o que no haya limites de horario, establece el cupo máximo de estudiantes, si se quiere que el exámen se tome usando el navegador SEB y guarda. Los estudiantes podrán inscribirse según disponibilidad.
                       </p>
                     </div>
                   </div>
@@ -98,7 +98,7 @@ const Principal = () => {
                     <div className="step-content">
                       <h5 className="step-title">3. Habilitar y Evaluar</h5>
                       <p className="step-description">
-                        En cada ventana de examen, revisa las inscripciones y habilita a los estudiantes marcando "Presente". Solo estudiantes habilitados pueden rendir en el horario programado. Consulta resultados una vez finalizados.
+                        En cada ventana de examen, revisa las inscripciones y habilita a los estudiantes marcando "Presente" si el exámen requiere asistencia. Si este es el caso, solo estudiantes habilitados pueden rendir en el horario programado. Consulta resultados una vez finalizados.
                       </p>
                     </div>
                   </div>
