@@ -485,9 +485,26 @@ const ProgrammingExamView = () => {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
+      // Eliminar del cache
+      setFileCache(prevCache => {
+        const newCache = { ...prevCache };
+        delete newCache[fileToDelete];
+        return newCache;
+      });
+      
+      // Eliminar de unsavedFiles
+      setUnsavedFiles(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(fileToDelete);
+        return newSet;
+      });
+      
+      // Actualizar lista de archivos sin llamar a fetchFiles() para no perder cambios
+      const remainingFiles = files.filter(f => f.filename !== fileToDelete);
+      setFiles(remainingFiles);
+      
       // Si eliminamos el archivo actual, cambiar a otro
       if (fileToDelete === currentFileName) {
-        const remainingFiles = files.filter(f => f.filename !== fileToDelete);
         if (remainingFiles.length > 0) {
           await loadFile(remainingFiles[0].filename);
         } else {
@@ -496,8 +513,6 @@ const ProgrammingExamView = () => {
           setCode('');
         }
       }
-      
-      await fetchFiles(); // Actualizar lista
       
       // Limpiar estado del modal
       setShowDeleteModal(false);
@@ -508,7 +523,7 @@ const ProgrammingExamView = () => {
     } finally {
       setFileOperationLoading(false);
     }
-  }, [examId, currentFileName, files, exam?.lenguajeProgramacion, fetchFiles, loadFile, fileToDelete]);
+  }, [examId, currentFileName, files, exam?.lenguajeProgramacion, loadFile, fileToDelete]);
 
   const createNewFile = useCallback(async () => {
     // La validación visual ya previene estos casos, pero por seguridad mantenemos las validaciones
