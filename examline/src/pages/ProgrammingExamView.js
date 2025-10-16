@@ -31,6 +31,9 @@ const ProgrammingExamView = () => {
   // 📝 Registro de archivos con cambios sin guardar
   const [unsavedFiles, setUnsavedFiles] = useState(new Set());
   
+  // 🔀 Estado para drag & drop de tabs
+  const [draggedTab, setDraggedTab] = useState(null);
+  
   // Estados para modales
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -532,6 +535,40 @@ const ProgrammingExamView = () => {
     }
   }, [newFileName, exam?.lenguajeProgramacion, files, saveCurrentFile, setCode, setCurrentFileName]);
 
+  // 🔀 Funciones para drag & drop de tabs
+  const handleDragStart = (e, index) => {
+    setDraggedTab(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.currentTarget.style.opacity = '0.5';
+  };
+
+  const handleDragEnd = (e) => {
+    e.currentTarget.style.opacity = '1';
+    setDraggedTab(null);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e, dropIndex) => {
+    e.preventDefault();
+    
+    if (draggedTab === null || draggedTab === dropIndex) return;
+    
+    const newFiles = [...files];
+    const draggedFile = newFiles[draggedTab];
+    
+    // Remover el archivo de su posición original
+    newFiles.splice(draggedTab, 1);
+    // Insertar en la nueva posición
+    newFiles.splice(dropIndex, 0, draggedFile);
+    
+    setFiles(newFiles);
+    console.log(`Movido ${draggedFile.filename} de posición ${draggedTab} a ${dropIndex}`);
+  };
+
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center vh-100">
@@ -675,9 +712,15 @@ const ProgrammingExamView = () => {
                         {files.map((file, index) => (
                           <div 
                             key={file.filename}
-                            className={`editor-tab ${file.filename === currentFileName ? 'active' : ''}`}
+                            className={`editor-tab ${file.filename === currentFileName ? 'active' : ''} ${draggedTab === index ? 'dragging' : ''}`}
                             onClick={() => loadFile(file.filename)}
+                            draggable="true"
+                            onDragStart={(e) => handleDragStart(e, index)}
+                            onDragEnd={handleDragEnd}
+                            onDragOver={handleDragOver}
+                            onDrop={(e) => handleDrop(e, index)}
                           >
+                            <i className="fas fa-grip-vertical me-2" style={{opacity: 0.5, cursor: 'grab'}}></i>
                             <i className="fas fa-file-code me-2"></i>
                             <span className="tab-filename">{file.filename}</span>
                             {unsavedFiles.has(file.filename) && (
@@ -762,9 +805,15 @@ const ProgrammingExamView = () => {
                             {files.map((file, index) => (
                               <div 
                                 key={file.filename}
-                                className={`editor-tab-compact ${file.filename === currentFileName ? 'active' : ''}`}
+                                className={`editor-tab-compact ${file.filename === currentFileName ? 'active' : ''} ${draggedTab === index ? 'dragging' : ''}`}
                                 onClick={() => loadFile(file.filename)}
+                                draggable="true"
+                                onDragStart={(e) => handleDragStart(e, index)}
+                                onDragEnd={handleDragEnd}
+                                onDragOver={handleDragOver}
+                                onDrop={(e) => handleDrop(e, index)}
                               >
+                                <i className="fas fa-grip-vertical" style={{fontSize: '0.7rem', opacity: 0.5, cursor: 'grab', marginRight: '2px'}}></i>
                                 <i className="fas fa-file-code"></i>
                                 <span className="tab-filename-short">
                                   {file.filename.length > 10 ? file.filename.substring(0, 10) + '...' : file.filename}
@@ -1098,6 +1147,26 @@ const ProgrammingExamView = () => {
 
         .editor-tab:not(.active) .unsaved-indicator {
           color: #cccccc;
+        }
+
+        /* Estilos para drag & drop de tabs */
+        .editor-tab.dragging {
+          opacity: 0.5;
+        }
+
+        .tab-grip {
+          margin-right: 8px;
+          color: #666;
+          font-size: 12px;
+          cursor: grab;
+        }
+
+        .editor-tab.dragging .tab-grip {
+          cursor: grabbing;
+        }
+
+        .editor-tab:hover .tab-grip {
+          color: #888;
         }
 
         /* Navegación compacta para muchos archivos */
