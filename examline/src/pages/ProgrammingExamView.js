@@ -174,10 +174,47 @@ const ProgrammingExamView = () => {
         
         setFiles(sortedFiles);
         
-        // Si no hay archivos, crear uno por defecto
+        // Si no hay archivos, crear uno por defecto con el código inicial del examen
         if (sortedFiles.length === 0) {
           const defaultFileName = `main.${exam?.lenguajeProgramacion === 'python' ? 'py' : 'js'}`;
+          const defaultContent = exam?.codigoInicial || '';
+          
           setCurrentFileName(defaultFileName);
+          setCode(defaultContent);
+          
+          // 💾 Crear el archivo por defecto en el servidor
+          const token = localStorage.getItem('token');
+          try {
+            await fetch(`${API_BASE_URL}/exam-files/${examId}/files`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                filename: defaultFileName,
+                content: defaultContent
+              })
+            });
+            
+            // ✅ Actualizar la lista de archivos inmediatamente
+            setFiles([{
+              filename: defaultFileName,
+              content: defaultContent,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            }]);
+            
+            // Actualizar el caché
+            setFileCache(prev => ({
+              ...prev,
+              [defaultFileName]: defaultContent
+            }));
+            
+            console.log(`Archivo por defecto creado: ${defaultFileName}`);
+          } catch (error) {
+            console.error('Error creando archivo por defecto:', error);
+          }
         } else {
           // Cargar el primer archivo si no hay uno seleccionado
           if (!currentFileName || !sortedFiles.find(f => f.filename === currentFileName)) {
@@ -233,11 +270,23 @@ const ProgrammingExamView = () => {
     try {
       setLoading(true);
       
-      // Guardar el código actual en el archivo que está siendo editado
-      if (code) {
-        const fileName = currentFileName || `main.${exam?.lenguajeProgramacion === 'python' ? 'py' : 'js'}`;
-        await saveCurrentFile(fileName, code);
+      // 💾 Guardar TODOS los archivos con cambios en el caché
+      console.log('Guardando todos los archivos antes de finalizar...');
+      const filesToSave = Object.keys(fileCache);
+      
+      for (const filename of filesToSave) {
+        const content = fileCache[filename];
+        console.log(`Guardando archivo: ${filename}`);
+        await saveCurrentFile(filename, content);
       }
+      
+      // También guardar el archivo actual si no está en el caché
+      if (code && currentFileName && fileCache[currentFileName] === undefined) {
+        console.log(`Guardando archivo actual: ${currentFileName}`);
+        await saveCurrentFile(currentFileName, code);
+      }
+      
+      console.log('Todos los archivos guardados. Finalizando examen...');
       
       const token = localStorage.getItem('token');
       const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
