@@ -564,7 +564,12 @@ const openExam = async (examId, windowId, token, window) => {
                             <div className="exam-info-item">
                               <i className="fas fa-shield-alt text-warning"></i>
                               <span><strong>Seguridad:</strong> 
-                                <span className="ms-1 badge bg-warning text-dark">
+                                <span className="ms-1 badge text-white" style={{
+                                  backgroundColor: '#ff8c00',
+                                  fontWeight: 'bold',
+                                  padding: '0.35rem 0.6rem',
+                                  fontSize: '0.75rem'
+                                }}>
                                   🔒 Requiere Safe Exam Browser
                                 </span>
                               </span>
@@ -619,6 +624,7 @@ const openExam = async (examId, windowId, token, window) => {
                             >
                               <i className="fas fa-user-plus me-2"></i>
                               Inscribirse
+                              {window.usaSEB && <i className="fas fa-shield-alt ms-2"></i>}
                             </button>
                           )}
                         </div>
@@ -752,13 +758,31 @@ const openExam = async (examId, windowId, token, window) => {
                               </button>
                             </div>
                           ) : canTake ? (
-                            <button 
-                              className="modern-btn modern-btn-primary w-100"
-                              onClick={() => openExam(window.examId, window.id, token, window)}
-                            >
-                              <i className="fas fa-play me-2"></i>
-                              {window.exam.tipo === 'programming' ? 'Programar' : 'Rendir Examen'}
-                            </button>
+                            <div className="d-grid gap-2">
+                              {window.usaSEB && (
+                                <div className="alert alert-warning d-flex align-items-center p-2 mb-2" style={{
+                                  fontSize: '0.85rem',
+                                  border: '1px solid #ffc107',
+                                  backgroundColor: '#fff3cd',
+                                  borderRadius: '8px'
+                                }}>
+                                  <i className="fas fa-shield-alt text-warning me-2" style={{ fontSize: '1.1rem' }}></i>
+                                  <div>
+                                    <strong>⚠️ Requiere Safe Exam Browser</strong>
+                                    <br />
+                                    <small>Este examen se abrirá automáticamente en SEB para mayor seguridad.</small>
+                                  </div>
+                                </div>
+                              )}
+                              <button 
+                                className="modern-btn modern-btn-primary w-100"
+                                onClick={() => openExam(window.examId, window.id, token, window)}
+                              >
+                                <i className="fas fa-play me-2"></i>
+                                {window.exam.tipo === 'programming' ? 'Programar' : 'Rendir Examen'}
+                                {window.usaSEB && <i className="fas fa-shield-alt ms-2"></i>}
+                              </button>
+                            </div>
                           ) : window.sinTiempo ? (
                             // Para ventanas sin tiempo, mostrar el estado de habilitación
                             <button className="modern-btn modern-btn-warning w-100" disabled>

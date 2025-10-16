@@ -1248,7 +1248,14 @@ export default function ExamWindowsPage() {
                                   id="usaSEB"
                                   name="usaSEB"
                                   checked={formData.usaSEB}
-                                  onChange={handleInputChange}
+                                  onChange={(e) => {
+                                    const useSEB = e.target.checked;
+                                    setFormData(prev => ({
+                                      ...prev,
+                                      usaSEB: useSEB,
+                                      kioskMode: useSEB ? prev.kioskMode : 0 // Desactivar kiosko si se desactiva SEB
+                                    }));
+                                  }}
                                   disabled={!!editingWindow && editingWindow.estado === 'en_curso'}
                                   style={{ 
                                     width: '3rem', 
@@ -1279,54 +1286,56 @@ export default function ExamWindowsPage() {
                       </div>
                     </div>
 
-                    {/* Toggle para modo kiosco */}
-                    <div className="mb-4">
-                      <div className="card" style={{ 
-                        backgroundColor: formData.kioskMode ? '#f0f4ff' : '#f8f9fa', 
-                        borderColor: formData.kioskMode ? '#4f46e5' : '#e9ecef',
-                        borderWidth: '2px',
-                        transition: 'all 0.3s ease'
-                      }}>
-                        <div className="card-body p-3">
-                          <div className="d-flex align-items-center justify-content-between">
-                            <div className="d-flex align-items-center">
-                              <div className="form-check form-switch me-3">
-                                <input 
-                                  className="form-check-input" 
-                                  type="checkbox" 
-                                  id="kioskMode"
-                                  name="kioskMode"
-                                  checked={formData.kioskMode ? true : false}
-                                  onChange={(e) => setFormData(prev => ({ ...prev, kioskMode: e.target.checked ? 1 : 0 }))}
-                                  disabled={!!editingWindow && editingWindow.estado === 'en_curso'}
-                                  style={{ 
-                                    width: '3rem', 
-                                    height: '1.5rem',
-                                    backgroundColor: formData.kioskMode ? '#4f46e5' : '#6c757d',
-                                    borderColor: formData.kioskMode ? '#4f46e5' : '#6c757d'
-                                  }}
-                                />
-                              </div>
-                              <div>
-                                <label className="form-check-label mb-0" htmlFor="kioskMode" style={{ fontWeight: '600', fontSize: '1rem', cursor: 'pointer' }}>
-                                  <i className={`fas ${formData.kioskMode ? 'fa-desktop text-primary' : 'fa-laptop text-secondary'} me-2`}></i>
-                                  {formData.kioskMode ? 'Modo Kiosko activado' : 'Modo Normal'}
-                                </label>
-                                <div style={{ fontSize: '0.85rem', color: '#6c757d', marginTop: '0.25rem' }}>
-                                  {formData.kioskMode 
-                                    ? 'La ventana se ejecutará en modo kiosko (pantalla completa, sin controles del navegador)'
-                                    : 'Los estudiantes usarán el modo de navegación normal'
-                                  }
+                    {/* Toggle para modo kiosco - Solo visible cuando SEB está activado */}
+                    {formData.usaSEB && (
+                      <div className="mb-4">
+                        <div className="card" style={{ 
+                          backgroundColor: formData.kioskMode ? '#f0f4ff' : '#f8f9fa', 
+                          borderColor: formData.kioskMode ? '#4f46e5' : '#e9ecef',
+                          borderWidth: '2px',
+                          transition: 'all 0.3s ease'
+                        }}>
+                          <div className="card-body p-3">
+                            <div className="d-flex align-items-center justify-content-between">
+                              <div className="d-flex align-items-center">
+                                <div className="form-check form-switch me-3">
+                                  <input 
+                                    className="form-check-input" 
+                                    type="checkbox" 
+                                    id="kioskMode"
+                                    name="kioskMode"
+                                    checked={formData.kioskMode ? true : false}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, kioskMode: e.target.checked ? 1 : 0 }))}
+                                    disabled={!!editingWindow && editingWindow.estado === 'en_curso'}
+                                    style={{ 
+                                      width: '3rem', 
+                                      height: '1.5rem',
+                                      backgroundColor: formData.kioskMode ? '#4f46e5' : '#6c757d',
+                                      borderColor: formData.kioskMode ? '#4f46e5' : '#6c757d'
+                                    }}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="form-check-label mb-0" htmlFor="kioskMode" style={{ fontWeight: '600', fontSize: '1rem', cursor: 'pointer' }}>
+                                    <i className={`fas ${formData.kioskMode ? 'fa-desktop text-primary' : 'fa-laptop text-secondary'} me-2`}></i>
+                                    {formData.kioskMode ? 'Modo Kiosko activado' : 'Modo Normal'}
+                                  </label>
+                                  <div style={{ fontSize: '0.85rem', color: '#6c757d', marginTop: '0.25rem' }}>
+                                    {formData.kioskMode 
+                                      ? 'SEB se ejecutará en modo kiosko (pantalla completa, sin controles del navegador)'
+                                      : 'SEB se ejecutará en modo ventana normal'
+                                    }
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                            <div style={{ fontSize: '2rem', opacity: 0.3 }}>
-                              <i className={`fas ${formData.kioskMode ? 'fa-desktop' : 'fa-laptop'}`}></i>
+                              <div style={{ fontSize: '2rem', opacity: 0.3 }}>
+                                <i className={`fas ${formData.kioskMode ? 'fa-desktop' : 'fa-laptop'}`}></i>
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* Toggle para tipo de ventana */}
                     <div className="mb-4">
