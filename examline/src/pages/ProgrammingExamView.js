@@ -584,6 +584,25 @@ const ProgrammingExamView = () => {
     console.log(`Movido ${draggedFile.filename} de posición ${draggedTab} a ${dropIndex}`);
   };
 
+  // ⌨️ Atajo de teclado Ctrl+S para guardar
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      // Ctrl+S o Cmd+S (para Mac)
+      if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+        event.preventDefault(); // Prevenir el diálogo de guardar del navegador
+        handleManualSave();
+      }
+    };
+
+    // Agregar el listener
+    window.addEventListener('keydown', handleKeyDown);
+
+    // Cleanup: remover el listener cuando el componente se desmonte
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleManualSave]);
+
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center vh-100">
