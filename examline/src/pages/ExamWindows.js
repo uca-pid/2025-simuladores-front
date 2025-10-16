@@ -763,7 +763,7 @@ export default function ExamWindowsPage() {
                   <span>
                     <strong>Modo:</strong>
                     <span className={`ms-1 badge ${window.kioskMode ? 'bg-primary' : 'bg-secondary'}`}>
-                      {window.kioskMode ? '🖥️ Kiosko' : '💻 Normal'}
+                      {window.kioskMode ? '🖥️ Pantalla Completa' : '💻 Normal'}
                     </span>
                   </span>
                 </div>
@@ -1291,7 +1291,7 @@ export default function ExamWindowsPage() {
                       <div className="mb-4">
                         <div className="card" style={{ 
                           backgroundColor: formData.kioskMode ? '#f0f4ff' : '#f8f9fa', 
-                          borderColor: formData.kioskMode ? '#4f46e5' : '#e9ecef',
+                          borderColor: formData.kioskMode ? '#28a745' : '#e9ecef',
                           borderWidth: '2px',
                           transition: 'all 0.3s ease'
                         }}>
@@ -1310,20 +1310,20 @@ export default function ExamWindowsPage() {
                                     style={{ 
                                       width: '3rem', 
                                       height: '1.5rem',
-                                      backgroundColor: formData.kioskMode ? '#4f46e5' : '#6c757d',
-                                      borderColor: formData.kioskMode ? '#4f46e5' : '#6c757d'
+                                      backgroundColor: formData.kioskMode ? '#28a745' : '#6c757d',
+                                      borderColor: formData.kioskMode ? '#28a745' : '#6c757d'
                                     }}
                                   />
                                 </div>
                                 <div>
                                   <label className="form-check-label mb-0" htmlFor="kioskMode" style={{ fontWeight: '600', fontSize: '1rem', cursor: 'pointer' }}>
                                     <i className={`fas ${formData.kioskMode ? 'fa-desktop text-primary' : 'fa-laptop text-secondary'} me-2`}></i>
-                                    {formData.kioskMode ? 'Modo Kiosko activado' : 'Modo Normal'}
+                                    {formData.kioskMode ? 'Modo Pantalla Completa activado' : 'Modo Normal'}
                                   </label>
                                   <div style={{ fontSize: '0.85rem', color: '#6c757d', marginTop: '0.25rem' }}>
                                     {formData.kioskMode 
-                                      ? 'SEB se ejecutará en modo kiosko (pantalla completa, sin controles del navegador)'
-                                      : 'SEB se ejecutará en modo ventana normal'
+                                      ? 'SEB se ejecutará en modo pantalla completa, sin barra de tareas'
+                                      : 'SEB se ejecutará en modo pantalla normal, permitiendo al alumno ver la barra de tareas'
                                     }
                                   </div>
                                 </div>
