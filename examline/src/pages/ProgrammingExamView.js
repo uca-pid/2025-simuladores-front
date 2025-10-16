@@ -669,14 +669,6 @@ const ProgrammingExamView = () => {
                   {/* Sección de controles - derecha */}
                   <div className="editor-controls">
                     <button 
-                      className="btn btn-sm btn-outline-light me-2"
-                      onClick={() => saveCurrentFile()}
-                      disabled={fileOperationLoading}
-                    >
-                      <i className="fas fa-save me-1"></i>
-                      Guardar
-                    </button>
-                    <button 
                       className="btn btn-sm btn-outline-info"
                       onClick={() => setShowFileManager(true)}
                     >
@@ -703,11 +695,6 @@ const ProgrammingExamView = () => {
                       parameterHints: {
                         enabled: exam.intellisenseHabilitado
                       }
-                    }}
-                    onMount={(editor, monaco) => {
-                      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-                        handleManualSave();
-                      });
                     }}
                   />
                 </div>
