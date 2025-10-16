@@ -25,8 +25,19 @@ const ProgrammingExamView = () => {
   const [newFileName, setNewFileName] = useState('');
   const [fileOperationLoading, setFileOperationLoading] = useState(false);
   
-  // Estado para el modal de confirmación
+  // 💾 Caché en memoria para mantener cambios no guardados
+  const [fileCache, setFileCache] = useState({});
+  
+  // 📝 Registro de archivos con cambios sin guardar
+  const [unsavedFiles, setUnsavedFiles] = useState(new Set());
+  
+  // 🔀 Estado para drag & drop de tabs
+  const [draggedTab, setDraggedTab] = useState(null);
+  
+  // Estados para modales
   const [showFinishModal, setShowFinishModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [fileToDelete, setFileToDelete] = useState('');
 
   // Obtener windowId de la URL
   const searchParams = new URLSearchParams(location.search);
@@ -161,25 +172,70 @@ const ProgrammingExamView = () => {
       
       if (response.ok) {
         const filesData = await response.json();
-        setFiles(filesData);
         
-        // Si no hay archivos, crear uno por defecto
-        if (filesData.length === 0) {
+        // ✅ Ordenar archivos alfabéticamente para mantener orden consistente
+        const sortedFiles = filesData.sort((a, b) => 
+          a.filename.localeCompare(b.filename)
+        );
+        
+        setFiles(sortedFiles);
+        
+        // 💾 Inicializar el caché con todos los archivos del servidor
+        const initialCache = {};
+        sortedFiles.forEach(file => {
+          initialCache[file.filename] = file.content || '';
+        });
+        setFileCache(initialCache);
+        
+        // Si no hay archivos, crear uno por defecto con el código inicial del examen
+        if (sortedFiles.length === 0) {
           const defaultFileName = `main.${exam?.lenguajeProgramacion === 'python' ? 'py' : 'js'}`;
+          const defaultContent = exam?.codigoInicial || '';
+          
           setCurrentFileName(defaultFileName);
-        } else {
-          // Cargar el primer archivo si no hay uno seleccionado
-          if (!currentFileName || !filesData.find(f => f.filename === currentFileName)) {
-            const firstFile = filesData[0];
-            setCurrentFileName(firstFile.filename);
-            setCode(firstFile.content || '');
+          setCode(defaultContent);
+          
+          // 💾 Crear el archivo por defecto en el servidor
+          try {
+            await fetch(`${API_BASE_URL}/exam-files/${examId}/files`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                filename: defaultFileName,
+                content: defaultContent
+              })
+            });
+            
+            // ✅ Actualizar la lista de archivos y caché inmediatamente
+            setFiles([{
+              filename: defaultFileName,
+              content: defaultContent,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            }]);
+            
+            setFileCache({ [defaultFileName]: defaultContent });
+            
+            console.log(`Archivo por defecto creado: ${defaultFileName}`);
+          } catch (error) {
+            console.error('Error creando archivo por defecto:', error);
           }
+        } else {
+          // Cargar el primer archivo
+          const firstFile = sortedFiles[0];
+          setCurrentFileName(firstFile.filename);
+          setCode(firstFile.content || '');
+          
+          console.log(`Archivos cargados del servidor:`, sortedFiles.map(f => f.filename));
         }
       }
     } catch (error) {
       console.error('Error fetching files:', error);
     }
-  }, [examId, exam, currentFileName]);
+  }, [examId, exam]);
 
   // Función para guardar código automáticamente
   const saveCode = useCallback(async (currentCode) => {
@@ -222,12 +278,23 @@ const ProgrammingExamView = () => {
     try {
       setLoading(true);
       
-      // Primero guardar el código actual con un nombre por defecto
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const defaultFileName = `FINAL_SUBMISSION_${timestamp}.${exam?.lenguajeProgramacion === 'python' ? 'py' : 'js'}`;
+      // 💾 Guardar TODOS los archivos con cambios en el caché
+      console.log('Guardando todos los archivos antes de finalizar...');
+      const filesToSave = Object.keys(fileCache);
       
-      // Guardar archivo final
-      await saveCurrentFile(defaultFileName, code);
+      for (const filename of filesToSave) {
+        const content = fileCache[filename];
+        console.log(`Guardando archivo: ${filename}`);
+        await saveCurrentFile(filename, content);
+      }
+      
+      // También guardar el archivo actual si no está en el caché
+      if (code && currentFileName && fileCache[currentFileName] === undefined) {
+        console.log(`Guardando archivo actual: ${currentFileName}`);
+        await saveCurrentFile(currentFileName, code);
+      }
+      
+      console.log('Todos los archivos guardados. Finalizando examen...');
       
       const token = localStorage.getItem('token');
       const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
@@ -289,14 +356,46 @@ const ProgrammingExamView = () => {
 
   // Manejar cambios en el editor con debounce para reducir actualizaciones
   const handleEditorChange = useCallback((value) => {
-    setCode(value || '');
-  }, []);
+    const newValue = value || '';
+    setCode(newValue);
+    
+    // 💾 Actualizar el caché en tiempo real
+    if (currentFileName) {
+      setFileCache(prev => ({
+        ...prev,
+        [currentFileName]: newValue
+      }));
+      
+      // 📝 Marcar archivo como no guardado
+      setUnsavedFiles(prev => new Set(prev).add(currentFileName));
+    }
+  }, [currentFileName]);
 
-  // Función para forzar guardado manual
-  const handleManualSave = () => {
-    saveCurrentFile();
+  // Función para forzar guardado manual - guarda TODOS los archivos
+  const handleManualSave = async () => {
+    try {
+      setSaving(true);
+      
+      // 💾 Guardar TODOS los archivos del caché
+      console.log('Guardando todos los archivos...');
+      const filesToSave = Object.keys(fileCache);
+      
+      for (const filename of filesToSave) {
+        const content = fileCache[filename];
+        console.log(`Guardando archivo: ${filename}`);
+        await saveCurrentFile(filename, content);
+      }
+      
+      // ✅ Limpiar marca de archivos sin guardar
+      setUnsavedFiles(new Set());
+      
+      console.log('Todos los archivos guardados correctamente');
+    } catch (error) {
+      console.error('Error guardando archivos:', error);
+    } finally {
+      setSaving(false);
+    }
   };
-
 
 
   const saveCurrentFile = useCallback(async (filename = currentFileName, content = code) => {
@@ -320,54 +419,92 @@ const ProgrammingExamView = () => {
       });
       
       setLastSaved(new Date());
-      await fetchFiles(); // Actualizar lista de archivos
+      
+      // 💾 Actualizar el caché con el contenido guardado
+      setFileCache(prev => ({
+        ...prev,
+        [filename]: content
+      }));
+      
+      // 📂 Solo actualizar la lista de archivos sin cambiar el archivo actual
+      // No llamamos a fetchFiles() para evitar que cambie al primer archivo
+      const response = await fetch(`${API_BASE_URL}/exam-files/${examId}/files`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const filesData = await response.json();
+        const sortedFiles = filesData.sort((a, b) => 
+          a.filename.localeCompare(b.filename)
+        );
+        setFiles(sortedFiles);
+        console.log('Lista de archivos actualizada sin cambiar archivo actual');
+      }
     } catch (error) {
       console.error('Error saving file:', error);
       setError('Error guardando archivo');
     } finally {
       setFileOperationLoading(false);
     }
-  }, [examId, currentFileName, code, attempt, fetchFiles]);
+  }, [examId, currentFileName, code, attempt]);
 
-  const loadFile = useCallback(async (filename) => {
-    try {
-      setFileOperationLoading(true);
-      const token = localStorage.getItem('token');
-      const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
-      
-      const response = await fetch(`${API_BASE_URL}/exam-files/${examId}/files/${filename}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (response.ok) {
-        const fileData = await response.json();
-        setCode(fileData.content || '');
-        setCurrentFileName(filename);
-      }
-    } catch (error) {
-      console.error('Error loading file:', error);
-      setError('Error cargando archivo');
-    } finally {
-      setFileOperationLoading(false);
+  const loadFile = useCallback((filename) => {
+    // 💾 Guardar el contenido actual en el caché ANTES de cambiar
+    if (currentFileName && code !== undefined) {
+      setFileCache(prev => ({
+        ...prev,
+        [currentFileName]: code
+      }));
     }
-  }, [examId]);
+    
+    // � Cargar desde el caché (ya inicializado en fetchFiles)
+    setFileCache(prev => {
+      const content = prev[filename] || '';
+      setCode(content);
+      setCurrentFileName(filename);
+      console.log(`Cargando ${filename} desde caché`);
+      return prev;
+    });
+  }, [currentFileName, code]);
 
-  const deleteFile = useCallback(async (filename) => {
-    if (!window.confirm(`¿Estás seguro de eliminar el archivo "${filename}"?`)) return;
+  const requestDeleteFile = useCallback((filename) => {
+    setFileToDelete(filename);
+    setShowDeleteModal(true);
+  }, []);
+
+  const deleteFile = useCallback(async () => {
+    if (!fileToDelete) return;
     
     try {
       setFileOperationLoading(true);
       const token = localStorage.getItem('token');
       const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
       
-      await fetch(`${API_BASE_URL}/exam-files/${examId}/files/${filename}`, {
+      await fetch(`${API_BASE_URL}/exam-files/${examId}/files/${fileToDelete}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
+      // Eliminar del cache
+      setFileCache(prevCache => {
+        const newCache = { ...prevCache };
+        delete newCache[fileToDelete];
+        return newCache;
+      });
+      
+      // Eliminar de unsavedFiles
+      setUnsavedFiles(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(fileToDelete);
+        return newSet;
+      });
+      
+      // Actualizar lista de archivos sin llamar a fetchFiles() para no perder cambios
+      const remainingFiles = files.filter(f => f.filename !== fileToDelete);
+      setFiles(remainingFiles);
+      
       // Si eliminamos el archivo actual, cambiar a otro
-      if (filename === currentFileName) {
-        const remainingFiles = files.filter(f => f.filename !== filename);
+      if (fileToDelete === currentFileName) {
         if (remainingFiles.length > 0) {
           await loadFile(remainingFiles[0].filename);
         } else {
@@ -377,37 +514,94 @@ const ProgrammingExamView = () => {
         }
       }
       
-      await fetchFiles(); // Actualizar lista
+      // Limpiar estado del modal
+      setShowDeleteModal(false);
+      setFileToDelete('');
     } catch (error) {
       console.error('Error deleting file:', error);
       setError('Error eliminando archivo');
     } finally {
       setFileOperationLoading(false);
     }
-  }, [examId, currentFileName, files, exam?.lenguajeProgramacion, fetchFiles, loadFile]);
+  }, [examId, currentFileName, files, exam?.lenguajeProgramacion, loadFile, fileToDelete]);
 
   const createNewFile = useCallback(async () => {
-    if (!newFileName.trim()) {
-      setError('Ingresa un nombre para el archivo');
-      return;
-    }
+    // La validación visual ya previene estos casos, pero por seguridad mantenemos las validaciones
+    if (!newFileName.trim()) return;
     
-    // Validar extensión según el lenguaje
+    const invalidChars = /[<>:"/\\|?*]/;
+    if (invalidChars.test(newFileName)) return;
+    
     const extension = exam?.lenguajeProgramacion === 'python' ? '.py' : '.js';
     const fileName = newFileName.endsWith(extension) ? newFileName : `${newFileName}${extension}`;
     
-    // Verificar que no existe
-    if (files.find(f => f.filename === fileName)) {
-      setError('Ya existe un archivo con ese nombre');
-      return;
-    }
+    if (files.find(f => f.filename.toLowerCase() === fileName.toLowerCase())) return;
     
-    await saveCurrentFile(fileName, '// Nuevo archivo\n');
-    setCurrentFileName(fileName);
-    setCode('// Nuevo archivo\n');
-    setNewFileName('');
-    setShowFileManager(false);
-  }, [newFileName, exam?.lenguajeProgramacion, files, saveCurrentFile]);
+    // Si llegamos aquí, el archivo es válido para crear
+    try {
+      await saveCurrentFile(fileName, '// Nuevo archivo\n');
+      setCurrentFileName(fileName);
+      setCode('// Nuevo archivo\n');
+      setNewFileName('');
+      setShowFileManager(false);
+    } catch (error) {
+      console.error('Error al crear archivo:', error);
+      // El error será manejado por la UI visual, no necesitamos modal
+    }
+  }, [newFileName, exam?.lenguajeProgramacion, files, saveCurrentFile, setCode, setCurrentFileName]);
+
+  // 🔀 Funciones para drag & drop de tabs
+  const handleDragStart = (e, index) => {
+    setDraggedTab(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.currentTarget.style.opacity = '0.5';
+  };
+
+  const handleDragEnd = (e) => {
+    e.currentTarget.style.opacity = '1';
+    setDraggedTab(null);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e, dropIndex) => {
+    e.preventDefault();
+    
+    if (draggedTab === null || draggedTab === dropIndex) return;
+    
+    const newFiles = [...files];
+    const draggedFile = newFiles[draggedTab];
+    
+    // Remover el archivo de su posición original
+    newFiles.splice(draggedTab, 1);
+    // Insertar en la nueva posición
+    newFiles.splice(dropIndex, 0, draggedFile);
+    
+    setFiles(newFiles);
+    console.log(`Movido ${draggedFile.filename} de posición ${draggedTab} a ${dropIndex}`);
+  };
+
+  // ⌨️ Atajo de teclado Ctrl+S para guardar
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      // Ctrl+S o Cmd+S (para Mac)
+      if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+        event.preventDefault(); // Prevenir el diálogo de guardar del navegador
+        handleManualSave();
+      }
+    };
+
+    // Agregar el listener
+    window.addEventListener('keydown', handleKeyDown);
+
+    // Cleanup: remover el listener cuando el componente se desmonte
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleManualSave]);
 
   if (loading) {
     return (
@@ -513,16 +707,25 @@ const ProgrammingExamView = () => {
                   <button 
                     className="btn-action btn-save" 
                     onClick={handleManualSave}
-                    disabled={saving}
+                    disabled={saving || fileOperationLoading}
                   >
-                    <i className="fas fa-save me-2"></i>
-                    Guardar código
+                    {saving ? (
+                      <>
+                        <i className="fas fa-spinner fa-spin me-2"></i>
+                        Guardando...
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-save me-2"></i>
+                        Guardar código
+                      </>
+                    )}
                   </button>
                   
                   <button 
                     className="btn-action btn-finish" 
                     onClick={handleFinishExamClick}
-                    disabled={loading}
+                    disabled={loading || saving}
                   >
                     <i className="fas fa-check-circle me-2"></i>
                     Finalizar examen
@@ -535,43 +738,145 @@ const ProgrammingExamView = () => {
             <div className="col-lg-8 col-md-12 programming-editor-panel">
               <div className="editor-container">
                 <div className="editor-header">
-                  <div className="editor-tabs">
-                    {files.map((file, index) => (
-                      <div 
-                        key={file.filename}
-                        className={`editor-tab ${file.filename === currentFileName ? 'active' : ''}`}
-                        onClick={() => loadFile(file.filename)}
-                      >
-                        <i className="fas fa-file-code me-2"></i>
-                        {file.filename}
-                        <button
-                          className="file-close-btn ms-2"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteFile(file.filename);
-                          }}
+                  {/* Sección de navegación de archivos - izquierda */}
+                  <div className="editor-navigation-section">
+                    {files.length <= 6 ? (
+                      /* Pestañas normales para pocos archivos */
+                      <div className="editor-tabs">
+                        {files.map((file, index) => (
+                          <div 
+                            key={file.filename}
+                            className={`editor-tab ${file.filename === currentFileName ? 'active' : ''} ${draggedTab === index ? 'dragging' : ''}`}
+                            onClick={() => loadFile(file.filename)}
+                            draggable="true"
+                            onDragStart={(e) => handleDragStart(e, index)}
+                            onDragEnd={handleDragEnd}
+                            onDragOver={handleDragOver}
+                            onDrop={(e) => handleDrop(e, index)}
+                          >
+                            <i className="fas fa-grip-vertical me-2" style={{opacity: 0.5, cursor: 'grab'}}></i>
+                            <i className="fas fa-file-code me-2"></i>
+                            <span className="tab-filename">{file.filename}</span>
+                            {unsavedFiles.has(file.filename) && (
+                              <span className="unsaved-indicator" title="Cambios sin guardar">●</span>
+                            )}
+                            <button
+                              className="file-close-btn ms-2"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                requestDeleteFile(file.filename);
+                              }}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                        <button 
+                          className="editor-tab new-file-tab"
+                          onClick={() => setShowFileManager(true)}
                         >
-                          ×
+                          <i className="fas fa-plus me-2"></i>
+                          Nuevo
                         </button>
                       </div>
-                    ))}
-                    <button 
-                      className="editor-tab new-file-tab"
-                      onClick={() => setShowFileManager(true)}
-                    >
-                      <i className="fas fa-plus me-2"></i>
-                      Nuevo
-                    </button>
+                    ) : (
+                      /* Navegación compacta para muchos archivos */
+                      <div className="editor-navigation-compact">
+                        <div className="editor-nav-controls">
+                          <select
+                            value={currentFileName}
+                            onChange={(e) => loadFile(e.target.value)}
+                            className="file-selector-dropdown"
+                          >
+                            {files.map((file, index) => (
+                              <option key={file.filename} value={file.filename}>
+                                {index + 1}. {file.filename}
+                              </option>
+                            ))}
+                          </select>
+                          
+                          <div className="nav-buttons">
+                            <button
+                              onClick={() => {
+                                const currentIndex = files.findIndex(f => f.filename === currentFileName);
+                                const prevIndex = Math.max(0, currentIndex - 1);
+                                if (prevIndex !== currentIndex) {
+                                  loadFile(files[prevIndex].filename);
+                                }
+                              }}
+                              disabled={files.findIndex(f => f.filename === currentFileName) === 0}
+                              className="nav-btn prev-btn"
+                            >
+                              <i className="fas fa-chevron-left"></i>
+                            </button>
+                            
+                            <button
+                              onClick={() => {
+                                const currentIndex = files.findIndex(f => f.filename === currentFileName);
+                                const nextIndex = Math.min(files.length - 1, currentIndex + 1);
+                                if (nextIndex !== currentIndex) {
+                                  loadFile(files[nextIndex].filename);
+                                }
+                              }}
+                              disabled={files.findIndex(f => f.filename === currentFileName) === files.length - 1}
+                              className="nav-btn next-btn"
+                            >
+                              <i className="fas fa-chevron-right"></i>
+                            </button>
+                            
+                            <button 
+                              className="nav-btn new-file-btn"
+                              onClick={() => setShowFileManager(true)}
+                            >
+                              <i className="fas fa-plus"></i>
+                            </button>
+                          </div>
+                        </div>
+                        
+                        {/* Pestañas con scroll para visualización */}
+                        <div className="editor-tabs-scroll">
+                          <div className="editor-tabs-container">
+                            {files.map((file, index) => (
+                              <div 
+                                key={file.filename}
+                                className={`editor-tab-compact ${file.filename === currentFileName ? 'active' : ''} ${draggedTab === index ? 'dragging' : ''}`}
+                                onClick={() => loadFile(file.filename)}
+                                draggable="true"
+                                onDragStart={(e) => handleDragStart(e, index)}
+                                onDragEnd={handleDragEnd}
+                                onDragOver={handleDragOver}
+                                onDrop={(e) => handleDrop(e, index)}
+                              >
+                                <i className="fas fa-grip-vertical" style={{fontSize: '0.7rem', opacity: 0.5, cursor: 'grab', marginRight: '2px'}}></i>
+                                <i className="fas fa-file-code"></i>
+                                <span className="tab-filename-short">
+                                  {file.filename.length > 10 ? file.filename.substring(0, 10) + '...' : file.filename}
+                                </span>
+                                {unsavedFiles.has(file.filename) && (
+                                  <span className="unsaved-indicator" title="Cambios sin guardar">●</span>
+                                )}
+                                <button
+                                  className="file-close-btn-compact"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    requestDeleteFile(file.filename);
+                                  }}
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
+
+                  {/* Línea divisoria vertical */}
+                  <div className="editor-divider"></div>
+
+                  {/* Sección de controles - derecha */}
                   <div className="editor-controls">
-                    <button 
-                      className="btn btn-sm btn-outline-light me-2"
-                      onClick={() => saveCurrentFile()}
-                      disabled={fileOperationLoading}
-                    >
-                      <i className="fas fa-save me-1"></i>
-                      Guardar
-                    </button>
                     <button 
                       className="btn btn-sm btn-outline-info"
                       onClick={() => setShowFileManager(true)}
@@ -599,11 +904,6 @@ const ProgrammingExamView = () => {
                       parameterHints: {
                         enabled: exam.intellisenseHabilitado
                       }
-                    }}
-                    onMount={(editor, monaco) => {
-                      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-                        handleManualSave();
-                      });
                     }}
                   />
                 </div>
@@ -780,21 +1080,67 @@ const ProgrammingExamView = () => {
           border-bottom: 1px solid #3e3e3e;
           padding: 0;
           display: flex;
-          justify-content: space-between;
+          align-items: stretch;
+          height: 60px; /* Altura fija */
+          position: relative;
+        }
+
+        /* Sección de navegación de archivos - izquierda */
+        .editor-navigation-section {
+          flex: 1;
+          display: flex;
           align-items: center;
+          padding: 0 15px;
+          overflow: hidden;
+        }
+
+        /* Línea divisoria vertical */
+        .editor-divider {
+          width: 1px;
+          background: #3e3e3e;
+          height: 100%;
+          flex-shrink: 0;
         }
 
         .editor-tabs {
           display: flex;
+          overflow-x: auto;
+          scrollbar-width: thin;
+          height: 60px; /* Altura fija igual al header */
+          align-items: center;
+        }
+
+        .editor-tabs::-webkit-scrollbar {
+          height: 3px;
+        }
+
+        .editor-tabs::-webkit-scrollbar-track {
+          background: #2d2d2d;
+        }
+
+        .editor-tabs::-webkit-scrollbar-thumb {
+          background: #555;
+          border-radius: 3px;
         }
 
         .editor-tab {
-          padding: 12px 20px;
+          padding: 12px 16px;
           background: #1e1e1e;
           color: #cccccc;
           border-right: 1px solid #3e3e3e;
-          font-size: 0.9rem;
+          font-size: 0.85rem;
           font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          flex-shrink: 0;
+          display: flex;
+          align-items: center;
+          min-width: 120px;
+          max-width: 200px;
+        }
+
+        .editor-tab:hover:not(.active) {
+          background: #2d2d2d;
         }
 
         .editor-tab.active {
@@ -802,8 +1148,216 @@ const ProgrammingExamView = () => {
           color: white;
         }
 
+        .tab-filename {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          flex: 1;
+        }
+
+        /* Indicador de cambios sin guardar (círculo blanco como VS Code) */
+        .unsaved-indicator {
+          color: white;
+          font-size: 16px;
+          margin-left: 6px;
+          margin-right: -2px;
+          line-height: 1;
+          opacity: 0.9;
+          animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+          0%, 100% {
+            opacity: 0.9;
+          }
+          50% {
+            opacity: 0.5;
+          }
+        }
+
+        .editor-tab.active .unsaved-indicator {
+          color: white;
+        }
+
+        .editor-tab:not(.active) .unsaved-indicator {
+          color: #cccccc;
+        }
+
+        /* Estilos para drag & drop de tabs */
+        .editor-tab.dragging {
+          opacity: 0.5;
+        }
+
+        .tab-grip {
+          margin-right: 8px;
+          color: #666;
+          font-size: 12px;
+          cursor: grab;
+        }
+
+        .editor-tab.dragging .tab-grip {
+          cursor: grabbing;
+        }
+
+        .editor-tab:hover .tab-grip {
+          color: #888;
+        }
+
+        /* Navegación compacta para muchos archivos */
+        .editor-navigation-compact {
+          display: flex;
+          flex-direction: column;
+          width: 100%;
+          height: 60px; /* Altura fija igual al header */
+          background: #2d2d2d;
+        }
+
+        .editor-nav-controls {
+          display: flex;
+          align-items: center;
+          padding: 6px 8px;
+          gap: 8px;
+          background: #252526;
+          border-bottom: 1px solid #3e3e3e;
+          height: 30px; /* Altura fija para controles */
+          flex-shrink: 0;
+        }
+
+        .file-selector-dropdown {
+          flex: 1;
+          padding: 6px 8px;
+          background: #3c3c3c;
+          border: 1px solid #555;
+          border-radius: 4px;
+          color: #cccccc;
+          font-size: 0.85rem;
+          min-width: 200px;
+        }
+
+        .file-selector-dropdown:focus {
+          outline: none;
+          border-color: #007acc;
+        }
+
+        .nav-buttons {
+          display: flex;
+          gap: 4px;
+        }
+
+        .nav-btn {
+          padding: 6px 8px;
+          background: #3c3c3c;
+          border: 1px solid #555;
+          border-radius: 4px;
+          color: #cccccc;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          font-size: 0.8rem;
+        }
+
+        .nav-btn:hover:not(:disabled) {
+          background: #007acc;
+          border-color: #007acc;
+        }
+
+        .nav-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .new-file-btn {
+          background: #0e639c !important;
+          border-color: #0e639c !important;
+        }
+
+        .editor-tabs-scroll {
+          flex: 1;
+          overflow-x: auto;
+          padding: 4px 0;
+          scrollbar-width: thin;
+          height: 30px; /* Altura fija para pestañas */
+          display: flex;
+          align-items: center;
+        }
+
+        .editor-tabs-scroll::-webkit-scrollbar {
+          height: 3px;
+        }
+
+        .editor-tabs-scroll::-webkit-scrollbar-track {
+          background: #2d2d2d;
+        }
+
+        .editor-tabs-scroll::-webkit-scrollbar-thumb {
+          background: #555;
+          border-radius: 3px;
+        }
+
+        .editor-tabs-container {
+          display: flex;
+          gap: 2px;
+          padding: 0 8px;
+          min-width: max-content;
+        }
+
+        .editor-tab-compact {
+          padding: 6px 10px;
+          background: #1e1e1e;
+          color: #cccccc;
+          border-radius: 4px;
+          font-size: 0.75rem;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          flex-shrink: 0;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          min-width: 80px;
+          max-width: 120px;
+        }
+
+        .editor-tab-compact:hover:not(.active) {
+          background: #2d2d2d;
+        }
+
+        .editor-tab-compact.active {
+          background: #007acc;
+          color: white;
+        }
+
+        .tab-filename-short {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          flex: 1;
+        }
+
+        .file-close-btn-compact {
+          background: none;
+          border: none;
+          color: inherit;
+          font-size: 12px;
+          cursor: pointer;
+          padding: 2px;
+          margin-left: 4px;
+          border-radius: 2px;
+          transition: all 0.2s;
+          opacity: 0.7;
+        }
+
+        .file-close-btn-compact:hover {
+          background: rgba(255, 255, 255, 0.1);
+          opacity: 1;
+        }
+
         .editor-controls {
-          padding: 0 20px;
+          padding: 0 15px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex-shrink: 0; /* No se comprime */
+          min-width: fit-content; /* Mantiene su tamaño mínimo */
         }
 
         .editor-hint {
@@ -829,6 +1383,53 @@ const ProgrammingExamView = () => {
           
           .exam-title {
             font-size: 1.4rem;
+          }
+          
+          .editor-nav-controls {
+            flex-wrap: wrap;
+            gap: 6px;
+          }
+          
+          .file-selector-dropdown {
+            min-width: 150px;
+          }
+          
+          .nav-buttons {
+            flex-shrink: 0;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .editor-navigation-compact {
+            font-size: 0.8rem;
+          }
+          
+          .editor-nav-controls {
+            padding: 6px 8px;
+          }
+          
+          .file-selector-dropdown {
+            min-width: 120px;
+            font-size: 0.8rem;
+          }
+          
+          .nav-btn {
+            padding: 5px 6px;
+            font-size: 0.75rem;
+          }
+          
+          .editor-tab {
+            padding: 10px 12px;
+            font-size: 0.8rem;
+            min-width: 100px;
+            max-width: 150px;
+          }
+          
+          .editor-tab-compact {
+            min-width: 70px;
+            max-width: 100px;
+            font-size: 0.7rem;
+            padding: 4px 6px;
           }
         }
       `}</style>
@@ -857,7 +1458,16 @@ const ProgrammingExamView = () => {
                 <div className="input-group">
                   <input
                     type="text"
-                    className="form-control"
+                    className={`form-control ${
+                      newFileName.trim() && 
+                      (/[<>:"/\\|?*]/.test(newFileName) || 
+                       files.find(f => {
+                         const extension = exam?.lenguajeProgramacion === 'python' ? '.py' : '.js';
+                         const fileName = newFileName.endsWith(extension) ? newFileName : `${newFileName}${extension}`;
+                         return f.filename.toLowerCase() === fileName.toLowerCase();
+                       })) 
+                      ? 'is-invalid' : ''
+                    }`}
                     placeholder={`nombre.${exam?.lenguajeProgramacion === 'python' ? 'py' : 'js'}`}
                     value={newFileName}
                     onChange={(e) => setNewFileName(e.target.value)}
@@ -866,11 +1476,44 @@ const ProgrammingExamView = () => {
                   <button 
                     className="btn btn-primary"
                     onClick={createNewFile}
-                    disabled={!newFileName.trim()}
+                    disabled={
+                      !newFileName.trim() || 
+                      /[<>:"/\\|?*]/.test(newFileName) ||
+                      files.find(f => {
+                        const extension = exam?.lenguajeProgramacion === 'python' ? '.py' : '.js';
+                        const fileName = newFileName.endsWith(extension) ? newFileName : `${newFileName}${extension}`;
+                        return f.filename.toLowerCase() === fileName.toLowerCase();
+                      })
+                    }
                   >
                     <i className="fas fa-plus"></i>
                   </button>
                 </div>
+                {/* Mensaje de ayuda */}
+                {newFileName.trim() && (
+                  <div className="form-text mt-1">
+                    {/[<>:"/\\|?*]/.test(newFileName) ? (
+                      <span className="text-danger">
+                        <i className="fas fa-exclamation-triangle me-1"></i>
+                        Caracteres no permitidos: {"< > : \" / \\ | ? *"}
+                      </span>
+                    ) : files.find(f => {
+                      const extension = exam?.lenguajeProgramacion === 'python' ? '.py' : '.js';
+                      const fileName = newFileName.endsWith(extension) ? newFileName : `${newFileName}${extension}`;
+                      return f.filename.toLowerCase() === fileName.toLowerCase();
+                    }) ? (
+                      <span className="text-danger">
+                        <i className="fas fa-exclamation-triangle me-1"></i>
+                        Ya existe un archivo con este nombre
+                      </span>
+                    ) : (
+                      <span className="text-success">
+                        <i className="fas fa-check me-1"></i>
+                        Nombre válido
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
               
               {/* Lista de archivos */}
@@ -906,7 +1549,7 @@ const ProgrammingExamView = () => {
                           </button>
                           <button
                             className="btn btn-sm btn-outline-danger"
-                            onClick={() => deleteFile(file.filename)}
+                            onClick={() => requestDeleteFile(file.filename)}
                           >
                             <i className="fas fa-trash"></i>
                           </button>
@@ -1053,6 +1696,47 @@ const ProgrammingExamView = () => {
         .new-file-tab:hover {
           background: #45a049 !important;
         }
+
+        /* Responsividad para el header fijo */
+        @media (max-width: 768px) {
+          .editor-header {
+            height: 70px; /* Más altura en móviles */
+          }
+
+          .editor-navigation-section {
+            padding: 0 10px;
+          }
+
+          .editor-controls {
+            padding: 0 10px;
+            flex-wrap: wrap;
+          }
+
+          .file-selector-dropdown {
+            min-width: 150px;
+            font-size: 0.8rem;
+          }
+
+          .nav-buttons {
+            gap: 4px;
+          }
+
+          .nav-btn {
+            min-width: 28px;
+            height: 28px;
+            font-size: 0.8rem;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .editor-header {
+            height: 80px; /* Aún más altura en pantallas muy pequeñas */
+          }
+
+          .editor-navigation-compact {
+            height: 80px;
+          }
+        }
       `}</style>
 
       {/* Modal de confirmación para finalizar examen */}
@@ -1064,6 +1748,22 @@ const ProgrammingExamView = () => {
         message="¿Estás seguro de que quieres finalizar el examen? Se guardará automáticamente el código actual. No podrás hacer más cambios después."
         type="confirm"
         confirmText="Finalizar"
+        cancelText="Cancelar"
+        showCancel={true}
+      />
+
+      {/* Modal de confirmación para eliminar archivo */}
+      <Modal
+        show={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setFileToDelete('');
+        }}
+        onConfirm={deleteFile}
+        title="Eliminar Archivo"
+        message={`¿Estás seguro de que quieres eliminar el archivo "${fileToDelete}"? Esta acción no se puede deshacer.`}
+        type="confirm"
+        confirmText="Eliminar"
         cancelText="Cancelar"
         showCancel={true}
       />

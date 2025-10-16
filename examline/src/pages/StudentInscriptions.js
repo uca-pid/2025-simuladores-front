@@ -157,6 +157,24 @@ export default function StudentInscriptionsPage({
     loadData();
   }, [user, navigate, loadData]);
 
+  useEffect(() => {
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === 'visible') {
+      if (sessionStorage.getItem('openedSEB') === 'true') {
+        sessionStorage.removeItem('openedSEB'); // limpiamos la bandera
+        window.location.reload();
+      }
+    }
+  };
+
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+
+  return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+}, []);
+
+
+
+
   const closeModal = () => {
     setModal(prev => ({ ...prev, show: false }));
   };
@@ -180,8 +198,7 @@ const isRunningSEB = () => {
   return false;
 };
 
-const openExam = (examId, windowId, token, window) => {
-  const backendUrl = `${API_BASE_URL}/exam-start/download/${examId}/${windowId}/${token}`;
+const openExam = async (examId, windowId, token, window) => {
   const requiresSEB = window?.usaSEB || false;
   const examType = window?.exam?.tipo || "normal";
   const params = `windowId=${windowId}`;
@@ -194,24 +211,44 @@ const openExam = (examId, windowId, token, window) => {
     }
   };
 
-  if (requiresSEB) {
-    // Si requiere SEB
-    if (isRunningSEB()) {
-      goToExam();
-    } else {
-      // Descargar archivo .seb
-      const link = document.createElement("a");
-      link.href = backendUrl;
-      link.download = `examen_${examId}.seb`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-  } else {
-    // Si NO requiere SEB
+  if (!requiresSEB) {
+    // Si no requiere SEB
     goToExam();
+    return;
+  }
+
+  sessionStorage.setItem('openedSEB', 'true');
+
+  if (isRunningSEB()) {
+    // Si ya está corriendo SEB
+    goToExam();
+    return;
+  }
+
+  try {
+    // 1️⃣ Generar el .seb en el backend
+    const res = await fetch(
+      `${API_BASE_URL}/exam-start/download/${examId}/${windowId}/${token}`
+    );
+    const data = await res.json();
+
+    if (!data.sebUrl) {
+      console.error("No se pudo generar el .seb");
+      return;
+    }
+
+    // 2️⃣ Crear un <a> invisible con seb:// y hacer click
+    const link = document.createElement("a");
+    link.href = data.sebUrl; // seb://localhost:4000/examenes/examen_1.seb
+    // link.target = "_blank";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } catch (error) {
+    console.error("Error generando o abriendo el .seb:", error);
   }
 };
+
 
 
   const handleFilterChange = (e) => {
@@ -527,7 +564,12 @@ const openExam = (examId, windowId, token, window) => {
                             <div className="exam-info-item">
                               <i className="fas fa-shield-alt text-warning"></i>
                               <span><strong>Seguridad:</strong> 
-                                <span className="ms-1 badge bg-warning text-dark">
+                                <span className="ms-1 badge text-white" style={{
+                                  backgroundColor: '#ff8c00',
+                                  fontWeight: 'bold',
+                                  padding: '0.35rem 0.6rem',
+                                  fontSize: '0.75rem'
+                                }}>
                                   🔒 Requiere Safe Exam Browser
                                 </span>
                               </span>
@@ -582,6 +624,7 @@ const openExam = (examId, windowId, token, window) => {
                             >
                               <i className="fas fa-user-plus me-2"></i>
                               Inscribirse
+                              {window.usaSEB && <i className="fas fa-shield-alt ms-2"></i>}
                             </button>
                           )}
                         </div>
@@ -715,13 +758,31 @@ const openExam = (examId, windowId, token, window) => {
                               </button>
                             </div>
                           ) : canTake ? (
-                            <button 
-                              className="modern-btn modern-btn-primary w-100"
-                              onClick={() => openExam(window.examId, window.id, token, window)}
-                            >
-                              <i className="fas fa-play me-2"></i>
-                              {window.exam.tipo === 'programming' ? 'Programar' : 'Rendir Examen'}
-                            </button>
+                            <div className="d-grid gap-2">
+                              {window.usaSEB && (
+                                <div className="alert alert-warning d-flex align-items-center p-2 mb-2" style={{
+                                  fontSize: '0.85rem',
+                                  border: '1px solid #ffc107',
+                                  backgroundColor: '#fff3cd',
+                                  borderRadius: '8px'
+                                }}>
+                                  <i className="fas fa-shield-alt text-warning me-2" style={{ fontSize: '1.1rem' }}></i>
+                                  <div>
+                                    <strong>⚠️ Requiere Safe Exam Browser</strong>
+                                    <br />
+                                    <small>Este examen se abrirá automáticamente en SEB para mayor seguridad.</small>
+                                  </div>
+                                </div>
+                              )}
+                              <button 
+                                className="modern-btn modern-btn-primary w-100"
+                                onClick={() => openExam(window.examId, window.id, token, window)}
+                              >
+                                <i className="fas fa-play me-2"></i>
+                                {window.exam.tipo === 'programming' ? 'Programar' : 'Rendir Examen'}
+                                {window.usaSEB && <i className="fas fa-shield-alt ms-2"></i>}
+                              </button>
+                            </div>
                           ) : window.sinTiempo ? (
                             // Para ventanas sin tiempo, mostrar el estado de habilitación
                             <button className="modern-btn modern-btn-warning w-100" disabled>

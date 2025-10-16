@@ -44,14 +44,14 @@ function App() {
             </StudentRoute>
           } />
           <Route path="/exam-attempt/:examId" element={
-            <StudentRoute>
+            
               <ExamAttempt />
-            </StudentRoute>
+            
           } />
           <Route path="/programming-exam/:examId" element={
-            <StudentRoute>
+            
               <ProgrammingExamView />
-            </StudentRoute>
+           
           } />
           <Route path="/exam-results/:attemptId" element={
             <StudentRoute>

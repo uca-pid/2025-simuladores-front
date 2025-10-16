@@ -109,8 +109,8 @@ const ExamCreator = () => {
     if (tipoExamen === "multiple_choice") {
       if (preguntas.length === 0) {
         showModal(
-          'error',
-          '❌ No se puede publicar el examen',
+          'warning',
+          '⚠️ No se puede publicar el examen',
           'No se puede publicar un examen sin preguntas. Por favor, agrega al menos una pregunta antes de continuar.',
           null,
           false
@@ -120,8 +120,8 @@ const ExamCreator = () => {
     } else if (tipoExamen === "programming") {
       if (!enunciadoProgramacion.trim()) {
         showModal(
-          'error',
-          '❌ No se puede publicar el examen',
+          'warning',
+          '⚠️ No se puede publicar el examen',
           'No se puede publicar un examen de programación sin consigna. Por favor, ingresa el enunciado del problema antes de continuar.',
           null,
           false
@@ -502,7 +502,7 @@ const ExamCreator = () => {
         message={modal.message}
         type={modal.type}
         showCancel={modal.showCancel}
-        confirmText="Entendido"
+        confirmText={(modal.type === 'warning') ? 'Confirmar' : 'Entendido'}
         cancelText="Cancelar"
       />
     </div>

@@ -16,6 +16,7 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
   const [attempt, setAttempt] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedFileIndex, setSelectedFileIndex] = useState(0);
 
   useEffect(() => {
     if (!attemptId || !token) return;
@@ -174,21 +175,295 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
             </div>
           </div>
 
-          {/* Código del estudiante */}
+          {/* Archivos guardados del estudiante */}
           <div className="modern-card mb-4">
             <div className="modern-card-header">
               <h3 className="modern-card-title">
-                <i className="fas fa-code me-2"></i>
-                Tu Solución
+                <i className="fas fa-folder-open me-2"></i>
+                Archivos de tu Solución
               </h3>
             </div>
             <div className="modern-card-body">
-              {attempt.codigoProgramacion ? (
+              {attempt.examFiles && attempt.examFiles.length > 0 ? (
+                <div>
+                  {/* Información de archivos */}
+                  <div className="mb-3 d-flex justify-content-between align-items-center" style={{
+                    padding: '0.75rem 1rem',
+                    background: 'rgba(99, 102, 241, 0.1)',
+                    border: '1px solid rgba(99, 102, 241, 0.2)',
+                    borderRadius: '0.5rem'
+                  }}>
+                    <small style={{ color: '#64748b' }}>
+                      <i className="fas fa-info-circle me-1" style={{ color: '#6366f1' }}></i>
+                      Se encontraron {attempt.examFiles.length} archivo{attempt.examFiles.length !== 1 ? 's' : ''} guardado{attempt.examFiles.length !== 1 ? 's' : ''}
+                    </small>
+                    {attempt.examFiles.length > 6 && (
+                      <span className="many-files-indicator">
+                        <i className="fas fa-layer-group me-1"></i>
+                        Muchos archivos
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Selector de pestañas */}
+                  <div style={{
+                    border: '1px solid #dee2e6',
+                    borderRadius: '0.75rem',
+                    overflow: 'hidden',
+                    background: 'white',
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+                  }}>
+                    {/* Navegación de archivos */}
+                    <div style={{
+                      background: '#f8f9fa',
+                      borderBottom: '1px solid #dee2e6',
+                      padding: '0.5rem'
+                    }}>
+                      {attempt.examFiles.length <= 6 ? (
+                        /* Pestañas normales para pocos archivos */
+                        <div style={{
+                          display: 'flex',
+                          gap: '2px'
+                        }}>
+                          {attempt.examFiles.map((file, index) => (
+                            <button
+                              key={file.id}
+                              onClick={() => setSelectedFileIndex(index)}
+                              style={{
+                                padding: '0.75rem 1rem',
+                                border: selectedFileIndex === index ? 'none' : '1px solid #e2e8f0',
+                                background: selectedFileIndex === index ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'white',
+                                color: selectedFileIndex === index ? 'white' : '#64748b',
+                                cursor: 'pointer',
+                                fontSize: '0.85rem',
+                                fontWeight: selectedFileIndex === index ? '600' : '500',
+                                transition: 'all 0.2s ease',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                borderRadius: '0.375rem',
+                                boxShadow: selectedFileIndex === index ? '0 4px 12px rgba(99, 102, 241, 0.3)' : '0 1px 3px rgba(0, 0, 0, 0.1)',
+                                flex: '1',
+                                minWidth: '0',
+                                justifyContent: 'center'
+                              }}
+                              onMouseEnter={(e) => {
+                                if (selectedFileIndex !== index) {
+                                  e.target.style.background = '#f8fafc';
+                                  e.target.style.borderColor = '#6366f1';
+                                  e.target.style.color = '#6366f1';
+                                }
+                              }}
+                              onMouseLeave={(e) => {
+                                if (selectedFileIndex !== index) {
+                                  e.target.style.background = 'white';
+                                  e.target.style.borderColor = '#e2e8f0';
+                                  e.target.style.color = '#64748b';
+                                }
+                              }}
+                            >
+                              <i className="fas fa-file-code"></i>
+                              <span style={{ 
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                              }}>
+                                {file.filename}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        /* Navegación compacta para muchos archivos */
+                        <div className="row align-items-center">
+                          <div className="col-md-6">
+                            {/* Selector desplegable */}
+                            <select
+                              value={selectedFileIndex}
+                              onChange={(e) => setSelectedFileIndex(parseInt(e.target.value))}
+                              className="form-select form-select-sm"
+                              style={{
+                                fontSize: '0.9rem',
+                                borderRadius: '0.375rem'
+                              }}
+                            >
+                              {attempt.examFiles.map((file, index) => (
+                                <option key={file.id} value={index}>
+                                  {index + 1}. {file.filename}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="col-md-6">
+                            {/* Navegación con botones */}
+                            <div className="d-flex justify-content-end gap-2">
+                              <button
+                                onClick={() => setSelectedFileIndex(Math.max(0, selectedFileIndex - 1))}
+                                disabled={selectedFileIndex === 0}
+                                style={{
+                                  padding: '0.5rem 0.75rem',
+                                  border: selectedFileIndex === 0 ? '1px solid #e2e8f0' : '1px solid #6366f1',
+                                  background: selectedFileIndex === 0 ? '#f8fafc' : 'white',
+                                  color: selectedFileIndex === 0 ? '#94a3b8' : '#6366f1',
+                                  borderRadius: '0.375rem',
+                                  cursor: selectedFileIndex === 0 ? 'not-allowed' : 'pointer',
+                                  transition: 'all 0.2s ease',
+                                  fontSize: '0.85rem',
+                                  fontWeight: '500'
+                                }}
+                              >
+                                <i className="fas fa-chevron-left me-1"></i>
+                                Anterior
+                              </button>
+                              <button
+                                onClick={() => setSelectedFileIndex(Math.min(attempt.examFiles.length - 1, selectedFileIndex + 1))}
+                                disabled={selectedFileIndex === attempt.examFiles.length - 1}
+                                style={{
+                                  padding: '0.5rem 0.75rem',
+                                  border: selectedFileIndex === attempt.examFiles.length - 1 ? '1px solid #e2e8f0' : '1px solid #6366f1',
+                                  background: selectedFileIndex === attempt.examFiles.length - 1 ? '#f8fafc' : 'white',
+                                  color: selectedFileIndex === attempt.examFiles.length - 1 ? '#94a3b8' : '#6366f1',
+                                  borderRadius: '0.375rem',
+                                  cursor: selectedFileIndex === attempt.examFiles.length - 1 ? 'not-allowed' : 'pointer',
+                                  transition: 'all 0.2s ease',
+                                  fontSize: '0.85rem',
+                                  fontWeight: '500'
+                                }}
+                              >
+                                Siguiente
+                                <i className="fas fa-chevron-right ms-1"></i>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Vista de pestañas con scroll para caso intermedio */}
+                      {attempt.examFiles.length > 6 && attempt.examFiles.length <= 12 && (
+                        <div style={{
+                          marginTop: '0.5rem',
+                          overflowX: 'auto',
+                          paddingBottom: '0.25rem'
+                        }}>
+                          <div style={{
+                            display: 'flex',
+                            gap: '2px',
+                            minWidth: 'max-content'
+                          }}>
+                            {attempt.examFiles.map((file, index) => (
+                              <button
+                                key={file.id}
+                                onClick={() => setSelectedFileIndex(index)}
+                                style={{
+                                  padding: '0.5rem 0.75rem',
+                                  border: selectedFileIndex === index ? 'none' : '1px solid #e2e8f0',
+                                  background: selectedFileIndex === index ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'white',
+                                  color: selectedFileIndex === index ? 'white' : '#64748b',
+                                  cursor: 'pointer',
+                                  fontSize: '0.8rem',
+                                  fontWeight: selectedFileIndex === index ? '600' : '500',
+                                  borderRadius: '0.375rem',
+                                  whiteSpace: 'nowrap',
+                                  minWidth: '100px',
+                                  transition: 'all 0.2s ease',
+                                  boxShadow: selectedFileIndex === index ? '0 2px 8px rgba(99, 102, 241, 0.3)' : '0 1px 2px rgba(0, 0, 0, 0.1)'
+                                }}
+                              >
+                                <i className="fas fa-file-code me-1"></i>
+                                {file.filename.length > 12 ? file.filename.substring(0, 12) + '...' : file.filename}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Contenido del archivo seleccionado */}
+                    {attempt.examFiles[selectedFileIndex] && (
+                      <div>
+                        {/* Header del archivo */}
+                        <div style={{
+                          padding: '1rem 1.25rem',
+                          background: '#ffffff',
+                          borderBottom: '1px solid #e9ecef'
+                        }}>
+                          <div className="d-flex justify-content-between align-items-center">
+                            <div>
+                              <h5 style={{
+                                margin: '0 0 0.25rem 0',
+                                color: '#2d3748',
+                                fontWeight: '600',
+                                fontSize: '1.1rem'
+                              }}>
+                                <i className="fas fa-file-code me-2 text-primary"></i>
+                                {attempt.examFiles[selectedFileIndex].filename}
+                              </h5>
+                              <small className="text-muted">
+                                <i className="fas fa-clock me-1"></i>
+                                Última modificación: {new Date(attempt.examFiles[selectedFileIndex].updatedAt).toLocaleString()}
+                              </small>
+                            </div>
+                            <span style={{
+                              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                              color: 'white',
+                              padding: '0.25rem 0.75rem',
+                              borderRadius: '1rem',
+                              fontSize: '0.75rem',
+                              fontWeight: '600'
+                            }}>
+                              Archivo {selectedFileIndex + 1} de {attempt.examFiles.length}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Contenido del código */}
+                        <div>
+                          {attempt.examFiles[selectedFileIndex].content ? (
+                            <pre style={{
+                              whiteSpace: 'pre-wrap',
+                              fontFamily: 'Monaco, Consolas, "Courier New", monospace',
+                              fontSize: '0.9rem',
+                              lineHeight: '1.5',
+                              margin: 0,
+                              padding: '1.5rem',
+                              backgroundColor: '#1e1e1e',
+                              color: '#d4d4d4',
+                              border: 'none',
+                              overflow: 'auto',
+                              maxHeight: '600px',
+                              minHeight: '300px'
+                            }}>
+                              {attempt.examFiles[selectedFileIndex].content}
+                            </pre>
+                          ) : (
+                            <div style={{
+                              padding: '3rem',
+                              textAlign: 'center',
+                              background: '#f8f9fa',
+                              minHeight: '300px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: '#6c757d'
+                            }}>
+                              <i className="fas fa-file-alt" style={{ fontSize: '3rem', marginBottom: '1rem' }}></i>
+                              <h6>Archivo vacío</h6>
+                              <p className="mb-0">Este archivo no tiene contenido</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : attempt.codigoProgramacion ? (
+                /* Fallback al código antiguo si no hay archivos guardados */
                 <div className="code-solution">
                   <div className="code-header mb-2">
                     <small className="text-muted">
                       <i className="fas fa-file-code me-1"></i>
-                      main.{attempt.exam.lenguajeProgramacion === 'python' ? 'py' : 'js'}
+                      Código Final (método anterior)
                     </small>
                   </div>
                   <pre style={{
@@ -213,9 +488,9 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
                   <div className="empty-icon">
                     <i className="fas fa-code"></i>
                   </div>
-                  <h4 className="empty-title">Sin código</h4>
+                  <h4 className="empty-title">Sin archivos</h4>
                   <p className="empty-subtitle">
-                    No se encontró código para este intento
+                    No se encontraron archivos guardados para este intento
                   </p>
                 </div>
               )}
@@ -331,6 +606,102 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
         </div>
       )}
 
+      {/* Estilos adicionales para mejorar la experiencia */}
+      <style>{`
+        /* Scroll horizontal para pestañas */
+        .file-tabs-scroll::-webkit-scrollbar {
+          height: 4px;
+        }
+        
+        .file-tabs-scroll::-webkit-scrollbar-track {
+          background: #f1f1f1;
+          border-radius: 2px;
+        }
+        
+        .file-tabs-scroll::-webkit-scrollbar-thumb {
+          background: #c1c1c1;
+          border-radius: 2px;
+        }
+        
+        .file-tabs-scroll::-webkit-scrollbar-thumb:hover {
+          background: #a8a8a8;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 768px) {
+          .file-navigation-row {
+            flex-direction: column !important;
+            gap: 0.5rem !important;
+          }
+          
+          .file-navigation-row .col-md-6 {
+            width: 100% !important;
+            max-width: 100% !important;
+          }
+          
+          .file-content-pre {
+            font-size: 0.8rem !important;
+            padding: 1rem !important;
+          }
+          
+          .file-selector-dropdown {
+            width: 100% !important;
+          }
+        }
+        
+        @media (max-width: 576px) {
+          .file-content-pre {
+            font-size: 0.75rem !important;
+            padding: 0.75rem !important;
+          }
+          
+          .file-navigation-buttons {
+            justify-content: center !important;
+          }
+          
+          .file-navigation-buttons button {
+            font-size: 0.75rem !important;
+            padding: 0.4rem 0.6rem !important;
+          }
+          
+          .file-tab-compact {
+            min-width: 80px !important;
+            font-size: 0.7rem !important;
+            padding: 0.4rem 0.6rem !important;
+          }
+        }
+        
+        /* Estados de focus y hover mejorados */
+        button:focus {
+          outline: 2px solid #6366f1;
+          outline-offset: -2px;
+        }
+        
+        .file-tab-button:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 8px rgba(99, 102, 241, 0.15) !important;
+        }
+        
+        .file-tab-button.active {
+          transform: translateY(-1px);
+        }
+        
+        /* Animaciones suaves */
+        .file-navigation-container * {
+          transition: all 0.2s ease;
+        }
+        
+        /* Indicador visual para muchos archivos */
+        .many-files-indicator {
+          background: linear-gradient(135deg, #f59e0b, #ef4444);
+          color: white;
+          border-radius: 1rem;
+          padding: 0.25rem 0.75rem;
+          font-size: 0.75rem;
+          font-weight: 600;
+          box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);
+        }
+      `}</style>
 
     </div>
   );
