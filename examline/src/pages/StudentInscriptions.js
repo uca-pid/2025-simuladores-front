@@ -217,36 +217,14 @@ const openExam = async (examId, windowId, token, window) => {
     return;
   }
 
-  sessionStorage.setItem('openedSEB', 'true');
-
+  // Si requiere SEB pero ya está corriendo en SEB, ir directo al examen
   if (isRunningSEB()) {
-    // Si ya está corriendo SEB
     goToExam();
     return;
   }
 
-  try {
-    // 1️⃣ Generar el .seb en el backend
-    const res = await fetch(
-      `${API_BASE_URL}/exam-start/download/${examId}/${windowId}/${token}`
-    );
-    const data = await res.json();
-
-    if (!data.sebUrl) {
-      console.error("No se pudo generar el .seb");
-      return;
-    }
-
-    // 2️⃣ Crear un <a> invisible con seb:// y hacer click
-    const link = document.createElement("a");
-    link.href = data.sebUrl; // seb://localhost:4000/examenes/examen_1.seb
-    // link.target = "_blank";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  } catch (error) {
-    console.error("Error generando o abriendo el .seb:", error);
-  }
+  // Si requiere SEB y NO está en SEB, redirigir a la página intermedia
+  navigate(`/seb-exam-launcher?examId=${examId}&windowId=${windowId}&examType=${examType}`);
 };
 
 

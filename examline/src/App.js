@@ -14,6 +14,7 @@ import ProgrammingExamView from "./pages/ProgrammingExamView";
 import ExamWindows from "./pages/ExamWindows";
 import StudentInscriptions from "./pages/StudentInscriptions";
 import WindowInscriptions from "./pages/WindowInscriptions";
+import SEBExamLauncher from "./pages/SEBExamLauncher";
 import "./modern-examline.css";
 
 function App() {
@@ -41,6 +42,11 @@ function App() {
           <Route path="/student-exam" element={
             <StudentRoute>
               <StudentExamPage />
+            </StudentRoute>
+          } />
+          <Route path="/seb-exam-launcher" element={
+            <StudentRoute>
+              <SEBExamLauncher />
             </StudentRoute>
           } />
           <Route path="/exam-attempt/:examId" element={
