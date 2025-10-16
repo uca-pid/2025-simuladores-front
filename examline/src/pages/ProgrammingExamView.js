@@ -25,6 +25,9 @@ const ProgrammingExamView = () => {
   const [newFileName, setNewFileName] = useState('');
   const [fileOperationLoading, setFileOperationLoading] = useState(false);
   
+  // 💾 Caché en memoria para mantener cambios no guardados
+  const [fileCache, setFileCache] = useState({});
+  
   // Estados para modales
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -163,16 +166,22 @@ const ProgrammingExamView = () => {
       
       if (response.ok) {
         const filesData = await response.json();
-        setFiles(filesData);
+        
+        // ✅ Ordenar archivos alfabéticamente para mantener orden consistente
+        const sortedFiles = filesData.sort((a, b) => 
+          a.filename.localeCompare(b.filename)
+        );
+        
+        setFiles(sortedFiles);
         
         // Si no hay archivos, crear uno por defecto
-        if (filesData.length === 0) {
+        if (sortedFiles.length === 0) {
           const defaultFileName = `main.${exam?.lenguajeProgramacion === 'python' ? 'py' : 'js'}`;
           setCurrentFileName(defaultFileName);
         } else {
           // Cargar el primer archivo si no hay uno seleccionado
-          if (!currentFileName || !filesData.find(f => f.filename === currentFileName)) {
-            const firstFile = filesData[0];
+          if (!currentFileName || !sortedFiles.find(f => f.filename === currentFileName)) {
+            const firstFile = sortedFiles[0];
             setCurrentFileName(firstFile.filename);
             setCode(firstFile.content || '');
           }
@@ -290,8 +299,17 @@ const ProgrammingExamView = () => {
 
   // Manejar cambios en el editor con debounce para reducir actualizaciones
   const handleEditorChange = useCallback((value) => {
-    setCode(value || '');
-  }, []);
+    const newValue = value || '';
+    setCode(newValue);
+    
+    // 💾 Actualizar el caché en tiempo real
+    if (currentFileName) {
+      setFileCache(prev => ({
+        ...prev,
+        [currentFileName]: newValue
+      }));
+    }
+  }, [currentFileName]);
 
   // Función para forzar guardado manual
   const handleManualSave = () => {
@@ -321,6 +339,13 @@ const ProgrammingExamView = () => {
       });
       
       setLastSaved(new Date());
+      
+      // 💾 Actualizar el caché con el contenido guardado
+      setFileCache(prev => ({
+        ...prev,
+        [filename]: content
+      }));
+      
       await fetchFiles(); // Actualizar lista de archivos
     } catch (error) {
       console.error('Error saving file:', error);
@@ -333,17 +358,41 @@ const ProgrammingExamView = () => {
   const loadFile = useCallback(async (filename) => {
     try {
       setFileOperationLoading(true);
-      const token = localStorage.getItem('token');
-      const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
       
-      const response = await fetch(`${API_BASE_URL}/exam-files/${examId}/files/${filename}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      // 💾 Guardar el contenido actual en el caché ANTES de cambiar
+      if (currentFileName && code !== undefined) {
+        setFileCache(prev => ({
+          ...prev,
+          [currentFileName]: code
+        }));
+      }
       
-      if (response.ok) {
-        const fileData = await response.json();
-        setCode(fileData.content || '');
+      // 🔍 Primero verificar si existe en el caché
+      if (fileCache[filename] !== undefined) {
+        // Si está en caché, usar ese contenido (no guardado)
+        setCode(fileCache[filename]);
         setCurrentFileName(filename);
+      } else {
+        // Si no está en caché, cargar del servidor
+        const token = localStorage.getItem('token');
+        const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
+        
+        const response = await fetch(`${API_BASE_URL}/exam-files/${examId}/files/${filename}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+          const fileData = await response.json();
+          const content = fileData.content || '';
+          setCode(content);
+          setCurrentFileName(filename);
+          
+          // Agregar al caché
+          setFileCache(prev => ({
+            ...prev,
+            [filename]: content
+          }));
+        }
       }
     } catch (error) {
       console.error('Error loading file:', error);
@@ -351,7 +400,7 @@ const ProgrammingExamView = () => {
     } finally {
       setFileOperationLoading(false);
     }
-  }, [examId]);
+  }, [examId, currentFileName, code, fileCache]);
 
   const requestDeleteFile = useCallback((filename) => {
     setFileToDelete(filename);
