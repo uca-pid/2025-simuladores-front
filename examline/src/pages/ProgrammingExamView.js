@@ -174,6 +174,13 @@ const ProgrammingExamView = () => {
         
         setFiles(sortedFiles);
         
+        // 💾 Inicializar el caché con todos los archivos del servidor
+        const initialCache = {};
+        sortedFiles.forEach(file => {
+          initialCache[file.filename] = file.content || '';
+        });
+        setFileCache(initialCache);
+        
         // Si no hay archivos, crear uno por defecto con el código inicial del examen
         if (sortedFiles.length === 0) {
           const defaultFileName = `main.${exam?.lenguajeProgramacion === 'python' ? 'py' : 'js'}`;
@@ -183,7 +190,6 @@ const ProgrammingExamView = () => {
           setCode(defaultContent);
           
           // 💾 Crear el archivo por defecto en el servidor
-          const token = localStorage.getItem('token');
           try {
             await fetch(`${API_BASE_URL}/exam-files/${examId}/files`, {
               method: 'POST',
@@ -197,7 +203,7 @@ const ProgrammingExamView = () => {
               })
             });
             
-            // ✅ Actualizar la lista de archivos inmediatamente
+            // ✅ Actualizar la lista de archivos y caché inmediatamente
             setFiles([{
               filename: defaultFileName,
               content: defaultContent,
@@ -205,29 +211,25 @@ const ProgrammingExamView = () => {
               updatedAt: new Date().toISOString()
             }]);
             
-            // Actualizar el caché
-            setFileCache(prev => ({
-              ...prev,
-              [defaultFileName]: defaultContent
-            }));
+            setFileCache({ [defaultFileName]: defaultContent });
             
             console.log(`Archivo por defecto creado: ${defaultFileName}`);
           } catch (error) {
             console.error('Error creando archivo por defecto:', error);
           }
         } else {
-          // Cargar el primer archivo si no hay uno seleccionado
-          if (!currentFileName || !sortedFiles.find(f => f.filename === currentFileName)) {
-            const firstFile = sortedFiles[0];
-            setCurrentFileName(firstFile.filename);
-            setCode(firstFile.content || '');
-          }
+          // Cargar el primer archivo
+          const firstFile = sortedFiles[0];
+          setCurrentFileName(firstFile.filename);
+          setCode(firstFile.content || '');
+          
+          console.log(`Archivos cargados del servidor:`, sortedFiles.map(f => f.filename));
         }
       }
     } catch (error) {
       console.error('Error fetching files:', error);
     }
-  }, [examId, exam, currentFileName]);
+  }, [examId, exam]);
 
   // Función para guardar código automáticamente
   const saveCode = useCallback(async (currentCode) => {
@@ -360,11 +362,28 @@ const ProgrammingExamView = () => {
     }
   }, [currentFileName]);
 
-  // Función para forzar guardado manual
-  const handleManualSave = () => {
-    saveCurrentFile();
+  // Función para forzar guardado manual - guarda TODOS los archivos
+  const handleManualSave = async () => {
+    try {
+      setSaving(true);
+      
+      // 💾 Guardar TODOS los archivos del caché
+      console.log('Guardando todos los archivos...');
+      const filesToSave = Object.keys(fileCache);
+      
+      for (const filename of filesToSave) {
+        const content = fileCache[filename];
+        console.log(`Guardando archivo: ${filename}`);
+        await saveCurrentFile(filename, content);
+      }
+      
+      console.log('Todos los archivos guardados correctamente');
+    } catch (error) {
+      console.error('Error guardando archivos:', error);
+    } finally {
+      setSaving(false);
+    }
   };
-
 
 
   const saveCurrentFile = useCallback(async (filename = currentFileName, content = code) => {
@@ -395,61 +414,46 @@ const ProgrammingExamView = () => {
         [filename]: content
       }));
       
-      await fetchFiles(); // Actualizar lista de archivos
+      // 📂 Solo actualizar la lista de archivos sin cambiar el archivo actual
+      // No llamamos a fetchFiles() para evitar que cambie al primer archivo
+      const response = await fetch(`${API_BASE_URL}/exam-files/${examId}/files`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const filesData = await response.json();
+        const sortedFiles = filesData.sort((a, b) => 
+          a.filename.localeCompare(b.filename)
+        );
+        setFiles(sortedFiles);
+        console.log('Lista de archivos actualizada sin cambiar archivo actual');
+      }
     } catch (error) {
       console.error('Error saving file:', error);
       setError('Error guardando archivo');
     } finally {
       setFileOperationLoading(false);
     }
-  }, [examId, currentFileName, code, attempt, fetchFiles]);
+  }, [examId, currentFileName, code, attempt]);
 
-  const loadFile = useCallback(async (filename) => {
-    try {
-      setFileOperationLoading(true);
-      
-      // 💾 Guardar el contenido actual en el caché ANTES de cambiar
-      if (currentFileName && code !== undefined) {
-        setFileCache(prev => ({
-          ...prev,
-          [currentFileName]: code
-        }));
-      }
-      
-      // 🔍 Primero verificar si existe en el caché
-      if (fileCache[filename] !== undefined) {
-        // Si está en caché, usar ese contenido (no guardado)
-        setCode(fileCache[filename]);
-        setCurrentFileName(filename);
-      } else {
-        // Si no está en caché, cargar del servidor
-        const token = localStorage.getItem('token');
-        const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
-        
-        const response = await fetch(`${API_BASE_URL}/exam-files/${examId}/files/${filename}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (response.ok) {
-          const fileData = await response.json();
-          const content = fileData.content || '';
-          setCode(content);
-          setCurrentFileName(filename);
-          
-          // Agregar al caché
-          setFileCache(prev => ({
-            ...prev,
-            [filename]: content
-          }));
-        }
-      }
-    } catch (error) {
-      console.error('Error loading file:', error);
-      setError('Error cargando archivo');
-    } finally {
-      setFileOperationLoading(false);
+  const loadFile = useCallback((filename) => {
+    // 💾 Guardar el contenido actual en el caché ANTES de cambiar
+    if (currentFileName && code !== undefined) {
+      setFileCache(prev => ({
+        ...prev,
+        [currentFileName]: code
+      }));
     }
-  }, [examId, currentFileName, code, fileCache]);
+    
+    // � Cargar desde el caché (ya inicializado en fetchFiles)
+    setFileCache(prev => {
+      const content = prev[filename] || '';
+      setCode(content);
+      setCurrentFileName(filename);
+      console.log(`Cargando ${filename} desde caché`);
+      return prev;
+    });
+  }, [currentFileName, code]);
 
   const requestDeleteFile = useCallback((filename) => {
     setFileToDelete(filename);
@@ -623,16 +627,25 @@ const ProgrammingExamView = () => {
                   <button 
                     className="btn-action btn-save" 
                     onClick={handleManualSave}
-                    disabled={saving}
+                    disabled={saving || fileOperationLoading}
                   >
-                    <i className="fas fa-save me-2"></i>
-                    Guardar código
+                    {saving ? (
+                      <>
+                        <i className="fas fa-spinner fa-spin me-2"></i>
+                        Guardando...
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-save me-2"></i>
+                        Guardar código
+                      </>
+                    )}
                   </button>
                   
                   <button 
                     className="btn-action btn-finish" 
                     onClick={handleFinishExamClick}
-                    disabled={loading}
+                    disabled={loading || saving}
                   >
                     <i className="fas fa-check-circle me-2"></i>
                     Finalizar examen
