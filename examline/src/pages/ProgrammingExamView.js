@@ -28,6 +28,9 @@ const ProgrammingExamView = () => {
   // 💾 Caché en memoria para mantener cambios no guardados
   const [fileCache, setFileCache] = useState({});
   
+  // 📝 Registro de archivos con cambios sin guardar
+  const [unsavedFiles, setUnsavedFiles] = useState(new Set());
+  
   // Estados para modales
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -359,6 +362,9 @@ const ProgrammingExamView = () => {
         ...prev,
         [currentFileName]: newValue
       }));
+      
+      // 📝 Marcar archivo como no guardado
+      setUnsavedFiles(prev => new Set(prev).add(currentFileName));
     }
   }, [currentFileName]);
 
@@ -376,6 +382,9 @@ const ProgrammingExamView = () => {
         console.log(`Guardando archivo: ${filename}`);
         await saveCurrentFile(filename, content);
       }
+      
+      // ✅ Limpiar marca de archivos sin guardar
+      setUnsavedFiles(new Set());
       
       console.log('Todos los archivos guardados correctamente');
     } catch (error) {
@@ -671,6 +680,9 @@ const ProgrammingExamView = () => {
                           >
                             <i className="fas fa-file-code me-2"></i>
                             <span className="tab-filename">{file.filename}</span>
+                            {unsavedFiles.has(file.filename) && (
+                              <span className="unsaved-indicator" title="Cambios sin guardar">●</span>
+                            )}
                             <button
                               className="file-close-btn ms-2"
                               onClick={(e) => {
@@ -757,6 +769,9 @@ const ProgrammingExamView = () => {
                                 <span className="tab-filename-short">
                                   {file.filename.length > 10 ? file.filename.substring(0, 10) + '...' : file.filename}
                                 </span>
+                                {unsavedFiles.has(file.filename) && (
+                                  <span className="unsaved-indicator" title="Cambios sin guardar">●</span>
+                                )}
                                 <button
                                   className="file-close-btn-compact"
                                   onClick={(e) => {
@@ -1055,6 +1070,34 @@ const ProgrammingExamView = () => {
           text-overflow: ellipsis;
           white-space: nowrap;
           flex: 1;
+        }
+
+        /* Indicador de cambios sin guardar (círculo blanco como VS Code) */
+        .unsaved-indicator {
+          color: white;
+          font-size: 16px;
+          margin-left: 6px;
+          margin-right: -2px;
+          line-height: 1;
+          opacity: 0.9;
+          animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+          0%, 100% {
+            opacity: 0.9;
+          }
+          50% {
+            opacity: 0.5;
+          }
+        }
+
+        .editor-tab.active .unsaved-indicator {
+          color: white;
+        }
+
+        .editor-tab:not(.active) .unsaved-indicator {
+          color: #cccccc;
         }
 
         /* Navegación compacta para muchos archivos */
