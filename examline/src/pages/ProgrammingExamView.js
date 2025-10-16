@@ -696,11 +696,6 @@ const ProgrammingExamView = () => {
                         enabled: exam.intellisenseHabilitado
                       }
                     }}
-                    onMount={(editor, monaco) => {
-                      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-                        handleManualSave();
-                      });
-                    }}
                   />
                 </div>
               </div>
