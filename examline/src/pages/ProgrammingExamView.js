@@ -25,6 +25,15 @@ const ProgrammingExamView = () => {
   const [newFileName, setNewFileName] = useState('');
   const [fileOperationLoading, setFileOperationLoading] = useState(false);
   
+  // 💾 Caché en memoria para mantener cambios no guardados
+  const [fileCache, setFileCache] = useState({});
+  
+  // 📝 Registro de archivos con cambios sin guardar
+  const [unsavedFiles, setUnsavedFiles] = useState(new Set());
+  
+  // 🔀 Estado para drag & drop de tabs
+  const [draggedTab, setDraggedTab] = useState(null);
+  
   // Estados para modales
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -163,25 +172,70 @@ const ProgrammingExamView = () => {
       
       if (response.ok) {
         const filesData = await response.json();
-        setFiles(filesData);
         
-        // Si no hay archivos, crear uno por defecto
-        if (filesData.length === 0) {
+        // ✅ Ordenar archivos alfabéticamente para mantener orden consistente
+        const sortedFiles = filesData.sort((a, b) => 
+          a.filename.localeCompare(b.filename)
+        );
+        
+        setFiles(sortedFiles);
+        
+        // 💾 Inicializar el caché con todos los archivos del servidor
+        const initialCache = {};
+        sortedFiles.forEach(file => {
+          initialCache[file.filename] = file.content || '';
+        });
+        setFileCache(initialCache);
+        
+        // Si no hay archivos, crear uno por defecto con el código inicial del examen
+        if (sortedFiles.length === 0) {
           const defaultFileName = `main.${exam?.lenguajeProgramacion === 'python' ? 'py' : 'js'}`;
+          const defaultContent = exam?.codigoInicial || '';
+          
           setCurrentFileName(defaultFileName);
-        } else {
-          // Cargar el primer archivo si no hay uno seleccionado
-          if (!currentFileName || !filesData.find(f => f.filename === currentFileName)) {
-            const firstFile = filesData[0];
-            setCurrentFileName(firstFile.filename);
-            setCode(firstFile.content || '');
+          setCode(defaultContent);
+          
+          // 💾 Crear el archivo por defecto en el servidor
+          try {
+            await fetch(`${API_BASE_URL}/exam-files/${examId}/files`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                filename: defaultFileName,
+                content: defaultContent
+              })
+            });
+            
+            // ✅ Actualizar la lista de archivos y caché inmediatamente
+            setFiles([{
+              filename: defaultFileName,
+              content: defaultContent,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            }]);
+            
+            setFileCache({ [defaultFileName]: defaultContent });
+            
+            console.log(`Archivo por defecto creado: ${defaultFileName}`);
+          } catch (error) {
+            console.error('Error creando archivo por defecto:', error);
           }
+        } else {
+          // Cargar el primer archivo
+          const firstFile = sortedFiles[0];
+          setCurrentFileName(firstFile.filename);
+          setCode(firstFile.content || '');
+          
+          console.log(`Archivos cargados del servidor:`, sortedFiles.map(f => f.filename));
         }
       }
     } catch (error) {
       console.error('Error fetching files:', error);
     }
-  }, [examId, exam, currentFileName]);
+  }, [examId, exam]);
 
   // Función para guardar código automáticamente
   const saveCode = useCallback(async (currentCode) => {
@@ -224,11 +278,23 @@ const ProgrammingExamView = () => {
     try {
       setLoading(true);
       
-      // Guardar el código actual en el archivo que está siendo editado
-      if (code) {
-        const fileName = currentFileName || `main.${exam?.lenguajeProgramacion === 'python' ? 'py' : 'js'}`;
-        await saveCurrentFile(fileName, code);
+      // 💾 Guardar TODOS los archivos con cambios en el caché
+      console.log('Guardando todos los archivos antes de finalizar...');
+      const filesToSave = Object.keys(fileCache);
+      
+      for (const filename of filesToSave) {
+        const content = fileCache[filename];
+        console.log(`Guardando archivo: ${filename}`);
+        await saveCurrentFile(filename, content);
       }
+      
+      // También guardar el archivo actual si no está en el caché
+      if (code && currentFileName && fileCache[currentFileName] === undefined) {
+        console.log(`Guardando archivo actual: ${currentFileName}`);
+        await saveCurrentFile(currentFileName, code);
+      }
+      
+      console.log('Todos los archivos guardados. Finalizando examen...');
       
       const token = localStorage.getItem('token');
       const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
@@ -290,14 +356,46 @@ const ProgrammingExamView = () => {
 
   // Manejar cambios en el editor con debounce para reducir actualizaciones
   const handleEditorChange = useCallback((value) => {
-    setCode(value || '');
-  }, []);
+    const newValue = value || '';
+    setCode(newValue);
+    
+    // 💾 Actualizar el caché en tiempo real
+    if (currentFileName) {
+      setFileCache(prev => ({
+        ...prev,
+        [currentFileName]: newValue
+      }));
+      
+      // 📝 Marcar archivo como no guardado
+      setUnsavedFiles(prev => new Set(prev).add(currentFileName));
+    }
+  }, [currentFileName]);
 
-  // Función para forzar guardado manual
-  const handleManualSave = () => {
-    saveCurrentFile();
+  // Función para forzar guardado manual - guarda TODOS los archivos
+  const handleManualSave = async () => {
+    try {
+      setSaving(true);
+      
+      // 💾 Guardar TODOS los archivos del caché
+      console.log('Guardando todos los archivos...');
+      const filesToSave = Object.keys(fileCache);
+      
+      for (const filename of filesToSave) {
+        const content = fileCache[filename];
+        console.log(`Guardando archivo: ${filename}`);
+        await saveCurrentFile(filename, content);
+      }
+      
+      // ✅ Limpiar marca de archivos sin guardar
+      setUnsavedFiles(new Set());
+      
+      console.log('Todos los archivos guardados correctamente');
+    } catch (error) {
+      console.error('Error guardando archivos:', error);
+    } finally {
+      setSaving(false);
+    }
   };
-
 
 
   const saveCurrentFile = useCallback(async (filename = currentFileName, content = code) => {
@@ -321,37 +419,53 @@ const ProgrammingExamView = () => {
       });
       
       setLastSaved(new Date());
-      await fetchFiles(); // Actualizar lista de archivos
+      
+      // 💾 Actualizar el caché con el contenido guardado
+      setFileCache(prev => ({
+        ...prev,
+        [filename]: content
+      }));
+      
+      // 📂 Solo actualizar la lista de archivos sin cambiar el archivo actual
+      // No llamamos a fetchFiles() para evitar que cambie al primer archivo
+      const response = await fetch(`${API_BASE_URL}/exam-files/${examId}/files`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const filesData = await response.json();
+        const sortedFiles = filesData.sort((a, b) => 
+          a.filename.localeCompare(b.filename)
+        );
+        setFiles(sortedFiles);
+        console.log('Lista de archivos actualizada sin cambiar archivo actual');
+      }
     } catch (error) {
       console.error('Error saving file:', error);
       setError('Error guardando archivo');
     } finally {
       setFileOperationLoading(false);
     }
-  }, [examId, currentFileName, code, attempt, fetchFiles]);
+  }, [examId, currentFileName, code, attempt]);
 
-  const loadFile = useCallback(async (filename) => {
-    try {
-      setFileOperationLoading(true);
-      const token = localStorage.getItem('token');
-      const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
-      
-      const response = await fetch(`${API_BASE_URL}/exam-files/${examId}/files/${filename}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (response.ok) {
-        const fileData = await response.json();
-        setCode(fileData.content || '');
-        setCurrentFileName(filename);
-      }
-    } catch (error) {
-      console.error('Error loading file:', error);
-      setError('Error cargando archivo');
-    } finally {
-      setFileOperationLoading(false);
+  const loadFile = useCallback((filename) => {
+    // 💾 Guardar el contenido actual en el caché ANTES de cambiar
+    if (currentFileName && code !== undefined) {
+      setFileCache(prev => ({
+        ...prev,
+        [currentFileName]: code
+      }));
     }
-  }, [examId]);
+    
+    // � Cargar desde el caché (ya inicializado en fetchFiles)
+    setFileCache(prev => {
+      const content = prev[filename] || '';
+      setCode(content);
+      setCurrentFileName(filename);
+      console.log(`Cargando ${filename} desde caché`);
+      return prev;
+    });
+  }, [currentFileName, code]);
 
   const requestDeleteFile = useCallback((filename) => {
     setFileToDelete(filename);
@@ -371,9 +485,26 @@ const ProgrammingExamView = () => {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
+      // Eliminar del cache
+      setFileCache(prevCache => {
+        const newCache = { ...prevCache };
+        delete newCache[fileToDelete];
+        return newCache;
+      });
+      
+      // Eliminar de unsavedFiles
+      setUnsavedFiles(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(fileToDelete);
+        return newSet;
+      });
+      
+      // Actualizar lista de archivos sin llamar a fetchFiles() para no perder cambios
+      const remainingFiles = files.filter(f => f.filename !== fileToDelete);
+      setFiles(remainingFiles);
+      
       // Si eliminamos el archivo actual, cambiar a otro
       if (fileToDelete === currentFileName) {
-        const remainingFiles = files.filter(f => f.filename !== fileToDelete);
         if (remainingFiles.length > 0) {
           await loadFile(remainingFiles[0].filename);
         } else {
@@ -382,8 +513,6 @@ const ProgrammingExamView = () => {
           setCode('');
         }
       }
-      
-      await fetchFiles(); // Actualizar lista
       
       // Limpiar estado del modal
       setShowDeleteModal(false);
@@ -394,7 +523,7 @@ const ProgrammingExamView = () => {
     } finally {
       setFileOperationLoading(false);
     }
-  }, [examId, currentFileName, files, exam?.lenguajeProgramacion, fetchFiles, loadFile, fileToDelete]);
+  }, [examId, currentFileName, files, exam?.lenguajeProgramacion, loadFile, fileToDelete]);
 
   const createNewFile = useCallback(async () => {
     // La validación visual ya previene estos casos, pero por seguridad mantenemos las validaciones
@@ -420,6 +549,59 @@ const ProgrammingExamView = () => {
       // El error será manejado por la UI visual, no necesitamos modal
     }
   }, [newFileName, exam?.lenguajeProgramacion, files, saveCurrentFile, setCode, setCurrentFileName]);
+
+  // 🔀 Funciones para drag & drop de tabs
+  const handleDragStart = (e, index) => {
+    setDraggedTab(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.currentTarget.style.opacity = '0.5';
+  };
+
+  const handleDragEnd = (e) => {
+    e.currentTarget.style.opacity = '1';
+    setDraggedTab(null);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e, dropIndex) => {
+    e.preventDefault();
+    
+    if (draggedTab === null || draggedTab === dropIndex) return;
+    
+    const newFiles = [...files];
+    const draggedFile = newFiles[draggedTab];
+    
+    // Remover el archivo de su posición original
+    newFiles.splice(draggedTab, 1);
+    // Insertar en la nueva posición
+    newFiles.splice(dropIndex, 0, draggedFile);
+    
+    setFiles(newFiles);
+    console.log(`Movido ${draggedFile.filename} de posición ${draggedTab} a ${dropIndex}`);
+  };
+
+  // ⌨️ Atajo de teclado Ctrl+S para guardar
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      // Ctrl+S o Cmd+S (para Mac)
+      if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+        event.preventDefault(); // Prevenir el diálogo de guardar del navegador
+        handleManualSave();
+      }
+    };
+
+    // Agregar el listener
+    window.addEventListener('keydown', handleKeyDown);
+
+    // Cleanup: remover el listener cuando el componente se desmonte
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleManualSave]);
 
   if (loading) {
     return (
@@ -525,16 +707,25 @@ const ProgrammingExamView = () => {
                   <button 
                     className="btn-action btn-save" 
                     onClick={handleManualSave}
-                    disabled={saving}
+                    disabled={saving || fileOperationLoading}
                   >
-                    <i className="fas fa-save me-2"></i>
-                    Guardar código
+                    {saving ? (
+                      <>
+                        <i className="fas fa-spinner fa-spin me-2"></i>
+                        Guardando...
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-save me-2"></i>
+                        Guardar código
+                      </>
+                    )}
                   </button>
                   
                   <button 
                     className="btn-action btn-finish" 
                     onClick={handleFinishExamClick}
-                    disabled={loading}
+                    disabled={loading || saving}
                   >
                     <i className="fas fa-check-circle me-2"></i>
                     Finalizar examen
@@ -555,11 +746,20 @@ const ProgrammingExamView = () => {
                         {files.map((file, index) => (
                           <div 
                             key={file.filename}
-                            className={`editor-tab ${file.filename === currentFileName ? 'active' : ''}`}
+                            className={`editor-tab ${file.filename === currentFileName ? 'active' : ''} ${draggedTab === index ? 'dragging' : ''}`}
                             onClick={() => loadFile(file.filename)}
+                            draggable="true"
+                            onDragStart={(e) => handleDragStart(e, index)}
+                            onDragEnd={handleDragEnd}
+                            onDragOver={handleDragOver}
+                            onDrop={(e) => handleDrop(e, index)}
                           >
+                            <i className="fas fa-grip-vertical me-2" style={{opacity: 0.5, cursor: 'grab'}}></i>
                             <i className="fas fa-file-code me-2"></i>
                             <span className="tab-filename">{file.filename}</span>
+                            {unsavedFiles.has(file.filename) && (
+                              <span className="unsaved-indicator" title="Cambios sin guardar">●</span>
+                            )}
                             <button
                               className="file-close-btn ms-2"
                               onClick={(e) => {
@@ -639,13 +839,22 @@ const ProgrammingExamView = () => {
                             {files.map((file, index) => (
                               <div 
                                 key={file.filename}
-                                className={`editor-tab-compact ${file.filename === currentFileName ? 'active' : ''}`}
+                                className={`editor-tab-compact ${file.filename === currentFileName ? 'active' : ''} ${draggedTab === index ? 'dragging' : ''}`}
                                 onClick={() => loadFile(file.filename)}
+                                draggable="true"
+                                onDragStart={(e) => handleDragStart(e, index)}
+                                onDragEnd={handleDragEnd}
+                                onDragOver={handleDragOver}
+                                onDrop={(e) => handleDrop(e, index)}
                               >
+                                <i className="fas fa-grip-vertical" style={{fontSize: '0.7rem', opacity: 0.5, cursor: 'grab', marginRight: '2px'}}></i>
                                 <i className="fas fa-file-code"></i>
                                 <span className="tab-filename-short">
                                   {file.filename.length > 10 ? file.filename.substring(0, 10) + '...' : file.filename}
                                 </span>
+                                {unsavedFiles.has(file.filename) && (
+                                  <span className="unsaved-indicator" title="Cambios sin guardar">●</span>
+                                )}
                                 <button
                                   className="file-close-btn-compact"
                                   onClick={(e) => {
@@ -944,6 +1153,54 @@ const ProgrammingExamView = () => {
           text-overflow: ellipsis;
           white-space: nowrap;
           flex: 1;
+        }
+
+        /* Indicador de cambios sin guardar (círculo blanco como VS Code) */
+        .unsaved-indicator {
+          color: white;
+          font-size: 16px;
+          margin-left: 6px;
+          margin-right: -2px;
+          line-height: 1;
+          opacity: 0.9;
+          animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+          0%, 100% {
+            opacity: 0.9;
+          }
+          50% {
+            opacity: 0.5;
+          }
+        }
+
+        .editor-tab.active .unsaved-indicator {
+          color: white;
+        }
+
+        .editor-tab:not(.active) .unsaved-indicator {
+          color: #cccccc;
+        }
+
+        /* Estilos para drag & drop de tabs */
+        .editor-tab.dragging {
+          opacity: 0.5;
+        }
+
+        .tab-grip {
+          margin-right: 8px;
+          color: #666;
+          font-size: 12px;
+          cursor: grab;
+        }
+
+        .editor-tab.dragging .tab-grip {
+          cursor: grabbing;
+        }
+
+        .editor-tab:hover .tab-grip {
+          color: #888;
         }
 
         /* Navegación compacta para muchos archivos */
