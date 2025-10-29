@@ -34,6 +34,9 @@ const ProgrammingExamView = () => {
   // 🔀 Estado para drag & drop de tabs
   const [draggedTab, setDraggedTab] = useState(null);
   
+  // 👁️ Estado para archivos ocultos de la vista
+  const [hiddenFiles, setHiddenFiles] = useState(new Set());
+  
   // Estados para modales
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -467,6 +470,38 @@ const ProgrammingExamView = () => {
     });
   }, [currentFileName, code]);
 
+  // Función para ocultar archivo de la vista (no lo elimina)
+  const hideFile = useCallback((filename) => {
+    setHiddenFiles(prev => new Set(prev).add(filename));
+    
+    // Si el archivo oculto es el actual, cambiar a otro visible
+    if (filename === currentFileName) {
+      const visibleFiles = files.filter(f => 
+        f.filename !== filename && !hiddenFiles.has(f.filename)
+      );
+      
+      if (visibleFiles.length > 0) {
+        loadFile(visibleFiles[0].filename);
+      } else {
+        // Si no hay archivos visibles, crear uno nuevo por defecto
+        const defaultFileName = `main.${exam?.lenguajeProgramacion === 'python' ? 'py' : 'js'}`;
+        setCurrentFileName(defaultFileName);
+        setCode('');
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentFileName, files, exam?.lenguajeProgramacion]);
+
+  // Función para mostrar archivo en la vista
+  const showFile = useCallback((filename) => {
+    setHiddenFiles(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(filename);
+      return newSet;
+    });
+    loadFile(filename);
+  }, [loadFile]);
+
   const requestDeleteFile = useCallback((filename) => {
     setFileToDelete(filename);
     setShowDeleteModal(true);
@@ -743,7 +778,7 @@ const ProgrammingExamView = () => {
                     {files.length <= 6 ? (
                       /* Pestañas normales para pocos archivos */
                       <div className="editor-tabs">
-                        {files.map((file, index) => (
+                        {files.filter(file => !hiddenFiles.has(file.filename)).map((file, index) => (
                           <div 
                             key={file.filename}
                             className={`editor-tab ${file.filename === currentFileName ? 'active' : ''} ${draggedTab === index ? 'dragging' : ''}`}
@@ -764,8 +799,9 @@ const ProgrammingExamView = () => {
                               className="file-close-btn ms-2"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                requestDeleteFile(file.filename);
+                                hideFile(file.filename);
                               }}
+                              title="Ocultar pestaña (no elimina el archivo)"
                             >
                               ×
                             </button>
@@ -788,7 +824,7 @@ const ProgrammingExamView = () => {
                             onChange={(e) => loadFile(e.target.value)}
                             className="file-selector-dropdown"
                           >
-                            {files.map((file, index) => (
+                            {files.filter(file => !hiddenFiles.has(file.filename)).map((file, index) => (
                               <option key={file.filename} value={file.filename}>
                                 {index + 1}. {file.filename}
                               </option>
@@ -798,13 +834,14 @@ const ProgrammingExamView = () => {
                           <div className="nav-buttons">
                             <button
                               onClick={() => {
-                                const currentIndex = files.findIndex(f => f.filename === currentFileName);
+                                const visibleFiles = files.filter(f => !hiddenFiles.has(f.filename));
+                                const currentIndex = visibleFiles.findIndex(f => f.filename === currentFileName);
                                 const prevIndex = Math.max(0, currentIndex - 1);
                                 if (prevIndex !== currentIndex) {
-                                  loadFile(files[prevIndex].filename);
+                                  loadFile(visibleFiles[prevIndex].filename);
                                 }
                               }}
-                              disabled={files.findIndex(f => f.filename === currentFileName) === 0}
+                              disabled={files.filter(f => !hiddenFiles.has(f.filename)).findIndex(f => f.filename === currentFileName) === 0}
                               className="nav-btn prev-btn"
                             >
                               <i className="fas fa-chevron-left"></i>
@@ -812,13 +849,14 @@ const ProgrammingExamView = () => {
                             
                             <button
                               onClick={() => {
-                                const currentIndex = files.findIndex(f => f.filename === currentFileName);
-                                const nextIndex = Math.min(files.length - 1, currentIndex + 1);
+                                const visibleFiles = files.filter(f => !hiddenFiles.has(f.filename));
+                                const currentIndex = visibleFiles.findIndex(f => f.filename === currentFileName);
+                                const nextIndex = Math.min(visibleFiles.length - 1, currentIndex + 1);
                                 if (nextIndex !== currentIndex) {
-                                  loadFile(files[nextIndex].filename);
+                                  loadFile(visibleFiles[nextIndex].filename);
                                 }
                               }}
-                              disabled={files.findIndex(f => f.filename === currentFileName) === files.length - 1}
+                              disabled={files.filter(f => !hiddenFiles.has(f.filename)).findIndex(f => f.filename === currentFileName) === files.filter(f => !hiddenFiles.has(f.filename)).length - 1}
                               className="nav-btn next-btn"
                             >
                               <i className="fas fa-chevron-right"></i>
@@ -836,7 +874,7 @@ const ProgrammingExamView = () => {
                         {/* Pestañas con scroll para visualización */}
                         <div className="editor-tabs-scroll">
                           <div className="editor-tabs-container">
-                            {files.map((file, index) => (
+                            {files.filter(file => !hiddenFiles.has(file.filename)).map((file, index) => (
                               <div 
                                 key={file.filename}
                                 className={`editor-tab-compact ${file.filename === currentFileName ? 'active' : ''} ${draggedTab === index ? 'dragging' : ''}`}
@@ -859,8 +897,9 @@ const ProgrammingExamView = () => {
                                   className="file-close-btn-compact"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    requestDeleteFile(file.filename);
+                                    hideFile(file.filename);
                                   }}
+                                  title="Ocultar pestaña (no elimina el archivo)"
                                 >
                                   ×
                                 </button>
@@ -1526,36 +1565,49 @@ const ProgrammingExamView = () => {
                   </div>
                 ) : (
                   <div className="files-grid">
-                    {files.map((file) => (
-                      <div key={file.filename} className="file-item">
-                        <div className="file-info">
-                          <div className="file-name">
-                            <i className="fas fa-file-code me-2"></i>
-                            {file.filename}
+                    {files.map((file) => {
+                      const isHidden = hiddenFiles.has(file.filename);
+                      return (
+                        <div key={file.filename} className={`file-item ${isHidden ? 'file-hidden' : ''}`}>
+                          <div className="file-info">
+                            <div className="file-name">
+                              <i className="fas fa-file-code me-2"></i>
+                              {file.filename}
+                              {isHidden && (
+                                <span className="badge bg-secondary ms-2" style={{fontSize: '0.7rem'}}>
+                                  Oculto
+                                </span>
+                              )}
+                              {unsavedFiles.has(file.filename) && (
+                                <span className="text-warning ms-2" title="Cambios sin guardar">●</span>
+                              )}
+                            </div>
+                            <div className="file-date">
+                              {new Date(file.updatedAt || file.createdAt).toLocaleString()}
+                            </div>
                           </div>
-                          <div className="file-date">
-                            {new Date(file.updatedAt || file.createdAt).toLocaleString()}
+                          <div className="file-actions">
+                            <button
+                              className="btn btn-sm btn-outline-primary"
+                              onClick={() => {
+                                showFile(file.filename);
+                                setShowFileManager(false);
+                              }}
+                              title={isHidden ? "Mostrar y abrir archivo" : "Abrir archivo"}
+                            >
+                              <i className={`fas ${isHidden ? 'fa-eye' : 'fa-folder-open'}`}></i>
+                            </button>
+                            <button
+                              className="btn btn-sm btn-outline-danger"
+                              onClick={() => requestDeleteFile(file.filename)}
+                              title="Eliminar archivo permanentemente"
+                            >
+                              <i className="fas fa-trash"></i>
+                            </button>
                           </div>
                         </div>
-                        <div className="file-actions">
-                          <button
-                            className="btn btn-sm btn-outline-primary"
-                            onClick={() => {
-                              loadFile(file.filename);
-                              setShowFileManager(false);
-                            }}
-                          >
-                            <i className="fas fa-folder-open"></i>
-                          </button>
-                          <button
-                            className="btn btn-sm btn-outline-danger"
-                            onClick={() => requestDeleteFile(file.filename)}
-                          >
-                            <i className="fas fa-trash"></i>
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -1649,9 +1701,22 @@ const ProgrammingExamView = () => {
           background: #f8fafc;
         }
 
+        .file-item.file-hidden {
+          opacity: 0.6;
+          background: #f9fafb;
+        }
+
+        .file-item.file-hidden:hover {
+          opacity: 1;
+          border-color: #3b82f6;
+          background: #f8fafc;
+        }
+
         .file-name {
           font-weight: 600;
           color: #2d3748;
+          display: flex;
+          align-items: center;
         }
 
         .file-date {
