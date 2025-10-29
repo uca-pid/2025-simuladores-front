@@ -41,6 +41,9 @@ const ProgrammingExamView = () => {
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [fileToDelete, setFileToDelete] = useState('');
+  
+  // Estado para compilación
+  const [isCompiling, setIsCompiling] = useState(false);
 
   // Obtener windowId de la URL
   const searchParams = new URLSearchParams(location.search);
@@ -585,6 +588,62 @@ const ProgrammingExamView = () => {
     }
   }, [newFileName, exam?.lenguajeProgramacion, files, saveCurrentFile, setCode, setCurrentFileName]);
 
+  // Función para compilar código
+  const handleCompile = async () => {
+    try {
+      setIsCompiling(true);
+      console.log('Compilando código...', currentFileName);
+      
+      const token = localStorage.getItem('token');
+      const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
+      
+      const response = await fetch(`${API_BASE_URL}/code-execution/run`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          code: code,
+          language: exam?.lenguajeProgramacion || 'python',
+          examId: examId
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok) {
+        console.log('Resultado de compilación:', result);
+        
+        // Mostrar resultado en consola (luego lo mostraremos en un panel)
+        if (result.output) {
+          console.log('Salida:', result.output);
+        }
+        if (result.error) {
+          console.error('Error de ejecución:', result.error);
+        }
+        console.log(`Tiempo de ejecución: ${result.executionTime}ms`);
+        
+        // TODO: Mostrar en panel de salida
+        alert(
+          `Compilación exitosa!\n\n` +
+          `Tiempo: ${result.executionTime}ms\n` +
+          `Salida:\n${result.output || '(sin salida)'}\n` +
+          `${result.error ? `\nErrores:\n${result.error}` : ''}`
+        );
+      } else {
+        console.error('Error en respuesta:', result);
+        alert(`Error: ${result.error || 'Error desconocido'}`);
+      }
+      
+    } catch (error) {
+      console.error('Error compilando:', error);
+      alert(`Error: ${error.message}`);
+    } finally {
+      setIsCompiling(false);
+    }
+  };
+
   // 🔀 Funciones para drag & drop de tabs
   const handleDragStart = (e, index) => {
     setDraggedTab(index);
@@ -922,6 +981,23 @@ const ProgrammingExamView = () => {
                     >
                       <i className="fas fa-folder me-1"></i>
                       Archivos
+                    </button>
+                    <button 
+                      className="btn btn-sm btn-outline-success"
+                      onClick={handleCompile}
+                      disabled={isCompiling}
+                    >
+                      {isCompiling ? (
+                        <>
+                          <i className="fas fa-spinner fa-spin me-1"></i>
+                          Compilando...
+                        </>
+                      ) : (
+                        <>
+                          <i className="fas fa-play me-1"></i>
+                          Compilar
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
