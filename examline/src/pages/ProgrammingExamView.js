@@ -46,6 +46,8 @@ const ProgrammingExamView = () => {
   const [isCompiling, setIsCompiling] = useState(false);
   const [compilationResult, setCompilationResult] = useState(null);
   const [userInput, setUserInput] = useState('');
+  // Navegación lateral (Consigna | Programación)
+  const [activeSection, setActiveSection] = useState('programacion'); // 'consigna' | 'programacion'
 
   // Obtener windowId de la URL
   const searchParams = new URLSearchParams(location.search);
@@ -379,31 +381,7 @@ const ProgrammingExamView = () => {
     }
   }, [currentFileName]);
 
-  // Función para forzar guardado manual - guarda TODOS los archivos
-  const handleManualSave = async () => {
-    try {
-      setSaving(true);
-      
-      // 💾 Guardar TODOS los archivos del caché
-      console.log('Guardando todos los archivos...');
-      const filesToSave = Object.keys(fileCache);
-      
-      for (const filename of filesToSave) {
-        const content = fileCache[filename];
-        console.log(`Guardando archivo: ${filename}`);
-        await saveCurrentFile(filename, content);
-      }
-      
-      // ✅ Limpiar marca de archivos sin guardar
-      setUnsavedFiles(new Set());
-      
-      console.log('Todos los archivos guardados correctamente');
-    } catch (error) {
-      console.error('Error guardando archivos:', error);
-    } finally {
-      setSaving(false);
-    }
-  };
+  // (Se mueve más abajo, después de saveCurrentFile)
 
 
   const saveCurrentFile = useCallback(async (filename = currentFileName, content = code) => {
@@ -455,6 +433,32 @@ const ProgrammingExamView = () => {
       setFileOperationLoading(false);
     }
   }, [examId, currentFileName, code, attempt]);
+
+  // Función para forzar guardado manual - guarda TODOS los archivos
+  const handleManualSave = useCallback(async () => {
+    try {
+      setSaving(true);
+
+      // 💾 Guardar TODOS los archivos del caché
+      console.log('Guardando todos los archivos...');
+      const filesToSave = Object.keys(fileCache);
+
+      for (const filename of filesToSave) {
+        const content = fileCache[filename];
+        console.log(`Guardando archivo: ${filename}`);
+        await saveCurrentFile(filename, content);
+      }
+
+      // ✅ Limpiar marca de archivos sin guardar
+      setUnsavedFiles(new Set());
+
+      console.log('Todos los archivos guardados correctamente');
+    } catch (error) {
+      console.error('Error guardando archivos:', error);
+    } finally {
+      setSaving(false);
+    }
+  }, [fileCache, saveCurrentFile]);
 
   const loadFile = useCallback((filename) => {
     // 💾 Guardar el contenido actual en el caché ANTES de cambiar
@@ -777,128 +781,66 @@ const ProgrammingExamView = () => {
         </div>
       </div>
 
-      {/* Contenido principal */}
+      {/* Contenido principal con sidebar */}
       <div className="programming-exam-content">
-        <div className="container-fluid h-100">
-          <div className="row h-100">
-            {/* Panel del enunciado */}
-            <div className="col-lg-4 col-md-12 programming-problem-panel">
-              <div className="problem-container">
-                <div className="problem-header">
-                  <h3>
-                    <i className="fas fa-puzzle-piece me-2"></i>
-                    Problema
-                  </h3>
-                </div>
-                
-                <div className="problem-content">
-                  <div className="problem-statement">
-                    {exam.enunciadoProgramacion}
-                  </div>
-                  
-                  {/* Panel de resultado de compilación */}
-                  {compilationResult && (
-                    <div className={`compilation-result ${compilationResult.success ? 'success' : 'error'}`}>
-                      <div className="compilation-header">
-                        <i className={`fas ${compilationResult.success ? 'fa-check-circle' : 'fa-times-circle'} me-2`}></i>
-                        {compilationResult.success ? 'Compilación exitosa' : 'Error de compilación'}
-                        {compilationResult.executionTime && (
-                          <span className="execution-time ms-2">
-                            ⏱️ {compilationResult.executionTime}ms
-                          </span>
-                        )}
-                      </div>
-                      
-                      {compilationResult.output && (
-                        <div className="output-section">
-                          <div className="output-label">Salida:</div>
-                          <pre className="output-content">{compilationResult.output}</pre>
-                        </div>
-                      )}
-                      
-                      {compilationResult.error && (
-                        <div className="error-section">
-                          <div className="error-label">Error:</div>
-                          <pre className="error-content">{compilationResult.error}</pre>
-                        </div>
-                      )}
-                      
-                      {!compilationResult.output && !compilationResult.error && compilationResult.success && (
-                        <div className="no-output">
-                          <i className="fas fa-info-circle me-2"></i>
-                          (sin salida)
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-                
-                {/* Campo de entrada para el programa */}
-                <div className="input-section">
-                  <label htmlFor="userInput" className="input-label">
-                    <i className="fas fa-keyboard me-2"></i>
-                    Entrada del programa (Input):
-                  </label>
-                  <textarea
-                    id="userInput"
-                    className="input-field"
-                    placeholder="Ingresa los datos de entrada para tu programa (ej: 2)
-Si necesitas múltiples valores, sepáralos con Enter:
-5
-10
-Hola"
-                    value={userInput}
-                    onChange={(e) => setUserInput(e.target.value)}
-                    rows="3"
-                  />
-                  <small className="input-hint">
-                    <i className="fas fa-info-circle me-1"></i>
-                    Este input se enviará como stdin al programa cuando lo compiles
-                  </small>
-                </div>
-                
-                <div className="problem-actions">
-                  <button 
-                    className="btn-action btn-save" 
-                    onClick={handleManualSave}
-                    disabled={saving || fileOperationLoading}
-                  >
-                    {saving ? (
-                      <>
-                        <i className="fas fa-spinner fa-spin me-2"></i>
-                        Guardando...
-                      </>
-                    ) : (
-                      <>
-                        <i className="fas fa-save me-2"></i>
-                        Guardar código
-                      </>
-                    )}
-                  </button>
-                  
-                  <button 
-                    className="btn-action btn-finish" 
-                    onClick={handleFinishExamClick}
-                    disabled={loading || saving}
-                  >
-                    <i className="fas fa-check-circle me-2"></i>
-                    Finalizar examen
-                  </button>
+        <div className="exam-shell">
+          {/* Sidebar */}
+          <aside className="exam-sidebar">
+            <div className="sidebar-header">
+              <div className="student-pill" title="Alumno">
+                <i className="fas fa-user-graduate"></i>
+              </div>
+              <div className="sidebar-title">Examen</div>
+            </div>
+            <nav className="sidebar-nav">
+              <button
+                className={`sidebar-item ${activeSection === 'consigna' ? 'active' : ''}`}
+                onClick={() => setActiveSection('consigna')}
+              >
+                <i className="fas fa-file-alt me-2"></i>
+                Consigna
+              </button>
+              <button
+                className={`sidebar-item ${activeSection === 'programacion' ? 'active' : ''}`}
+                onClick={() => setActiveSection('programacion')}
+              >
+                <i className="fas fa-code me-2"></i>
+                Programación
+              </button>
+            </nav>
+            <div className="sidebar-footer">
+              <button
+                className="btn-send-exam"
+                onClick={handleFinishExamClick}
+                disabled={loading || saving}
+              >
+                <i className="fas fa-paper-plane me-2"></i>
+                Finalizar examen
+              </button>
+            </div>
+          </aside>
+
+          {/* Main content */}
+          <main className="exam-main">
+            {activeSection === 'consigna' ? (
+              <div className="consigna-panel">
+                <h3 className="consigna-title">
+                  <i className="fas fa-puzzle-piece me-2"></i>
+                  Consigna
+                </h3>
+                <div className="problem-statement">
+                  {exam.enunciadoProgramacion}
                 </div>
               </div>
-            </div>
-            
-            {/* Panel del editor */}
-            <div className="col-lg-8 col-md-12 programming-editor-panel">
-              <div className="editor-container">
+            ) : (
+              <div className="programming-area">
+                {/* Toolbar superior: tabs y acciones */}
                 <div className="editor-header">
-                  {/* Sección de navegación de archivos - izquierda */}
                   <div className="editor-navigation-section">
                     {files.length <= 6 ? (
-                      /* Pestañas normales para pocos archivos */
                       <div className="editor-tabs">
                         {files.filter(file => !hiddenFiles.has(file.filename)).map((file, index) => (
-                          <div 
+                          <div
                             key={file.filename}
                             className={`editor-tab ${file.filename === currentFileName ? 'active' : ''} ${draggedTab === index ? 'dragging' : ''}`}
                             onClick={() => loadFile(file.filename)}
@@ -926,7 +868,7 @@ Hola"
                             </button>
                           </div>
                         ))}
-                        <button 
+                        <button
                           className="editor-tab new-file-tab"
                           onClick={() => setShowFileManager(true)}
                         >
@@ -935,7 +877,6 @@ Hola"
                         </button>
                       </div>
                     ) : (
-                      /* Navegación compacta para muchos archivos */
                       <div className="editor-navigation-compact">
                         <div className="editor-nav-controls">
                           <select
@@ -949,7 +890,6 @@ Hola"
                               </option>
                             ))}
                           </select>
-                          
                           <div className="nav-buttons">
                             <button
                               onClick={() => {
@@ -965,7 +905,6 @@ Hola"
                             >
                               <i className="fas fa-chevron-left"></i>
                             </button>
-                            
                             <button
                               onClick={() => {
                                 const visibleFiles = files.filter(f => !hiddenFiles.has(f.filename));
@@ -980,8 +919,7 @@ Hola"
                             >
                               <i className="fas fa-chevron-right"></i>
                             </button>
-                            
-                            <button 
+                            <button
                               className="nav-btn new-file-btn"
                               onClick={() => setShowFileManager(true)}
                             >
@@ -989,12 +927,10 @@ Hola"
                             </button>
                           </div>
                         </div>
-                        
-                        {/* Pestañas con scroll para visualización */}
                         <div className="editor-tabs-scroll">
                           <div className="editor-tabs-container">
                             {files.filter(file => !hiddenFiles.has(file.filename)).map((file, index) => (
-                              <div 
+                              <div
                                 key={file.filename}
                                 className={`editor-tab-compact ${file.filename === currentFileName ? 'active' : ''} ${draggedTab === index ? 'dragging' : ''}`}
                                 onClick={() => loadFile(file.filename)}
@@ -1029,20 +965,16 @@ Hola"
                       </div>
                     )}
                   </div>
-
-                  {/* Línea divisoria vertical */}
                   <div className="editor-divider"></div>
-
-                  {/* Sección de controles - derecha */}
                   <div className="editor-controls">
-                    <button 
+                    <button
                       className="btn btn-sm btn-outline-info"
                       onClick={() => setShowFileManager(true)}
                     >
                       <i className="fas fa-folder me-1"></i>
                       Archivos
                     </button>
-                    <button 
+                    <button
                       className="btn btn-sm btn-outline-success"
                       onClick={handleCompile}
                       disabled={isCompiling}
@@ -1055,36 +987,103 @@ Hola"
                       ) : (
                         <>
                           <i className="fas fa-play me-1"></i>
-                          Compilar
+                          Ejecutar
+                        </>
+                      )}
+                    </button>
+                    <button
+                      className="btn btn-sm btn-outline-primary"
+                      onClick={handleManualSave}
+                      disabled={saving || fileOperationLoading}
+                    >
+                      {saving ? (
+                        <>
+                          <i className="fas fa-spinner fa-spin me-1"></i>
+                          Guardando
+                        </>
+                      ) : (
+                        <>
+                          <i className="fas fa-save me-1"></i>
+                          Guardar
                         </>
                       )}
                     </button>
                   </div>
                 </div>
-                
-                <div className="editor-content">
-                  <Editor
-                    height="100%"
-                    language={exam.lenguajeProgramacion}
-                    theme="vs-dark"
-                    value={code}
-                    onChange={handleEditorChange}
-                    options={{
-                      ...editorOptions,
-                      quickSuggestions: exam.intellisenseHabilitado,
-                      suggestOnTriggerCharacters: exam.intellisenseHabilitado,
-                      acceptSuggestionOnEnter: exam.intellisenseHabilitado ? 'on' : 'off',
-                      tabCompletion: exam.intellisenseHabilitado ? 'on' : 'off',
-                      wordBasedSuggestions: exam.intellisenseHabilitado,
-                      parameterHints: {
-                        enabled: exam.intellisenseHabilitado
-                      }
-                    }}
-                  />
+
+                {/* Grilla principal: izquierda (editor+input) | derecha (output) */}
+                <div className="programming-grid">
+                  <div className="grid-left">
+                    <div className="editor-content">
+                      <Editor
+                        height="100%"
+                        language={exam.lenguajeProgramacion}
+                        theme="vs-dark"
+                        value={code}
+                        onChange={handleEditorChange}
+                        options={{
+                          ...editorOptions,
+                          quickSuggestions: exam.intellisenseHabilitado,
+                          suggestOnTriggerCharacters: exam.intellisenseHabilitado,
+                          acceptSuggestionOnEnter: exam.intellisenseHabilitado ? 'on' : 'off',
+                          tabCompletion: exam.intellisenseHabilitado ? 'on' : 'off',
+                          wordBasedSuggestions: exam.intellisenseHabilitado,
+                          parameterHints: { enabled: exam.intellisenseHabilitado }
+                        }}
+                      />
+                    </div>
+                    <div className="input-section compact">
+                      <label htmlFor="userInput" className="input-label">
+                        <i className="fas fa-keyboard me-2"></i>
+                        Entrada del programa (stdin)
+                      </label>
+                      <textarea
+                        id="userInput"
+                        className="input-field"
+                        placeholder={`Ejemplo:\n2\n3`}
+                        value={userInput}
+                        onChange={(e) => setUserInput(e.target.value)}
+                        rows="3"
+                      />
+                      <small className="input-hint">
+                        Se envía como entrada al ejecutar
+                      </small>
+                    </div>
+                  </div>
+                  <div className="grid-right">
+                    <div className="output-panel">
+                      <div className="output-header">
+                        <i className="fas fa-terminal me-2"></i> Salida
+                        {compilationResult?.executionTime && (
+                          <span className="execution-time ms-2">⏱️ {compilationResult.executionTime}ms</span>
+                        )}
+                      </div>
+                      <div className="output-body">
+                        {compilationResult ? (
+                          <>
+                            {compilationResult.output && (
+                              <pre className="output-content console">{compilationResult.output}</pre>
+                            )}
+                            {compilationResult.error && (
+                              <pre className="error-content console">{compilationResult.error}</pre>
+                            )}
+                            {!compilationResult.output && !compilationResult.error && compilationResult.success && (
+                              <div className="no-output"><i className="fas fa-info-circle me-2"></i>(sin salida)</div>
+                            )}
+                          </>
+                        ) : (
+                          <div className="output-placeholder">
+                            <i className="fas fa-play-circle me-2"></i>
+                            Ejecuta tu programa para ver la salida aquí
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
+            )}
+          </main>
         </div>
       </div>
 
@@ -1758,6 +1757,87 @@ Hola"
             font-size: 0.7rem;
             padding: 4px 6px;
           }
+        }
+      `}</style>
+      {/* Estilos del nuevo layout con sidebar */}
+      <style jsx>{`
+        .exam-shell {
+          display: grid;
+          grid-template-columns: 260px 1fr;
+          height: 100%;
+        }
+        .exam-sidebar {
+          background: #111827;
+          color: #d1d5db;
+          border-right: 1px solid #1f2937;
+          display: flex;
+          flex-direction: column;
+          padding: 14px 10px;
+          gap: 10px;
+        }
+        .sidebar-header {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 6px 8px;
+        }
+        .student-pill {
+          width: 28px; height: 28px;
+          border-radius: 6px;
+          background: #374151;
+          display:flex; align-items:center; justify-content:center;
+        }
+        .sidebar-title { font-weight: 700; color:#e5e7eb; }
+        .sidebar-nav { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+        .sidebar-item {
+          text-align: left;
+          background: transparent;
+          border: 1px solid transparent;
+          color: inherit;
+          padding: 10px 12px;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: background .15s,border .15s;
+        }
+        .sidebar-item:hover { background: #1f2937; }
+        .sidebar-item.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+        .sidebar-footer { margin-top: auto; padding-top: 8px; border-top: 1px solid #1f2937; }
+        .btn-send-exam {
+          width: 100%;
+          background: linear-gradient(45deg,#10b981,#059669);
+          border: none; color: #fff; font-weight: 700;
+          padding: 10px 12px; border-radius: 10px; cursor: pointer;
+        }
+        .btn-send-exam:disabled { opacity: .6; cursor: not-allowed; }
+
+        .exam-main { height: 100%; overflow: hidden; background: #0b0f17; }
+        .consigna-panel { padding: 18px; height: 100%; overflow: auto; }
+        .consigna-title { color: #e5e7eb; margin-bottom: 10px; }
+        .programming-area { height: 100%; display: flex; flex-direction: column; }
+        .programming-grid {
+          flex: 1; min-height: 0; display: grid;
+          grid-template-columns: 2fr 1fr;
+          grid-gap: 10px; padding: 10px;
+        }
+        .grid-left { display: grid; grid-template-rows: 1fr auto; min-height: 0; gap: 10px; }
+        .grid-right { min-height: 0; }
+        .output-panel { height: 100%; background: #111827; border: 1px solid #1f2937; border-radius: 10px; display:flex; flex-direction:column; }
+        .output-header { color:#e5e7eb; padding: 10px 12px; border-bottom:1px solid #1f2937; font-weight:700; }
+        .output-body { flex:1; min-height:0; overflow:auto; padding: 10px; }
+        .console { background:#0b0f17; color:#d1d5db; border:1px solid #1f2937; padding:10px; border-radius:8px; }
+        .output-placeholder { color:#9ca3af; font-style: italic; padding: 12px; }
+        .input-section.compact { background: rgba(243,244,246,0.08); border-color:#374151; }
+
+        @media (max-width: 992px) {
+          .exam-shell { grid-template-columns: 56px 1fr; }
+          .sidebar-title { display:none; }
+          .sidebar-item { padding: 8px; display:flex; justify-content:center; }
+          .sidebar-item span { display:none; }
+        }
+        @media (max-width: 768px) {
+          .programming-grid { grid-template-columns: 1fr; }
+          .grid-left { grid-template-rows: 1fr auto; }
+          .output-panel { height: 220px; }
         }
       `}</style>
 
