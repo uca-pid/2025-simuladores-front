@@ -45,6 +45,7 @@ const ProgrammingExamView = () => {
   // Estado para compilación
   const [isCompiling, setIsCompiling] = useState(false);
   const [compilationResult, setCompilationResult] = useState(null);
+  const [userInput, setUserInput] = useState('');
 
   // Obtener windowId de la URL
   const searchParams = new URLSearchParams(location.search);
@@ -595,6 +596,7 @@ const ProgrammingExamView = () => {
       setIsCompiling(true);
       setCompilationResult(null);
       console.log('Compilando código...', currentFileName);
+      console.log('Input del usuario:', userInput);
       
       const token = localStorage.getItem('token');
       const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
@@ -608,7 +610,8 @@ const ProgrammingExamView = () => {
         body: JSON.stringify({
           code: code,
           language: exam?.lenguajeProgramacion || 'python',
-          examId: examId
+          examId: examId,
+          input: userInput || '' // Enviar el input del usuario
         })
       });
       
@@ -828,6 +831,30 @@ const ProgrammingExamView = () => {
                       )}
                     </div>
                   )}
+                </div>
+                
+                {/* Campo de entrada para el programa */}
+                <div className="input-section">
+                  <label htmlFor="userInput" className="input-label">
+                    <i className="fas fa-keyboard me-2"></i>
+                    Entrada del programa (Input):
+                  </label>
+                  <textarea
+                    id="userInput"
+                    className="input-field"
+                    placeholder="Ingresa los datos de entrada para tu programa (ej: 2)
+Si necesitas múltiples valores, sepáralos con Enter:
+5
+10
+Hola"
+                    value={userInput}
+                    onChange={(e) => setUserInput(e.target.value)}
+                    rows="3"
+                  />
+                  <small className="input-hint">
+                    <i className="fas fa-info-circle me-1"></i>
+                    Este input se enviará como stdin al programa cuando lo compiles
+                  </small>
                 </div>
                 
                 <div className="problem-actions">
@@ -1272,6 +1299,55 @@ const ProgrammingExamView = () => {
           font-style: italic;
           font-size: 0.9rem;
           margin-top: 8px;
+        }
+
+        .input-section {
+          margin-bottom: 20px;
+          padding: 16px;
+          background: rgba(243, 244, 246, 0.5);
+          border: 2px solid rgba(209, 213, 219, 0.5);
+          border-radius: 12px;
+          animation: slideIn 0.3s ease;
+        }
+
+        .input-label {
+          display: block;
+          font-weight: 600;
+          font-size: 0.95rem;
+          color: #374151;
+          margin-bottom: 8px;
+        }
+
+        .input-field {
+          width: 100%;
+          padding: 12px;
+          border: 2px solid #d1d5db;
+          border-radius: 8px;
+          font-size: 0.9rem;
+          font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+          background: white;
+          color: #1f2937;
+          resize: vertical;
+          transition: all 0.2s ease;
+        }
+
+        .input-field:focus {
+          outline: none;
+          border-color: #3b82f6;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .input-field::placeholder {
+          color: #9ca3af;
+          font-style: italic;
+        }
+
+        .input-hint {
+          display: block;
+          margin-top: 6px;
+          font-size: 0.8rem;
+          color: #6b7280;
+          font-style: italic;
         }
 
         .problem-actions {
