@@ -44,6 +44,7 @@ const ProgrammingExamView = () => {
   
   // Estado para compilación
   const [isCompiling, setIsCompiling] = useState(false);
+  const [compilationResult, setCompilationResult] = useState(null);
 
   // Obtener windowId de la URL
   const searchParams = new URLSearchParams(location.search);
@@ -592,6 +593,7 @@ const ProgrammingExamView = () => {
   const handleCompile = async () => {
     try {
       setIsCompiling(true);
+      setCompilationResult(null);
       console.log('Compilando código...', currentFileName);
       
       const token = localStorage.getItem('token');
@@ -614,31 +616,26 @@ const ProgrammingExamView = () => {
       
       if (response.ok) {
         console.log('Resultado de compilación:', result);
-        
-        // Mostrar resultado en consola (luego lo mostraremos en un panel)
-        if (result.output) {
-          console.log('Salida:', result.output);
-        }
-        if (result.error) {
-          console.error('Error de ejecución:', result.error);
-        }
-        console.log(`Tiempo de ejecución: ${result.executionTime}ms`);
-        
-        // TODO: Mostrar en panel de salida
-        alert(
-          `Compilación exitosa!\n\n` +
-          `Tiempo: ${result.executionTime}ms\n` +
-          `Salida:\n${result.output || '(sin salida)'}\n` +
-          `${result.error ? `\nErrores:\n${result.error}` : ''}`
-        );
+        setCompilationResult({
+          success: true,
+          output: result.output,
+          error: result.error,
+          executionTime: result.executionTime
+        });
       } else {
         console.error('Error en respuesta:', result);
-        alert(`Error: ${result.error || 'Error desconocido'}`);
+        setCompilationResult({
+          success: false,
+          error: result.error || 'Error desconocido'
+        });
       }
       
     } catch (error) {
       console.error('Error compilando:', error);
-      alert(`Error: ${error.message}`);
+      setCompilationResult({
+        success: false,
+        error: error.message
+      });
     } finally {
       setIsCompiling(false);
     }
@@ -795,6 +792,42 @@ const ProgrammingExamView = () => {
                   <div className="problem-statement">
                     {exam.enunciadoProgramacion}
                   </div>
+                  
+                  {/* Panel de resultado de compilación */}
+                  {compilationResult && (
+                    <div className={`compilation-result ${compilationResult.success ? 'success' : 'error'}`}>
+                      <div className="compilation-header">
+                        <i className={`fas ${compilationResult.success ? 'fa-check-circle' : 'fa-times-circle'} me-2`}></i>
+                        {compilationResult.success ? 'Compilación exitosa' : 'Error de compilación'}
+                        {compilationResult.executionTime && (
+                          <span className="execution-time ms-2">
+                            ⏱️ {compilationResult.executionTime}ms
+                          </span>
+                        )}
+                      </div>
+                      
+                      {compilationResult.output && (
+                        <div className="output-section">
+                          <div className="output-label">Salida:</div>
+                          <pre className="output-content">{compilationResult.output}</pre>
+                        </div>
+                      )}
+                      
+                      {compilationResult.error && (
+                        <div className="error-section">
+                          <div className="error-label">Error:</div>
+                          <pre className="error-content">{compilationResult.error}</pre>
+                        </div>
+                      )}
+                      
+                      {!compilationResult.output && !compilationResult.error && compilationResult.success && (
+                        <div className="no-output">
+                          <i className="fas fa-info-circle me-2"></i>
+                          (sin salida)
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
                 
                 <div className="problem-actions">
@@ -1136,6 +1169,109 @@ const ProgrammingExamView = () => {
           line-height: 1.7;
           color: #374151;
           font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+        }
+
+        .compilation-result {
+          margin-top: 20px;
+          border-radius: 12px;
+          padding: 16px;
+          animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .compilation-result.success {
+          background: rgba(16, 185, 129, 0.1);
+          border: 2px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .compilation-result.error {
+          background: rgba(239, 68, 68, 0.1);
+          border: 2px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .compilation-header {
+          font-weight: 700;
+          font-size: 1rem;
+          margin-bottom: 12px;
+          display: flex;
+          align-items: center;
+        }
+
+        .compilation-result.success .compilation-header {
+          color: #059669;
+        }
+
+        .compilation-result.error .compilation-header {
+          color: #dc2626;
+        }
+
+        .execution-time {
+          font-size: 0.85rem;
+          font-weight: 600;
+          color: #6b7280;
+          background: rgba(255, 255, 255, 0.5);
+          padding: 2px 8px;
+          border-radius: 4px;
+        }
+
+        .output-section, .error-section {
+          margin-top: 12px;
+        }
+
+        .output-label, .error-label {
+          font-weight: 600;
+          font-size: 0.85rem;
+          margin-bottom: 6px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .output-label {
+          color: #059669;
+        }
+
+        .error-label {
+          color: #dc2626;
+        }
+
+        .output-content, .error-content {
+          background: rgba(255, 255, 255, 0.8);
+          border-radius: 8px;
+          padding: 12px;
+          margin: 0;
+          white-space: pre-wrap;
+          font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+          font-size: 0.9rem;
+          line-height: 1.5;
+          max-height: 200px;
+          overflow-y: auto;
+        }
+
+        .output-content {
+          color: #1f2937;
+          border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .error-content {
+          color: #991b1b;
+          border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .no-output {
+          color: #6b7280;
+          font-style: italic;
+          font-size: 0.9rem;
+          margin-top: 8px;
         }
 
         .problem-actions {
