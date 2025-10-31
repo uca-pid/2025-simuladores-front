@@ -314,27 +314,57 @@ const ProgrammingExamView = () => {
     try {
       setLoading(true);
       
-      // 💾 Guardar TODOS los archivos con cambios en el caché
-      console.log('Guardando todos los archivos antes de finalizar...');
-      const filesToSave = Object.keys(fileCache);
+      // � PASO 1: Crear versión de "submission" (snapshot del envío)
+      // Recolectar todos los archivos con su contenido actual
+      console.log('Creando snapshot de archivos para envío...');
+      const submissionFiles = [];
       
-      for (const filename of filesToSave) {
-        const content = fileCache[filename];
-        console.log(`Guardando archivo: ${filename}`);
-        await saveCurrentFile(filename, content);
+      // Agregar archivos del caché (archivos con cambios no guardados)
+      for (const filename of Object.keys(fileCache)) {
+        submissionFiles.push({
+          filename: filename,
+          content: fileCache[filename]
+        });
       }
       
-      // También guardar el archivo actual si no está en el caché
+      // Agregar el archivo actual si no está en el caché
       if (code && currentFileName && fileCache[currentFileName] === undefined) {
-        console.log(`Guardando archivo actual: ${currentFileName}`);
-        await saveCurrentFile(currentFileName, code);
+        submissionFiles.push({
+          filename: currentFileName,
+          content: code
+        });
       }
       
-      console.log('Todos los archivos guardados. Finalizando examen...');
+      // Agregar archivos que no están en el caché pero existen en la lista
+      for (const file of files) {
+        const isInCache = submissionFiles.some(f => f.filename === file.filename);
+        if (!isInCache) {
+          submissionFiles.push({
+            filename: file.filename,
+            content: file.content
+          });
+        }
+      }
       
       const token = localStorage.getItem('token');
       const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
       
+      // Guardar archivos como versión de envío (submission)
+      console.log(`Guardando ${submissionFiles.length} archivos como versión de envío (submission)...`);
+      await fetch(`${API_BASE_URL}/exam-files/${examId}/files/submission`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          files: submissionFiles
+        })
+      });
+      
+      console.log('✅ Versión de envío creada. Finalizando examen...');
+      
+      // 🏁 PASO 2: Finalizar el examen
       await fetch(`${API_BASE_URL}/exam-attempts/${attempt.id}/finish`, {
         method: 'PUT',
         headers: {
