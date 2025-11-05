@@ -640,9 +640,9 @@ const ProgrammingExamView = () => {
     
     // Si llegamos aquí, el archivo es válido para crear
     try {
-      await saveCurrentFile(fileName, '// Nuevo archivo\n');
+      await saveCurrentFile(fileName, '# Nuevo archivo\n');
       setCurrentFileName(fileName);
-      setCode('// Nuevo archivo\n');
+      setCode('# Nuevo archivo\n');
       setNewFileName('');
       setShowFileManager(false);
     } catch (error) {
@@ -3188,7 +3188,7 @@ const ProgrammingExamView = () => {
         onClose={() => setShowFinishModal(false)}
         onConfirm={finishExam}
         title="Finalizar Examen"
-        message="¿Estás seguro de que quieres finalizar el examen? Se guardará automáticamente el código actual. No podrás hacer más cambios después."
+        message="¿Estás seguro de que quieres finalizar el examen?"
         type="confirm"
         confirmText="Finalizar"
         cancelText="Cancelar"
