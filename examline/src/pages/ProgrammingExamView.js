@@ -34,10 +34,26 @@ const ProgrammingExamView = () => {
   // 🔀 Estado para drag & drop de tabs
   const [draggedTab, setDraggedTab] = useState(null);
   
+  // 👁️ Estado para archivos ocultos de la vista
+  const [hiddenFiles, setHiddenFiles] = useState(new Set());
+  
   // Estados para modales
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [fileToDelete, setFileToDelete] = useState('');
+  
+  // Estado para compilación
+  const [isCompiling, setIsCompiling] = useState(false);
+  const [compilationResult, setCompilationResult] = useState(null);
+  const [userInput, setUserInput] = useState('');
+  // Navegación lateral (Consigna | Programación)
+  const [activeSection, setActiveSection] = useState('programacion'); // 'consigna' | 'programacion'
+  
+  // 📱 Estado para sidebar colapsado en móviles
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  
+  // 🔄 Estado para alternar entre vista de entrada/salida en móviles
+  const [mobileTerminalView, setMobileTerminalView] = useState('output'); // 'input' | 'output'
 
   // Obtener windowId de la URL
   const searchParams = new URLSearchParams(location.search);
@@ -68,6 +84,26 @@ const ProgrammingExamView = () => {
   };
 
   // Configuración del editor Monaco optimizada para reducir ResizeObserver errors
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  
+  // 📱 Detectar cambios de tamaño de ventana
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+      // Auto-colapsar sidebar en móviles
+      if (window.innerWidth < 768) {
+        setIsSidebarCollapsed(true);
+      } else {
+        setIsSidebarCollapsed(false);
+      }
+    };
+    
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Ejecutar al montar
+    
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
   const editorOptions = {
     selectOnLineNumbers: true,
     roundedSelection: false,
@@ -75,16 +111,16 @@ const ProgrammingExamView = () => {
     cursorStyle: 'line',
     automaticLayout: true,
     scrollBeyondLastLine: false,
-    minimap: { enabled: true },
-    fontSize: 14,
+    minimap: { enabled: windowWidth > 768 }, // Deshabilitar minimap en móviles
+    fontSize: windowWidth < 768 ? 12 : 14, // Fuente más pequeña en móviles
     lineNumbers: 'on',
     wordWrap: 'on',
     scrollbar: {
       vertical: 'visible',
       horizontal: 'visible',
       // Reducir la sensibilidad del scrollbar para evitar resize loops
-      verticalScrollbarSize: 12,
-      horizontalScrollbarSize: 12
+      verticalScrollbarSize: windowWidth < 768 ? 8 : 12,
+      horizontalScrollbarSize: windowWidth < 768 ? 8 : 12
     },
     // Optimizaciones para reducir redraws
     smoothScrolling: false,
@@ -278,27 +314,57 @@ const ProgrammingExamView = () => {
     try {
       setLoading(true);
       
-      // 💾 Guardar TODOS los archivos con cambios en el caché
-      console.log('Guardando todos los archivos antes de finalizar...');
-      const filesToSave = Object.keys(fileCache);
+      // � PASO 1: Crear versión de "submission" (snapshot del envío)
+      // Recolectar todos los archivos con su contenido actual
+      console.log('Creando snapshot de archivos para envío...');
+      const submissionFiles = [];
       
-      for (const filename of filesToSave) {
-        const content = fileCache[filename];
-        console.log(`Guardando archivo: ${filename}`);
-        await saveCurrentFile(filename, content);
+      // Agregar archivos del caché (archivos con cambios no guardados)
+      for (const filename of Object.keys(fileCache)) {
+        submissionFiles.push({
+          filename: filename,
+          content: fileCache[filename]
+        });
       }
       
-      // También guardar el archivo actual si no está en el caché
+      // Agregar el archivo actual si no está en el caché
       if (code && currentFileName && fileCache[currentFileName] === undefined) {
-        console.log(`Guardando archivo actual: ${currentFileName}`);
-        await saveCurrentFile(currentFileName, code);
+        submissionFiles.push({
+          filename: currentFileName,
+          content: code
+        });
       }
       
-      console.log('Todos los archivos guardados. Finalizando examen...');
+      // Agregar archivos que no están en el caché pero existen en la lista
+      for (const file of files) {
+        const isInCache = submissionFiles.some(f => f.filename === file.filename);
+        if (!isInCache) {
+          submissionFiles.push({
+            filename: file.filename,
+            content: file.content
+          });
+        }
+      }
       
       const token = localStorage.getItem('token');
       const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
       
+      // Guardar archivos como versión de envío (submission)
+      console.log(`Guardando ${submissionFiles.length} archivos como versión de envío (submission)...`);
+      await fetch(`${API_BASE_URL}/exam-files/${examId}/files/submission`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          files: submissionFiles
+        })
+      });
+      
+      console.log('✅ Versión de envío creada. Finalizando examen...');
+      
+      // 🏁 PASO 2: Finalizar el examen
       await fetch(`${API_BASE_URL}/exam-attempts/${attempt.id}/finish`, {
         method: 'PUT',
         headers: {
@@ -344,7 +410,7 @@ const ProgrammingExamView = () => {
   }, [exam, attempt, fetchFiles]);
 
   // Efecto para guardado automático cada 30 segundos
-  useEffect(() => {
+/*  useEffect(() => {
     if (!attempt || attempt.estado !== 'en_progreso') return;
     
     const interval = setInterval(() => {
@@ -353,6 +419,7 @@ const ProgrammingExamView = () => {
     
     return () => clearInterval(interval);
   }, [code, attempt, saveCode]);
+*/
 
   // Manejar cambios en el editor con debounce para reducir actualizaciones
   const handleEditorChange = useCallback((value) => {
@@ -371,31 +438,7 @@ const ProgrammingExamView = () => {
     }
   }, [currentFileName]);
 
-  // Función para forzar guardado manual - guarda TODOS los archivos
-  const handleManualSave = async () => {
-    try {
-      setSaving(true);
-      
-      // 💾 Guardar TODOS los archivos del caché
-      console.log('Guardando todos los archivos...');
-      const filesToSave = Object.keys(fileCache);
-      
-      for (const filename of filesToSave) {
-        const content = fileCache[filename];
-        console.log(`Guardando archivo: ${filename}`);
-        await saveCurrentFile(filename, content);
-      }
-      
-      // ✅ Limpiar marca de archivos sin guardar
-      setUnsavedFiles(new Set());
-      
-      console.log('Todos los archivos guardados correctamente');
-    } catch (error) {
-      console.error('Error guardando archivos:', error);
-    } finally {
-      setSaving(false);
-    }
-  };
+  // (Se mueve más abajo, después de saveCurrentFile)
 
 
   const saveCurrentFile = useCallback(async (filename = currentFileName, content = code) => {
@@ -448,6 +491,33 @@ const ProgrammingExamView = () => {
     }
   }, [examId, currentFileName, code, attempt]);
 
+  // Función para forzar guardado manual - guarda SOLO el archivo actual
+  const handleManualSave = useCallback(async () => {
+    if (!currentFileName) return;
+    
+    try {
+      setSaving(true);
+
+      // 💾 Guardar SOLO el archivo actual
+      console.log(`Guardando archivo actual: ${currentFileName}`);
+      const content = fileCache[currentFileName] || code;
+      await saveCurrentFile(currentFileName, content);
+
+      // ✅ Limpiar marca de archivo sin guardar (solo el actual)
+      setUnsavedFiles(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(currentFileName);
+        return newSet;
+      });
+
+      console.log('Archivo guardado correctamente');
+    } catch (error) {
+      console.error('Error guardando archivo:', error);
+    } finally {
+      setSaving(false);
+    }
+  }, [currentFileName, fileCache, code, saveCurrentFile]);
+
   const loadFile = useCallback((filename) => {
     // 💾 Guardar el contenido actual en el caché ANTES de cambiar
     if (currentFileName && code !== undefined) {
@@ -466,6 +536,38 @@ const ProgrammingExamView = () => {
       return prev;
     });
   }, [currentFileName, code]);
+
+  // Función para ocultar archivo de la vista (no lo elimina)
+  const hideFile = useCallback((filename) => {
+    setHiddenFiles(prev => new Set(prev).add(filename));
+    
+    // Si el archivo oculto es el actual, cambiar a otro visible
+    if (filename === currentFileName) {
+      const visibleFiles = files.filter(f => 
+        f.filename !== filename && !hiddenFiles.has(f.filename)
+      );
+      
+      if (visibleFiles.length > 0) {
+        loadFile(visibleFiles[0].filename);
+      } else {
+        // Si no hay archivos visibles, crear uno nuevo por defecto
+        const defaultFileName = `main.${exam?.lenguajeProgramacion === 'python' ? 'py' : 'js'}`;
+        setCurrentFileName(defaultFileName);
+        setCode('');
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentFileName, files, exam?.lenguajeProgramacion]);
+
+  // Función para mostrar archivo en la vista
+  const showFile = useCallback((filename) => {
+    setHiddenFiles(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(filename);
+      return newSet;
+    });
+    loadFile(filename);
+  }, [loadFile]);
 
   const requestDeleteFile = useCallback((filename) => {
     setFileToDelete(filename);
@@ -539,9 +641,9 @@ const ProgrammingExamView = () => {
     
     // Si llegamos aquí, el archivo es válido para crear
     try {
-      await saveCurrentFile(fileName, '// Nuevo archivo\n');
+      await saveCurrentFile(fileName, '# Nuevo archivo\n');
       setCurrentFileName(fileName);
-      setCode('// Nuevo archivo\n');
+      setCode('# Nuevo archivo\n');
       setNewFileName('');
       setShowFileManager(false);
     } catch (error) {
@@ -549,6 +651,60 @@ const ProgrammingExamView = () => {
       // El error será manejado por la UI visual, no necesitamos modal
     }
   }, [newFileName, exam?.lenguajeProgramacion, files, saveCurrentFile, setCode, setCurrentFileName]);
+
+  // Función para compilar código
+  const handleCompile = async () => {
+    try {
+      setIsCompiling(true);
+      setCompilationResult(null);
+      console.log('Compilando código...', currentFileName);
+      console.log('Input del usuario:', userInput);
+      
+      const token = localStorage.getItem('token');
+      const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
+      
+      const response = await fetch(`${API_BASE_URL}/code-execution/run`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          code: code,
+          language: exam?.lenguajeProgramacion || 'python',
+          examId: examId,
+          input: userInput || '' // Enviar el input del usuario
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok) {
+        console.log('Resultado de compilación:', result);
+        setCompilationResult({
+          success: true,
+          output: result.output,
+          error: result.error,
+          executionTime: result.executionTime
+        });
+      } else {
+        console.error('Error en respuesta:', result);
+        setCompilationResult({
+          success: false,
+          error: result.error || 'Error desconocido'
+        });
+      }
+      
+    } catch (error) {
+      console.error('Error compilando:', error);
+      setCompilationResult({
+        success: false,
+        error: error.message
+      });
+    } finally {
+      setIsCompiling(false);
+    }
+  };
 
   // 🔀 Funciones para drag & drop de tabs
   const handleDragStart = (e, index) => {
@@ -646,14 +802,14 @@ const ProgrammingExamView = () => {
       <div className="programming-exam-header">
         <div className="container-fluid">
           <div className="row align-items-center py-2">
-            <div className="col-auto">
+            <div className="col-auto d-none d-md-block">
               <div className="exam-logo">
                 <i className="fas fa-laptop-code"></i>
               </div>
             </div>
             <div className="col">
               <h1 className="exam-title mb-0">{exam.titulo}</h1>
-              <small className="exam-subtitle">
+              <small className="exam-subtitle d-none d-sm-block">
                 {exam.lenguajeProgramacion === 'python' ? '🐍 Python' : '⚡ JavaScript'} • 
                 {exam.intellisenseHabilitado ? ' ✨ Intellisense activo' : ' 🔒 Intellisense desactivado'}
                 {isInSEB && ' • 🔒 Modo Seguro (SEB)'}
@@ -664,17 +820,17 @@ const ProgrammingExamView = () => {
                 {saving ? (
                   <span className="status-saving">
                     <i className="fas fa-spinner fa-spin me-1"></i>
-                    Guardando...
+                    <span className="d-none d-sm-inline">Guardando...</span>
                   </span>
                 ) : lastSaved ? (
                   <span className="status-saved">
                     <i className="fas fa-check me-1"></i>
-                    Guardado {lastSaved.toLocaleTimeString()}
+                    <span className="d-none d-sm-inline">Guardado {lastSaved.toLocaleTimeString()}</span>
                   </span>
                 ) : (
                   <span className="status-unsaved">
                     <i className="fas fa-clock me-1"></i>
-                    Sin guardar
+                    <span className="d-none d-sm-inline">Sin guardar</span>
                   </span>
                 )}
               </div>
@@ -683,68 +839,89 @@ const ProgrammingExamView = () => {
         </div>
       </div>
 
-      {/* Contenido principal */}
+      {/* Contenido principal con sidebar */}
       <div className="programming-exam-content">
-        <div className="container-fluid h-100">
-          <div className="row h-100">
-            {/* Panel del enunciado */}
-            <div className="col-lg-4 col-md-12 programming-problem-panel">
-              <div className="problem-container">
-                <div className="problem-header">
-                  <h3>
-                    <i className="fas fa-puzzle-piece me-2"></i>
-                    Problema
-                  </h3>
-                </div>
-                
-                <div className="problem-content">
-                  <div className="problem-statement">
-                    {exam.enunciadoProgramacion}
-                  </div>
-                </div>
-                
-                <div className="problem-actions">
-                  <button 
-                    className="btn-action btn-save" 
-                    onClick={handleManualSave}
-                    disabled={saving || fileOperationLoading}
-                  >
-                    {saving ? (
-                      <>
-                        <i className="fas fa-spinner fa-spin me-2"></i>
-                        Guardando...
-                      </>
-                    ) : (
-                      <>
-                        <i className="fas fa-save me-2"></i>
-                        Guardar código
-                      </>
-                    )}
-                  </button>
-                  
-                  <button 
-                    className="btn-action btn-finish" 
-                    onClick={handleFinishExamClick}
-                    disabled={loading || saving}
-                  >
-                    <i className="fas fa-check-circle me-2"></i>
-                    Finalizar examen
-                  </button>
+        <div className={`exam-shell ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+          {/* Overlay para cerrar el sidebar en móviles */}
+          {!isSidebarCollapsed && windowWidth < 768 && (
+            <div 
+              className="sidebar-overlay"
+              onClick={() => setIsSidebarCollapsed(true)}
+            />
+          )}
+          
+          {/* Botón toggle para móviles */}
+          <button 
+            className="sidebar-toggle d-md-none"
+            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            aria-label="Toggle menu"
+          >
+            <i className={`fas ${isSidebarCollapsed ? 'fa-bars' : 'fa-times'}`}></i>
+          </button>
+          
+          {/* Sidebar */}
+          <aside className={`exam-sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
+            <div className="sidebar-header">
+              <div className="student-pill" title="Alumno">
+                <i className="fas fa-user-graduate"></i>
+              </div>
+              <div className="sidebar-title">Examen</div>
+            </div>
+            <nav className="sidebar-nav">
+              <button
+                className={`sidebar-item ${activeSection === 'consigna' ? 'active' : ''}`}
+                onClick={() => {
+                  setActiveSection('consigna');
+                  if (windowWidth < 768) setIsSidebarCollapsed(true);
+                }}
+              >
+                <i className="fas fa-file-alt me-2"></i>
+                <span className="sidebar-text">Consigna</span>
+              </button>
+              <button
+                className={`sidebar-item ${activeSection === 'programacion' ? 'active' : ''}`}
+                onClick={() => {
+                  setActiveSection('programacion');
+                  if (windowWidth < 768) setIsSidebarCollapsed(true);
+                }}
+              >
+                <i className="fas fa-code me-2"></i>
+                <span className="sidebar-text">Programación</span>
+              </button>
+            </nav>
+            <div className="sidebar-footer">
+              <button
+                className="btn-send-exam"
+                onClick={handleFinishExamClick}
+                disabled={loading || saving}
+              >
+                <i className="fas fa-paper-plane me-2"></i>
+                <span className="sidebar-text">Finalizar examen</span>
+              </button>
+            </div>
+          </aside>
+
+          {/* Main content */}
+          <main className="exam-main">
+            {activeSection === 'consigna' ? (
+              <div className="consigna-panel">
+                <h3 className="consigna-title">
+                  <i className="fas fa-puzzle-piece me-2"></i>
+                  Consigna
+                </h3>
+                <div className="problem-statement">
+                  {exam.enunciadoProgramacion}
                 </div>
               </div>
-            </div>
-            
-            {/* Panel del editor */}
-            <div className="col-lg-8 col-md-12 programming-editor-panel">
-              <div className="editor-container">
+            ) : (
+              <div className="programming-area">
+                {/* Toolbar superior: tabs y acciones */}
                 <div className="editor-header">
-                  {/* Sección de navegación de archivos - izquierda */}
                   <div className="editor-navigation-section">
                     {files.length <= 6 ? (
-                      /* Pestañas normales para pocos archivos */
                       <div className="editor-tabs">
-                        {files.map((file, index) => (
-                          <div 
+                        {files.filter(file => !hiddenFiles.has(file.filename)).map((file, index) => (
+                          <div
                             key={file.filename}
                             className={`editor-tab ${file.filename === currentFileName ? 'active' : ''} ${draggedTab === index ? 'dragging' : ''}`}
                             onClick={() => loadFile(file.filename)}
@@ -764,14 +941,15 @@ const ProgrammingExamView = () => {
                               className="file-close-btn ms-2"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                requestDeleteFile(file.filename);
+                                hideFile(file.filename);
                               }}
+                              title="Ocultar pestaña (no elimina el archivo)"
                             >
                               ×
                             </button>
                           </div>
                         ))}
-                        <button 
+                        <button
                           className="editor-tab new-file-tab"
                           onClick={() => setShowFileManager(true)}
                         >
@@ -780,7 +958,6 @@ const ProgrammingExamView = () => {
                         </button>
                       </div>
                     ) : (
-                      /* Navegación compacta para muchos archivos */
                       <div className="editor-navigation-compact">
                         <div className="editor-nav-controls">
                           <select
@@ -788,43 +965,42 @@ const ProgrammingExamView = () => {
                             onChange={(e) => loadFile(e.target.value)}
                             className="file-selector-dropdown"
                           >
-                            {files.map((file, index) => (
+                            {files.filter(file => !hiddenFiles.has(file.filename)).map((file, index) => (
                               <option key={file.filename} value={file.filename}>
                                 {index + 1}. {file.filename}
                               </option>
                             ))}
                           </select>
-                          
                           <div className="nav-buttons">
                             <button
                               onClick={() => {
-                                const currentIndex = files.findIndex(f => f.filename === currentFileName);
+                                const visibleFiles = files.filter(f => !hiddenFiles.has(f.filename));
+                                const currentIndex = visibleFiles.findIndex(f => f.filename === currentFileName);
                                 const prevIndex = Math.max(0, currentIndex - 1);
                                 if (prevIndex !== currentIndex) {
-                                  loadFile(files[prevIndex].filename);
+                                  loadFile(visibleFiles[prevIndex].filename);
                                 }
                               }}
-                              disabled={files.findIndex(f => f.filename === currentFileName) === 0}
+                              disabled={files.filter(f => !hiddenFiles.has(f.filename)).findIndex(f => f.filename === currentFileName) === 0}
                               className="nav-btn prev-btn"
                             >
                               <i className="fas fa-chevron-left"></i>
                             </button>
-                            
                             <button
                               onClick={() => {
-                                const currentIndex = files.findIndex(f => f.filename === currentFileName);
-                                const nextIndex = Math.min(files.length - 1, currentIndex + 1);
+                                const visibleFiles = files.filter(f => !hiddenFiles.has(f.filename));
+                                const currentIndex = visibleFiles.findIndex(f => f.filename === currentFileName);
+                                const nextIndex = Math.min(visibleFiles.length - 1, currentIndex + 1);
                                 if (nextIndex !== currentIndex) {
-                                  loadFile(files[nextIndex].filename);
+                                  loadFile(visibleFiles[nextIndex].filename);
                                 }
                               }}
-                              disabled={files.findIndex(f => f.filename === currentFileName) === files.length - 1}
+                              disabled={files.filter(f => !hiddenFiles.has(f.filename)).findIndex(f => f.filename === currentFileName) === files.filter(f => !hiddenFiles.has(f.filename)).length - 1}
                               className="nav-btn next-btn"
                             >
                               <i className="fas fa-chevron-right"></i>
                             </button>
-                            
-                            <button 
+                            <button
                               className="nav-btn new-file-btn"
                               onClick={() => setShowFileManager(true)}
                             >
@@ -832,12 +1008,10 @@ const ProgrammingExamView = () => {
                             </button>
                           </div>
                         </div>
-                        
-                        {/* Pestañas con scroll para visualización */}
                         <div className="editor-tabs-scroll">
                           <div className="editor-tabs-container">
-                            {files.map((file, index) => (
-                              <div 
+                            {files.filter(file => !hiddenFiles.has(file.filename)).map((file, index) => (
+                              <div
                                 key={file.filename}
                                 className={`editor-tab-compact ${file.filename === currentFileName ? 'active' : ''} ${draggedTab === index ? 'dragging' : ''}`}
                                 onClick={() => loadFile(file.filename)}
@@ -859,8 +1033,9 @@ const ProgrammingExamView = () => {
                                   className="file-close-btn-compact"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    requestDeleteFile(file.filename);
+                                    hideFile(file.filename);
                                   }}
+                                  title="Ocultar pestaña (no elimina el archivo)"
                                 >
                                   ×
                                 </button>
@@ -871,45 +1046,198 @@ const ProgrammingExamView = () => {
                       </div>
                     )}
                   </div>
-
-                  {/* Línea divisoria vertical */}
                   <div className="editor-divider"></div>
-
-                  {/* Sección de controles - derecha */}
                   <div className="editor-controls">
-                    <button 
+                    <button
                       className="btn btn-sm btn-outline-info"
                       onClick={() => setShowFileManager(true)}
                     >
                       <i className="fas fa-folder me-1"></i>
-                      Archivos
+                      <span>Archivos</span>
+                    </button>
+                    <button
+                      className="btn btn-sm btn-outline-success"
+                      onClick={handleCompile}
+                      disabled={isCompiling}
+                    >
+                      {isCompiling ? (
+                        <>
+                          <i className="fas fa-spinner fa-spin me-1"></i>
+                          <span>Compilando...</span>
+                        </>
+                      ) : (
+                        <>
+                          <i className="fas fa-play me-1"></i>
+                          <span>Ejecutar</span>
+                        </>
+                      )}
+                    </button>
+                    <button
+                      className="btn btn-sm btn-outline-primary"
+                      onClick={handleManualSave}
+                      disabled={saving || fileOperationLoading}
+                    >
+                      {saving ? (
+                        <>
+                          <i className="fas fa-spinner fa-spin me-1"></i>
+                          <span>Guardando</span>
+                        </>
+                      ) : (
+                        <>
+                          <i className="fas fa-save me-1"></i>
+                          <span>Guardar</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
-                
-                <div className="editor-content">
-                  <Editor
-                    height="100%"
-                    language={exam.lenguajeProgramacion}
-                    theme="vs-dark"
-                    value={code}
-                    onChange={handleEditorChange}
-                    options={{
-                      ...editorOptions,
-                      quickSuggestions: exam.intellisenseHabilitado,
-                      suggestOnTriggerCharacters: exam.intellisenseHabilitado,
-                      acceptSuggestionOnEnter: exam.intellisenseHabilitado ? 'on' : 'off',
-                      tabCompletion: exam.intellisenseHabilitado ? 'on' : 'off',
-                      wordBasedSuggestions: exam.intellisenseHabilitado,
-                      parameterHints: {
-                        enabled: exam.intellisenseHabilitado
-                      }
-                    }}
-                  />
+
+                {/* Grilla principal: izquierda (editor+input) | derecha (output) */}
+                <div className="programming-grid">
+                  <div className="grid-left">
+                    <div className="editor-content">
+                      <Editor
+                        height="100%"
+                        language={exam.lenguajeProgramacion}
+                        theme="vs-dark"
+                        value={code}
+                        onChange={handleEditorChange}
+                        options={{
+                          ...editorOptions,
+                          quickSuggestions: exam.intellisenseHabilitado,
+                          suggestOnTriggerCharacters: exam.intellisenseHabilitado,
+                          acceptSuggestionOnEnter: exam.intellisenseHabilitado ? 'on' : 'off',
+                          tabCompletion: exam.intellisenseHabilitado ? 'on' : 'off',
+                          wordBasedSuggestions: exam.intellisenseHabilitado,
+                          parameterHints: { enabled: exam.intellisenseHabilitado }
+                        }}
+                      />
+                    </div>
+                    <div className="input-section compact d-none d-md-block">
+                      <label htmlFor="userInput" className="input-label">
+                        <i className="fas fa-keyboard me-2"></i>
+                        Entrada del programa (stdin)
+                      </label>
+                      <textarea
+                        id="userInput"
+                        className="input-field"
+                        placeholder={`Ejemplo:\n2\n3`}
+                        value={userInput}
+                        onChange={(e) => setUserInput(e.target.value)}
+                        rows="3"
+                      />
+                      <small className="input-hint">
+                        Se envía como entrada al ejecutar
+                      </small>
+                    </div>
+                  </div>
+                  
+                  <div className="grid-right">
+                    {/* Vista desktop: solo panel de salida */}
+                    <div className="output-panel d-none d-md-flex">
+                      <div className="output-header">
+                        <i className="fas fa-terminal me-2"></i> Salida
+                        {compilationResult?.executionTime && (
+                          <span className="execution-time ms-2">⏱️ {compilationResult.executionTime}ms</span>
+                        )}
+                      </div>
+                      <div className="output-body">
+                        {compilationResult ? (
+                          <>
+                            {compilationResult.output && (
+                              <pre className="output-content console">{compilationResult.output}</pre>
+                            )}
+                            {compilationResult.error && (
+                              <pre className="error-content console">{compilationResult.error}</pre>
+                            )}
+                            {!compilationResult.output && !compilationResult.error && compilationResult.success && (
+                              <div className="no-output"><i className="fas fa-info-circle me-2"></i>(sin salida)</div>
+                            )}
+                          </>
+                        ) : (
+                          <div className="output-placeholder">
+                            <i className="fas fa-play-circle me-2"></i>
+                            Ejecuta tu programa para ver la salida aquí
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Vista móvil: panel intercambiable */}
+                    <div className="terminal-mobile d-md-none">
+                      {/* Pestañas para móvil */}
+                      <div className="mobile-terminal-tabs">
+                        <button
+                          className={`mobile-terminal-tab ${mobileTerminalView === 'output' ? 'active' : ''}`}
+                          onClick={() => setMobileTerminalView('output')}
+                        >
+                          <i className="fas fa-terminal"></i>
+                          <span className="ms-2">Salida</span>
+                          {compilationResult && (
+                            <span className="terminal-badge ms-1">
+                              {compilationResult.success ? '✓' : '✗'}
+                            </span>
+                          )}
+                        </button>
+                        <button
+                          className={`mobile-terminal-tab ${mobileTerminalView === 'input' ? 'active' : ''}`}
+                          onClick={() => setMobileTerminalView('input')}
+                        >
+                          <i className="fas fa-keyboard"></i>
+                          <span className="ms-2">Entrada</span>
+                          {userInput.trim() && (
+                            <span className="terminal-badge ms-1">●</span>
+                          )}
+                        </button>
+                      </div>
+                      
+                      {/* Contenido móvil */}
+                      <div className="mobile-terminal-content">
+                        {mobileTerminalView === 'output' ? (
+                          <div className="mobile-output-panel">
+                            <div className="mobile-output-body">
+                              {compilationResult ? (
+                                <>
+                                  {compilationResult.output && (
+                                    <pre className="output-content console">{compilationResult.output}</pre>
+                                  )}
+                                  {compilationResult.error && (
+                                    <pre className="error-content console">{compilationResult.error}</pre>
+                                  )}
+                                  {!compilationResult.output && !compilationResult.error && compilationResult.success && (
+                                    <div className="no-output"><i className="fas fa-info-circle me-2"></i>(sin salida)</div>
+                                  )}
+                                </>
+                              ) : (
+                                <div className="output-placeholder">
+                                  <i className="fas fa-play-circle me-2"></i>
+                                  Ejecuta tu programa para ver la salida
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="mobile-input-panel">
+                            <textarea
+                              id="userInputMobile"
+                              className="mobile-input-field"
+                              placeholder={`Ingresa los datos aquí...\n\nEjemplo:\n2\n3`}
+                              value={userInput}
+                              onChange={(e) => setUserInput(e.target.value)}
+                            />
+                            <div className="mobile-input-hint">
+                              <i className="fas fa-info-circle me-1"></i>
+                              Se enviará al programa al ejecutar
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
+            )}
+          </main>
         </div>
       </div>
 
@@ -947,6 +1275,18 @@ const ProgrammingExamView = () => {
           color: #2d3748;
           margin: 0;
         }
+        
+        @media (max-width: 768px) {
+          .exam-title {
+            font-size: 1.2rem;
+          }
+        }
+        
+        @media (max-width: 480px) {
+          .exam-title {
+            font-size: 1rem;
+          }
+        }
 
         .exam-subtitle {
           color: #718096;
@@ -959,6 +1299,13 @@ const ProgrammingExamView = () => {
           border-radius: 20px;
           font-size: 0.85rem;
           font-weight: 600;
+        }
+        
+        @media (max-width: 768px) {
+          .exam-status {
+            padding: 6px 10px;
+            font-size: 0.75rem;
+          }
         }
 
         .status-saving {
@@ -1023,6 +1370,158 @@ const ProgrammingExamView = () => {
           font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
         }
 
+        .compilation-result {
+          margin-top: 20px;
+          border-radius: 12px;
+          padding: 16px;
+          animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .compilation-result.success {
+          background: rgba(16, 185, 129, 0.1);
+          border: 2px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .compilation-result.error {
+          background: rgba(239, 68, 68, 0.1);
+          border: 2px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .compilation-header {
+          font-weight: 700;
+          font-size: 1rem;
+          margin-bottom: 12px;
+          display: flex;
+          align-items: center;
+        }
+
+        .compilation-result.success .compilation-header {
+          color: #059669;
+        }
+
+        .compilation-result.error .compilation-header {
+          color: #dc2626;
+        }
+
+        .execution-time {
+          font-size: 0.85rem;
+          font-weight: 600;
+          color: #6b7280;
+          background: rgba(255, 255, 255, 0.5);
+          padding: 2px 8px;
+          border-radius: 4px;
+        }
+
+        .output-section, .error-section {
+          margin-top: 12px;
+        }
+
+        .output-label, .error-label {
+          font-weight: 600;
+          font-size: 0.85rem;
+          margin-bottom: 6px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .output-label {
+          color: #059669;
+        }
+
+        .error-label {
+          color: #dc2626;
+        }
+
+        .output-content, .error-content {
+          background: rgba(255, 255, 255, 0.8);
+          border-radius: 8px;
+          padding: 12px;
+          margin: 0;
+          white-space: pre-wrap;
+          font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+          font-size: 0.9rem;
+          line-height: 1.5;
+          max-height: 200px;
+          overflow-y: auto;
+        }
+
+        .output-content {
+          color: #1f2937;
+          border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .error-content {
+          color: #991b1b;
+          border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .no-output {
+          color: #6b7280;
+          font-style: italic;
+          font-size: 0.9rem;
+          margin-top: 8px;
+        }
+
+        .input-section {
+          margin-bottom: 20px;
+          padding: 16px;
+          background: rgba(243, 244, 246, 0.5);
+          border: 2px solid rgba(209, 213, 219, 0.5);
+          border-radius: 12px;
+          animation: slideIn 0.3s ease;
+        }
+
+        .input-label {
+          display: block;
+          font-weight: 600;
+          font-size: 0.95rem;
+          color: #374151;
+          margin-bottom: 8px;
+        }
+
+        .input-field {
+          width: 100%;
+          padding: 12px;
+          border: 2px solid #d1d5db;
+          border-radius: 8px;
+          font-size: 0.9rem;
+          font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+          background: white;
+          color: #1f2937;
+          resize: vertical;
+          transition: all 0.2s ease;
+        }
+
+        .input-field:focus {
+          outline: none;
+          border-color: #3b82f6;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .input-field::placeholder {
+          color: #9ca3af;
+          font-style: italic;
+        }
+
+        .input-hint {
+          display: block;
+          margin-top: 6px;
+          font-size: 0.8rem;
+          color: #6b7280;
+          font-style: italic;
+        }
+
         .problem-actions {
           display: flex;
           flex-direction: column;
@@ -1083,6 +1582,15 @@ const ProgrammingExamView = () => {
           align-items: stretch;
           height: 60px; /* Altura fija */
           position: relative;
+          flex-wrap: wrap;
+        }
+        
+        @media (max-width: 768px) {
+          .editor-header {
+            height: auto;
+            min-height: 50px;
+            align-items: center;
+          }
         }
 
         /* Sección de navegación de archivos - izquierda */
@@ -1092,6 +1600,22 @@ const ProgrammingExamView = () => {
           align-items: center;
           padding: 0 15px;
           overflow: hidden;
+          min-width: 0;
+        }
+        
+        @media (max-width: 768px) {
+          .editor-navigation-section {
+            padding: 0 8px;
+            flex: 0 1 auto;
+            order: 1;
+            max-width: calc(100% - 200px);
+          }
+        }
+        
+        @media (max-width: 480px) {
+          .editor-navigation-section {
+            max-width: calc(100% - 160px);
+          }
         }
 
         /* Línea divisoria vertical */
@@ -1101,6 +1625,12 @@ const ProgrammingExamView = () => {
           height: 100%;
           flex-shrink: 0;
         }
+        
+        @media (max-width: 768px) {
+          .editor-divider {
+            display: none;
+          }
+        }
 
         .editor-tabs {
           display: flex;
@@ -1108,6 +1638,12 @@ const ProgrammingExamView = () => {
           scrollbar-width: thin;
           height: 60px; /* Altura fija igual al header */
           align-items: center;
+        }
+        
+        @media (max-width: 768px) {
+          .editor-tabs {
+            height: 50px;
+          }
         }
 
         .editor-tabs::-webkit-scrollbar {
@@ -1137,6 +1673,24 @@ const ProgrammingExamView = () => {
           align-items: center;
           min-width: 120px;
           max-width: 200px;
+        }
+        
+        @media (max-width: 768px) {
+          .editor-tab {
+            padding: 8px 12px;
+            font-size: 0.75rem;
+            min-width: 100px;
+            max-width: 150px;
+          }
+        }
+        
+        @media (max-width: 480px) {
+          .editor-tab {
+            padding: 6px 10px;
+            font-size: 0.7rem;
+            min-width: 80px;
+            max-width: 120px;
+          }
         }
 
         .editor-tab:hover:not(.active) {
@@ -1211,6 +1765,15 @@ const ProgrammingExamView = () => {
           height: 60px; /* Altura fija igual al header */
           background: #2d2d2d;
         }
+        
+        @media (max-width: 768px) {
+          .editor-navigation-compact {
+            flex-direction: row;
+            height: auto;
+            align-items: center;
+            gap: 8px;
+          }
+        }
 
         .editor-nav-controls {
           display: flex;
@@ -1221,6 +1784,16 @@ const ProgrammingExamView = () => {
           border-bottom: 1px solid #3e3e3e;
           height: 30px; /* Altura fija para controles */
           flex-shrink: 0;
+        }
+        
+        @media (max-width: 768px) {
+          .editor-nav-controls {
+            border-bottom: none;
+            padding: 4px 6px;
+            gap: 6px;
+            height: auto;
+            flex: 0 1 auto;
+          }
         }
 
         .file-selector-dropdown {
@@ -1233,6 +1806,23 @@ const ProgrammingExamView = () => {
           font-size: 0.85rem;
           min-width: 200px;
         }
+        
+        @media (max-width: 768px) {
+          .file-selector-dropdown {
+            min-width: 120px;
+            max-width: 150px;
+            font-size: 0.75rem;
+            padding: 4px 6px;
+          }
+        }
+        
+        @media (max-width: 480px) {
+          .file-selector-dropdown {
+            min-width: 100px;
+            max-width: 120px;
+            font-size: 0.7rem;
+          }
+        }
 
         .file-selector-dropdown:focus {
           outline: none;
@@ -1242,6 +1832,7 @@ const ProgrammingExamView = () => {
         .nav-buttons {
           display: flex;
           gap: 4px;
+          flex-shrink: 0;
         }
 
         .nav-btn {
@@ -1253,6 +1844,20 @@ const ProgrammingExamView = () => {
           cursor: pointer;
           transition: all 0.2s ease;
           font-size: 0.8rem;
+        }
+        
+        @media (max-width: 768px) {
+          .nav-btn {
+            padding: 4px 6px;
+            font-size: 0.75rem;
+          }
+        }
+        
+        @media (max-width: 480px) {
+          .nav-btn {
+            padding: 3px 5px;
+            font-size: 0.7rem;
+          }
         }
 
         .nav-btn:hover:not(:disabled) {
@@ -1278,6 +1883,12 @@ const ProgrammingExamView = () => {
           height: 30px; /* Altura fija para pestañas */
           display: flex;
           align-items: center;
+        }
+        
+        @media (max-width: 768px) {
+          .editor-tabs-scroll {
+            display: none;
+          }
         }
 
         .editor-tabs-scroll::-webkit-scrollbar {
@@ -1359,6 +1970,57 @@ const ProgrammingExamView = () => {
           flex-shrink: 0; /* No se comprime */
           min-width: fit-content; /* Mantiene su tamaño mínimo */
         }
+        
+        @media (max-width: 768px) {
+          .editor-controls {
+            padding: 0 8px;
+            gap: 6px;
+            flex: 0 1 auto;
+            order: 2;
+            justify-content: flex-end;
+          }
+          
+          .editor-controls .btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            white-space: nowrap;
+          }
+          
+          .editor-controls .btn i {
+            font-size: 0.8rem;
+          }
+        }
+        
+        @media (max-width: 480px) {
+          .editor-controls {
+            gap: 4px;
+            padding: 0 6px;
+          }
+          
+          .editor-controls .btn {
+            font-size: 0.7rem;
+            padding: 5px 8px;
+          }
+          
+          .editor-controls .btn span {
+            display: none;
+          }
+          
+          .editor-controls .btn i {
+            margin: 0 !important;
+          }
+        }
+        
+        @media (max-width: 360px) {
+          .editor-controls {
+            gap: 3px;
+            padding: 0 4px;
+          }
+          
+          .editor-controls .btn {
+            padding: 4px 6px;
+          }
+        }
 
         .editor-hint {
           color: #858585;
@@ -1430,6 +2092,644 @@ const ProgrammingExamView = () => {
             max-width: 100px;
             font-size: 0.7rem;
             padding: 4px 6px;
+          }
+        }
+      `}</style>
+      {/* Estilos del nuevo layout con sidebar */}
+      <style jsx>{`
+        .exam-shell {
+          display: grid;
+          grid-template-columns: 260px 1fr;
+          height: 100%;
+          position: relative;
+        }
+        
+        .exam-shell.sidebar-collapsed {
+          grid-template-columns: 1fr;
+        }
+        
+        /* Overlay para cerrar sidebar en móviles */
+        .sidebar-overlay {
+          display: none;
+        }
+        
+        @media (max-width: 767px) {
+          .sidebar-overlay {
+            display: block;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            animation: fadeIn 0.3s ease;
+          }
+        }
+        
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+        
+        /* Botón toggle para móviles */
+        .sidebar-toggle {
+          position: fixed;
+          top: 80px;
+          left: 10px;
+          z-index: 1001;
+          background: #111827;
+          border: 2px solid #374151;
+          color: #e5e7eb;
+          width: 44px;
+          height: 44px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+          transition: all 0.3s ease;
+        }
+        
+        .sidebar-toggle:hover {
+          background: #1f2937;
+          transform: scale(1.05);
+        }
+        
+        .sidebar-toggle:active {
+          transform: scale(0.95);
+        }
+        
+        @media (min-width: 768px) {
+          .sidebar-toggle {
+            display: none;
+          }
+        }
+        
+        .exam-sidebar {
+          background: #111827;
+          color: #d1d5db;
+          border-right: 1px solid #1f2937;
+          display: flex;
+          flex-direction: column;
+          padding: 14px 10px;
+          gap: 10px;
+          transition: transform 0.3s ease;
+        }
+        
+        @media (max-width: 767px) {
+          .exam-sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 260px;
+            z-index: 1000;
+            transform: translateX(0);
+            box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+          }
+          
+          .exam-sidebar.collapsed {
+            transform: translateX(-100%);
+          }
+        }
+        
+        .sidebar-header {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 6px 8px;
+        }
+        
+        .student-pill {
+          width: 28px; 
+          height: 28px;
+          border-radius: 6px;
+          background: #374151;
+          display: flex; 
+          align-items: center; 
+          justify-content: center;
+          flex-shrink: 0;
+        }
+        
+        .sidebar-title { 
+          font-weight: 700; 
+          color: #e5e7eb; 
+        }
+        
+        .sidebar-nav { 
+          display: flex; 
+          flex-direction: column; 
+          gap: 6px; 
+          margin-top: 6px; 
+        }
+        
+        .sidebar-item {
+          text-align: left;
+          background: transparent;
+          border: 1px solid transparent;
+          color: inherit;
+          padding: 10px 12px;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: background .15s, border .15s;
+          display: flex;
+          align-items: center;
+        }
+        
+        .sidebar-item:hover { 
+          background: #1f2937; 
+        }
+        
+        .sidebar-item.active { 
+          background: #2563eb; 
+          color: #fff; 
+          border-color: #2563eb; 
+        }
+        
+        .sidebar-footer { 
+          margin-top: auto; 
+          padding-top: 8px; 
+          border-top: 1px solid #1f2937; 
+        }
+        
+        .btn-send-exam {
+          width: 100%;
+          background: linear-gradient(45deg, #10b981, #059669);
+          border: none; 
+          color: #fff; 
+          font-weight: 700;
+          padding: 10px 12px; 
+          border-radius: 10px; 
+          cursor: pointer;
+          transition: all 0.2s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        
+        .btn-send-exam:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+        
+        .btn-send-exam:disabled { 
+          opacity: .6; 
+          cursor: not-allowed; 
+        }
+
+        .exam-main { 
+          height: 100%; 
+          overflow: hidden; 
+          background: #0b0f17; 
+        }
+        
+        .consigna-panel { 
+          padding: 18px; 
+          height: 100%; 
+          overflow: auto; 
+        }
+        
+        @media (max-width: 768px) {
+          .consigna-panel {
+            padding: 12px;
+          }
+        }
+        
+        .consigna-title { 
+          color: #e5e7eb; 
+          margin-bottom: 10px;
+          font-size: 1.5rem;
+        }
+        
+        @media (max-width: 768px) {
+          .consigna-title {
+            font-size: 1.2rem;
+          }
+        }
+        
+        .programming-area { 
+          height: 100%; 
+          display: flex; 
+          flex-direction: column;
+          overflow: hidden;
+        }
+        
+        .programming-grid {
+          flex: 1; 
+          min-height: 0; 
+          display: grid;
+          grid-template-columns: 2fr 1fr;
+          grid-gap: 10px; 
+          padding: 10px;
+          overflow: hidden;
+        }
+        
+        .grid-left { 
+          display: grid; 
+          grid-template-rows: 1fr auto; 
+          min-height: 0;
+          max-height: 100%;
+          gap: 10px;
+          overflow: hidden;
+        }
+        
+        .editor-content {
+          min-height: 0;
+          max-height: 100%;
+          overflow: hidden;
+        }
+        
+        .grid-right { 
+          min-height: 0;
+          max-height: 100%;
+          overflow: hidden;
+        }
+        
+        .output-panel { 
+          height: 100%; 
+          background: #111827; 
+          border: 1px solid #1f2937; 
+          border-radius: 10px; 
+          display: flex; 
+          flex-direction: column; 
+        }
+        
+        .output-header { 
+          color: #e5e7eb; 
+          padding: 10px 12px; 
+          border-bottom: 1px solid #1f2937; 
+          font-weight: 700;
+          font-size: 0.9rem;
+        }
+        
+        .output-body { 
+          flex: 1; 
+          min-height: 0; 
+          overflow: auto; 
+          padding: 10px; 
+        }
+        
+        .console { 
+          background: #0b0f17; 
+          color: #d1d5db; 
+          border: 1px solid #1f2937; 
+          padding: 12px; 
+          border-radius: 8px;
+          font-size: 0.85rem;
+          line-height: 1.6;
+          max-height: none;
+          overflow-wrap: break-word;
+          word-wrap: break-word;
+        }
+        
+        @media (max-width: 768px) {
+          .console {
+            font-size: 0.8rem;
+            padding: 14px;
+          }
+        }
+        
+        @media (max-width: 480px) {
+          .console {
+            font-size: 0.75rem;
+            padding: 12px;
+          }
+        }
+        
+        .output-placeholder { 
+          color: #9ca3af; 
+          font-style: italic; 
+          padding: 30px 12px;
+          font-size: 0.9rem;
+          text-align: center;
+        }
+        
+        @media (max-width: 768px) {
+          .output-placeholder {
+            padding: 40px 15px;
+            font-size: 0.85rem;
+          }
+        }
+        
+        .no-output {
+          color: #9ca3af;
+          font-style: italic;
+          padding: 30px 12px;
+          text-align: center;
+        }
+        
+        @media (max-width: 768px) {
+          .no-output {
+            padding: 40px 15px;
+          }
+        }
+        
+        .input-section.compact { 
+          background: rgba(243, 244, 246, 0.08); 
+          border-color: #374151; 
+        }
+        
+        /* Estilos para móvil - Terminal intercambiable */
+        .terminal-mobile {
+          height: 100%;
+          background: #111827;
+          border: 1px solid #1f2937;
+          border-radius: 10px;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+        
+        .mobile-terminal-tabs {
+          display: flex;
+          background: #0b0f17;
+          border-bottom: 1px solid #1f2937;
+          flex-shrink: 0;
+        }
+        
+        .mobile-terminal-tab {
+          flex: 1;
+          background: transparent;
+          border: none;
+          color: #9ca3af;
+          padding: 14px 10px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 0.9rem;
+          font-weight: 600;
+          border-bottom: 3px solid transparent;
+        }
+        
+        .mobile-terminal-tab:hover {
+          background: rgba(255, 255, 255, 0.05);
+          color: #d1d5db;
+        }
+        
+        .mobile-terminal-tab.active {
+          color: #3b82f6;
+          background: #111827;
+          border-bottom-color: #3b82f6;
+        }
+        
+        .terminal-badge {
+          font-size: 0.8rem;
+          color: #10b981;
+          font-weight: 700;
+        }
+        
+        .mobile-terminal-tab.active .terminal-badge {
+          color: #3b82f6;
+        }
+        
+        @media (max-width: 480px) {
+          .mobile-terminal-tab {
+            padding: 12px 8px;
+            font-size: 0.85rem;
+          }
+          
+          .mobile-terminal-tab span:not(.terminal-badge) {
+            display: none;
+          }
+          
+          .mobile-terminal-tab i {
+            font-size: 1.3rem;
+          }
+        }
+        
+        .mobile-terminal-content {
+          flex: 1;
+          min-height: 0;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+        }
+        
+        .mobile-output-panel {
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+        
+        .mobile-output-body {
+          flex: 1;
+          min-height: 0;
+          overflow: auto;
+          padding: 12px;
+        }
+        
+        .mobile-input-panel {
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+          padding: 12px;
+          gap: 10px;
+        }
+        
+        .mobile-input-field {
+          flex: 1;
+          min-height: 200px;
+          width: 100%;
+          background: #0b0f17;
+          border: 1px solid #374151;
+          border-radius: 8px;
+          padding: 12px;
+          color: #d1d5db;
+          font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+          font-size: 0.9rem;
+          line-height: 1.5;
+          resize: none;
+        }
+        
+        .mobile-input-field:focus {
+          outline: none;
+          border-color: #3b82f6;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .mobile-input-field::placeholder {
+          color: #6b7280;
+          font-style: italic;
+        }
+        
+        .mobile-input-hint {
+          color: #9ca3af;
+          font-size: 0.8rem;
+          font-style: italic;
+          padding: 8px;
+          background: rgba(59, 130, 246, 0.1);
+          border-radius: 6px;
+          border-left: 3px solid #3b82f6;
+        }
+        
+        @media (max-width: 480px) {
+          .mobile-input-field {
+            font-size: 0.85rem;
+            min-height: 150px;
+          }
+          
+          .mobile-input-hint {
+            font-size: 0.75rem;
+          }
+        }
+        
+        .output-panel { 
+          height: 100%; 
+          background: #111827; 
+          border: 1px solid #1f2937; 
+          border-radius: 10px; 
+          display: flex; 
+          flex-direction: column; 
+        }
+        
+        .output-header { 
+          color: #e5e7eb; 
+          padding: 10px 12px; 
+          border-bottom: 1px solid #1f2937; 
+          font-weight: 700;
+          font-size: 0.9rem;
+        }
+        
+        .output-body { 
+          flex: 1; 
+          min-height: 0; 
+          overflow: auto; 
+          padding: 10px; 
+        }
+        
+        .console { 
+          background: #0b0f17; 
+          color: #d1d5db; 
+          border: 1px solid #1f2937; 
+          padding: 10px; 
+          border-radius: 8px;
+          font-size: 0.85rem;
+        }
+        
+        @media (max-width: 768px) {
+          .console {
+            font-size: 0.75rem;
+          }
+        }
+        
+        .output-placeholder { 
+          color: #9ca3af; 
+          font-style: italic; 
+          padding: 12px;
+          font-size: 0.9rem;
+        }
+        
+        .input-section.compact { 
+          background: rgba(243, 244, 246, 0.08); 
+          border-color: #374151; 
+        }
+
+        /* Media queries para tablets */
+        @media (max-width: 992px) and (min-width: 768px) {
+          .exam-shell { 
+            grid-template-columns: 200px 1fr; 
+          }
+          
+          .sidebar-item {
+            padding: 8px 10px;
+            font-size: 0.9rem;
+          }
+          
+          .programming-grid {
+            grid-template-columns: 1.5fr 1fr;
+          }
+        }
+        
+        /* Media queries para móviles */
+        @media (max-width: 768px) {
+          .programming-grid { 
+            grid-template-columns: 1fr;
+            grid-template-rows: minmax(300px, 50vh) minmax(350px, 45vh);
+            padding: 8px;
+            gap: 8px;
+            height: 100%;
+          }
+          
+          .grid-left { 
+            grid-template-rows: 1fr;
+            min-height: 300px;
+            max-height: 50vh;
+            overflow: hidden;
+          }
+          
+          .editor-content {
+            height: 100%;
+            overflow: hidden;
+          }
+          
+          .grid-right {
+            min-height: 350px;
+            max-height: 45vh;
+            overflow: hidden;
+          }
+          
+          .input-section.compact {
+            display: none !important;
+          }
+          
+          .terminal-mobile {
+            height: 100%;
+          }
+          
+          .mobile-terminal-content {
+            height: calc(100% - 48px);
+          }
+        }
+        
+        /* Media queries para pantallas muy pequeñas */
+        @media (max-width: 480px) {
+          .programming-grid {
+            padding: 6px;
+            grid-template-rows: minmax(250px, 45vh) minmax(300px, 50vh);
+          }
+          
+          .grid-left {
+            min-height: 250px;
+            max-height: 45vh;
+          }
+          
+          .grid-right {
+            min-height: 300px;
+            max-height: 50vh;
+          }
+          
+          .sidebar-text {
+            font-size: 0.9rem;
+          }
+          
+          .mobile-terminal-content {
+            height: calc(100% - 44px);
+          }
+        }
+        
+        /* Ajustes específicos para landscape en móviles */
+        @media (max-width: 768px) and (orientation: landscape) {
+          .programming-grid {
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr;
+            height: 100%;
+          }
+          
+          .grid-left {
+            max-height: 100%;
+          }
+          
+          .grid-right {
+            max-height: 100%;
           }
         }
       `}</style>
@@ -1526,36 +2826,49 @@ const ProgrammingExamView = () => {
                   </div>
                 ) : (
                   <div className="files-grid">
-                    {files.map((file) => (
-                      <div key={file.filename} className="file-item">
-                        <div className="file-info">
-                          <div className="file-name">
-                            <i className="fas fa-file-code me-2"></i>
-                            {file.filename}
+                    {files.map((file) => {
+                      const isHidden = hiddenFiles.has(file.filename);
+                      return (
+                        <div key={file.filename} className={`file-item ${isHidden ? 'file-hidden' : ''}`}>
+                          <div className="file-info">
+                            <div className="file-name">
+                              <i className="fas fa-file-code me-2"></i>
+                              {file.filename}
+                              {isHidden && (
+                                <span className="badge bg-secondary ms-2" style={{fontSize: '0.7rem'}}>
+                                  Oculto
+                                </span>
+                              )}
+                              {unsavedFiles.has(file.filename) && (
+                                <span className="text-warning ms-2" title="Cambios sin guardar">●</span>
+                              )}
+                            </div>
+                            <div className="file-date">
+                              {new Date(file.updatedAt || file.createdAt).toLocaleString()}
+                            </div>
                           </div>
-                          <div className="file-date">
-                            {new Date(file.updatedAt || file.createdAt).toLocaleString()}
+                          <div className="file-actions">
+                            <button
+                              className="btn btn-sm btn-outline-primary"
+                              onClick={() => {
+                                showFile(file.filename);
+                                setShowFileManager(false);
+                              }}
+                              title={isHidden ? "Mostrar y abrir archivo" : "Abrir archivo"}
+                            >
+                              <i className={`fas ${isHidden ? 'fa-eye' : 'fa-folder-open'}`}></i>
+                            </button>
+                            <button
+                              className="btn btn-sm btn-outline-danger"
+                              onClick={() => requestDeleteFile(file.filename)}
+                              title="Eliminar archivo permanentemente"
+                            >
+                              <i className="fas fa-trash"></i>
+                            </button>
                           </div>
                         </div>
-                        <div className="file-actions">
-                          <button
-                            className="btn btn-sm btn-outline-primary"
-                            onClick={() => {
-                              loadFile(file.filename);
-                              setShowFileManager(false);
-                            }}
-                          >
-                            <i className="fas fa-folder-open"></i>
-                          </button>
-                          <button
-                            className="btn btn-sm btn-outline-danger"
-                            onClick={() => requestDeleteFile(file.filename)}
-                          >
-                            <i className="fas fa-trash"></i>
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -1576,6 +2889,7 @@ const ProgrammingExamView = () => {
           align-items: center;
           justify-content: center;
           z-index: 1000;
+          padding: 10px;
         }
 
         .file-manager-modal {
@@ -1587,6 +2901,22 @@ const ProgrammingExamView = () => {
           overflow: hidden;
           box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
         }
+        
+        @media (max-width: 768px) {
+          .file-manager-modal {
+            width: 95%;
+            max-height: 85vh;
+            border-radius: 8px;
+          }
+        }
+        
+        @media (max-width: 480px) {
+          .file-manager-modal {
+            width: 100%;
+            max-height: 90vh;
+            border-radius: 0;
+          }
+        }
 
         .modal-header {
           background: #2d3748;
@@ -1595,6 +2925,26 @@ const ProgrammingExamView = () => {
           display: flex;
           justify-content: space-between;
           align-items: center;
+        }
+        
+        @media (max-width: 768px) {
+          .modal-header {
+            padding: 15px;
+          }
+          
+          .modal-header h4 {
+            font-size: 1.1rem;
+          }
+        }
+        
+        @media (max-width: 480px) {
+          .modal-header {
+            padding: 12px;
+          }
+          
+          .modal-header h4 {
+            font-size: 1rem;
+          }
         }
 
         .modal-close-btn {
@@ -1611,6 +2961,7 @@ const ProgrammingExamView = () => {
           justify-content: center;
           border-radius: 50%;
           transition: background 0.2s;
+          flex-shrink: 0;
         }
 
         .modal-close-btn:hover {
@@ -1622,16 +2973,46 @@ const ProgrammingExamView = () => {
           max-height: 60vh;
           overflow-y: auto;
         }
+        
+        @media (max-width: 768px) {
+          .modal-body {
+            padding: 16px;
+            max-height: 65vh;
+          }
+        }
+        
+        @media (max-width: 480px) {
+          .modal-body {
+            padding: 12px;
+            max-height: 70vh;
+          }
+        }
 
         .new-file-section {
           border-bottom: 1px solid #e2e8f0;
           padding-bottom: 20px;
+        }
+        
+        @media (max-width: 768px) {
+          .new-file-section {
+            padding-bottom: 15px;
+          }
+          
+          .new-file-section h5 {
+            font-size: 1rem;
+          }
         }
 
         .files-grid {
           display: flex;
           flex-direction: column;
           gap: 12px;
+        }
+        
+        @media (max-width: 768px) {
+          .files-grid {
+            gap: 8px;
+          }
         }
 
         .file-item {
@@ -1643,8 +3024,28 @@ const ProgrammingExamView = () => {
           border-radius: 8px;
           transition: all 0.2s;
         }
+        
+        @media (max-width: 768px) {
+          .file-item {
+            padding: 10px;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+          }
+        }
 
         .file-item:hover {
+          border-color: #3b82f6;
+          background: #f8fafc;
+        }
+
+        .file-item.file-hidden {
+          opacity: 0.6;
+          background: #f9fafb;
+        }
+
+        .file-item.file-hidden:hover {
+          opacity: 1;
           border-color: #3b82f6;
           background: #f8fafc;
         }
@@ -1652,22 +3053,65 @@ const ProgrammingExamView = () => {
         .file-name {
           font-weight: 600;
           color: #2d3748;
+          display: flex;
+          align-items: center;
+          word-break: break-word;
+        }
+        
+        @media (max-width: 768px) {
+          .file-name {
+            font-size: 0.9rem;
+          }
         }
 
         .file-date {
           font-size: 0.8rem;
           color: #718096;
         }
+        
+        @media (max-width: 768px) {
+          .file-date {
+            font-size: 0.75rem;
+          }
+        }
 
         .file-actions {
           display: flex;
           gap: 8px;
+          flex-wrap: wrap;
+        }
+        
+        @media (max-width: 768px) {
+          .file-actions {
+            width: 100%;
+            justify-content: flex-end;
+            gap: 6px;
+          }
+          
+          .file-actions .btn {
+            font-size: 0.85rem;
+            padding: 6px 10px;
+          }
         }
 
         .no-files {
           text-align: center;
           padding: 40px 20px;
           color: #718096;
+        }
+        
+        @media (max-width: 768px) {
+          .no-files {
+            padding: 30px 15px;
+          }
+          
+          .no-files i {
+            font-size: 2rem !important;
+          }
+          
+          .no-files p {
+            font-size: 0.9rem;
+          }
         }
 
         .file-close-btn {
@@ -1745,7 +3189,7 @@ const ProgrammingExamView = () => {
         onClose={() => setShowFinishModal(false)}
         onConfirm={finishExam}
         title="Finalizar Examen"
-        message="¿Estás seguro de que quieres finalizar el examen? Se guardará automáticamente el código actual. No podrás hacer más cambios después."
+        message="¿Estás seguro de que quieres finalizar el examen?"
         type="confirm"
         confirmText="Finalizar"
         cancelText="Cancelar"

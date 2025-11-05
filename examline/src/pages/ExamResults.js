@@ -17,6 +17,9 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedFileIndex, setSelectedFileIndex] = useState(0);
+  const [fileVersion, setFileVersion] = useState('manual'); // 'manual' | 'submission' - Por defecto muestra guardados manuales
+  const [manualFiles, setManualFiles] = useState([]);
+  const [submissionFiles, setSubmissionFiles] = useState([]);
 
   useEffect(() => {
     if (!attemptId || !token) return;
@@ -34,6 +37,12 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
         if (response.ok) {
           const data = await response.json();
           setAttempt(data);
+          
+          // Si es un examen de programación, cargar ambas versiones de archivos
+          if (data.exam.tipo === 'programming') {
+            await fetchFileVersions(data.exam.id);
+          }
+          
           setError(null);
         } else {
           const errorData = await response.json();
@@ -49,6 +58,91 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
 
     fetchResults();
   }, [attemptId, token]);
+
+  // Función para cargar ambas versiones de archivos
+  const fetchFileVersions = async (examId) => {
+    try {
+      const [manualResponse, submissionResponse] = await Promise.all([
+        fetch(`${API_BASE_URL}/exam-files/${examId}/files?version=manual`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch(`${API_BASE_URL}/exam-files/${examId}/files?version=submission`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+      ]);
+
+      if (manualResponse.ok) {
+        const manualData = await manualResponse.json();
+        setManualFiles(manualData);
+      }
+
+      if (submissionResponse.ok) {
+        const submissionData = await submissionResponse.json();
+        setSubmissionFiles(submissionData);
+      }
+    } catch (err) {
+      console.error('Error fetching file versions:', err);
+    }
+  };
+
+  // Función para detectar si realmente hay diferencias entre versiones
+  const hasRealDifferences = () => {
+    if (manualFiles.length === 0 || submissionFiles.length === 0) {
+      return false;
+    }
+
+    // Verificar si tienen la misma cantidad de archivos
+    if (manualFiles.length !== submissionFiles.length) {
+      return true;
+    }
+
+    // Crear mapas de archivos por nombre
+    const manualMap = new Map(manualFiles.map(f => [f.filename, f.content]));
+    const submissionMap = new Map(submissionFiles.map(f => [f.filename, f.content]));
+
+    // Verificar si todos los archivos existen en ambas versiones
+    for (const filename of manualMap.keys()) {
+      if (!submissionMap.has(filename)) {
+        return true;
+      }
+    }
+
+    // Comparar contenido de archivos con el mismo nombre
+    for (const [filename, manualContent] of manualMap.entries()) {
+      const submissionContent = submissionMap.get(filename);
+      if (manualContent !== submissionContent) {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
+  // Función para cambiar de versión manteniendo el archivo actual si existe
+  const handleVersionChange = (newVersion) => {
+    const currentFiles = fileVersion === 'manual' ? manualFiles : submissionFiles;
+    const newFiles = newVersion === 'manual' ? manualFiles : submissionFiles;
+    
+    // Obtener el nombre del archivo actualmente seleccionado
+    const currentFileName = currentFiles[selectedFileIndex]?.filename;
+    
+    if (currentFileName) {
+      // Buscar el mismo archivo en la nueva versión
+      const sameFileIndex = newFiles.findIndex(f => f.filename === currentFileName);
+      
+      if (sameFileIndex !== -1) {
+        // Si existe el mismo archivo, mantener la selección
+        setSelectedFileIndex(sameFileIndex);
+      } else {
+        // Si no existe, seleccionar el primer archivo
+        setSelectedFileIndex(0);
+      }
+    } else {
+      setSelectedFileIndex(0);
+    }
+    
+    setFileVersion(newVersion);
+  };
 
   const handleBack = () => {
     if (onBack) {
@@ -178,32 +272,148 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
           {/* Archivos guardados del estudiante */}
           <div className="modern-card mb-4">
             <div className="modern-card-header">
-              <h3 className="modern-card-title">
-                <i className="fas fa-folder-open me-2"></i>
-                Archivos de tu Solución
-              </h3>
+              <div className="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <h3 className="modern-card-title mb-0">
+                  <i className="fas fa-folder-open me-2"></i>
+                  Archivos de tu Solución
+                </h3>
+                
+                {/* Selector de versión de archivos */}
+                {(manualFiles.length > 0 || submissionFiles.length > 0) && (
+                  <div className="version-selector">
+                    <div className="btn-group" role="group" aria-label="Versión de archivos">
+                      <button
+                        type="button"
+                        className={`modern-btn ${fileVersion === 'manual' ? 'modern-btn-primary' : 'modern-btn-outline'}`}
+                        onClick={() => handleVersionChange('manual')}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          padding: '0.5rem 1rem',
+                          fontWeight: '600',
+                          fontSize: '0.85rem',
+                          transition: 'all 0.3s ease',
+                          borderTopRightRadius: 0,
+                          borderBottomRightRadius: 0,
+                          ...(fileVersion !== 'manual' && {
+                            borderColor: '#e2e8f0',
+                            color: '#64748b',
+                            background: 'white'
+                          })
+                        }}
+                      >
+                        <i className="fas fa-save"></i>
+                        <span>Guardado Manual</span>
+                        {manualFiles.length > 0 && (
+                          <span className="badge bg-light text-dark ms-1" style={{
+                            fontSize: '0.7rem',
+                            padding: '0.2rem 0.4rem',
+                            borderRadius: '0.25rem'
+                          }}>
+                            {manualFiles.length}
+                          </span>
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        className={`modern-btn ${fileVersion === 'submission' ? 'modern-btn-success' : 'modern-btn-outline'}`}
+                        onClick={() => handleVersionChange('submission')}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          padding: '0.5rem 1rem',
+                          fontWeight: '600',
+                          fontSize: '0.85rem',
+                          transition: 'all 0.3s ease',
+                          borderTopLeftRadius: 0,
+                          borderBottomLeftRadius: 0,
+                          borderLeft: 'none',
+                          ...(fileVersion !== 'submission' && {
+                            borderColor: '#e2e8f0',
+                            color: '#64748b',
+                            background: 'white'
+                          })
+                        }}
+                      >
+                        <i className="fas fa-paper-plane"></i>
+                        <span>Al Enviar Examen</span>
+                        {submissionFiles.length > 0 && (
+                          <span className="badge bg-light text-dark ms-1" style={{
+                            fontSize: '0.7rem',
+                            padding: '0.2rem 0.4rem',
+                            borderRadius: '0.25rem'
+                          }}>
+                            {submissionFiles.length}
+                          </span>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
             <div className="modern-card-body">
-              {attempt.examFiles && attempt.examFiles.length > 0 ? (
+              {(() => {
+                const currentFiles = fileVersion === 'manual' ? manualFiles : submissionFiles;
+                const hasFiles = currentFiles && currentFiles.length > 0;
+                
+                return hasFiles ? (
                 <div>
                   {/* Información de archivos */}
-                  <div className="mb-3 d-flex justify-content-between align-items-center" style={{
+                  <div className="mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2" style={{
                     padding: '0.75rem 1rem',
-                    background: 'rgba(99, 102, 241, 0.1)',
-                    border: '1px solid rgba(99, 102, 241, 0.2)',
-                    borderRadius: '0.5rem'
+                    background: fileVersion === 'manual' ? 'rgba(99, 102, 241, 0.08)' : 'rgba(16, 185, 129, 0.08)',
+                    border: `1px solid ${fileVersion === 'manual' ? '#6366f1' : '#10b981'}`,
+                    borderRadius: '0.5rem',
+                    borderLeft: `4px solid ${fileVersion === 'manual' ? '#6366f1' : '#10b981'}`
                   }}>
-                    <small style={{ color: '#64748b' }}>
-                      <i className="fas fa-info-circle me-1" style={{ color: '#6366f1' }}></i>
-                      Se encontraron {attempt.examFiles.length} archivo{attempt.examFiles.length !== 1 ? 's' : ''} guardado{attempt.examFiles.length !== 1 ? 's' : ''}
+                    <small style={{ color: '#64748b', fontWeight: '500' }}>
+                      <i className={`fas ${fileVersion === 'manual' ? 'fa-save' : 'fa-paper-plane'} me-2`} 
+                         style={{ color: fileVersion === 'manual' ? '#6366f1' : '#10b981' }}></i>
+                      {fileVersion === 'manual' 
+                        ? `${currentFiles.length} archivo${currentFiles.length !== 1 ? 's' : ''} guardado${currentFiles.length !== 1 ? 's' : ''} manualmente (Ctrl+S)`
+                        : `${currentFiles.length} archivo${currentFiles.length !== 1 ? 's' : ''} al enviar el examen`
+                      }
                     </small>
-                    {attempt.examFiles.length > 6 && (
-                      <span className="many-files-indicator">
+                    {currentFiles.length > 6 && (
+                      <span className="badge" style={{
+                        background: 'linear-gradient(135deg, #f59e0b, #ef4444)',
+                        color: 'white',
+                        borderRadius: '1rem',
+                        padding: '0.25rem 0.75rem',
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        boxShadow: '0 2px 4px rgba(245, 158, 11, 0.3)'
+                      }}>
                         <i className="fas fa-layer-group me-1"></i>
                         Muchos archivos
                       </span>
                     )}
                   </div>
+
+                  {/* Comparación de versiones */}
+                  {hasRealDifferences() && (
+                    <div className="mb-3 p-3" style={{
+                      background: 'rgba(245, 158, 11, 0.08)',
+                      border: '1px solid #f59e0b',
+                      borderRadius: '0.5rem',
+                      borderLeft: '4px solid #f59e0b'
+                    }}>
+                      <div className="d-flex align-items-start gap-3">
+                        <i className="fas fa-exclamation-triangle mt-1" style={{ color: '#f59e0b', fontSize: '1.25rem' }}></i>
+                        <div>
+                          <strong style={{ color: '#334155', fontSize: '0.9rem' }}>
+                            Diferencias detectadas
+                          </strong>
+                          <p className="mb-0" style={{ color: '#64748b', fontSize: '0.85rem', marginTop: '0.25rem' }}>
+                            Hay diferencias entre los archivos guardados manualmente (Ctrl+S) y los archivos al momento de enviar el examen. Usa el selector arriba para comparar ambas versiones.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Selector de pestañas */}
                   <div style={{
@@ -219,20 +429,24 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
                       borderBottom: '1px solid #dee2e6',
                       padding: '0.5rem'
                     }}>
-                      {attempt.examFiles.length <= 6 ? (
+                      {currentFiles.length <= 6 ? (
                         /* Pestañas normales para pocos archivos */
                         <div style={{
                           display: 'flex',
                           gap: '2px'
                         }}>
-                          {attempt.examFiles.map((file, index) => (
+                          {currentFiles.map((file, index) => (
                             <button
                               key={file.id}
                               onClick={() => setSelectedFileIndex(index)}
                               style={{
                                 padding: '0.75rem 1rem',
                                 border: selectedFileIndex === index ? 'none' : '1px solid #e2e8f0',
-                                background: selectedFileIndex === index ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'white',
+                                background: selectedFileIndex === index 
+                                  ? (fileVersion === 'manual' 
+                                      ? 'var(--primary-color, #6366f1)' 
+                                      : 'linear-gradient(135deg, var(--success-color, #10b981), #059669)')
+                                  : 'white',
                                 color: selectedFileIndex === index ? 'white' : '#64748b',
                                 cursor: 'pointer',
                                 fontSize: '0.85rem',
@@ -250,8 +464,8 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
                               onMouseEnter={(e) => {
                                 if (selectedFileIndex !== index) {
                                   e.target.style.background = '#f8fafc';
-                                  e.target.style.borderColor = '#6366f1';
-                                  e.target.style.color = '#6366f1';
+                                  e.target.style.borderColor = fileVersion === 'manual' ? 'var(--primary-color, #6366f1)' : 'var(--success-color, #10b981)';
+                                  e.target.style.color = fileVersion === 'manual' ? 'var(--primary-color, #6366f1)' : 'var(--success-color, #10b981)';
                                 }
                               }}
                               onMouseLeave={(e) => {
@@ -287,7 +501,7 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
                                 borderRadius: '0.375rem'
                               }}
                             >
-                              {attempt.examFiles.map((file, index) => (
+                              {currentFiles.map((file, index) => (
                                 <option key={file.id} value={index}>
                                   {index + 1}. {file.filename}
                                 </option>
@@ -316,15 +530,15 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
                                 Anterior
                               </button>
                               <button
-                                onClick={() => setSelectedFileIndex(Math.min(attempt.examFiles.length - 1, selectedFileIndex + 1))}
-                                disabled={selectedFileIndex === attempt.examFiles.length - 1}
+                                onClick={() => setSelectedFileIndex(Math.min(currentFiles.length - 1, selectedFileIndex + 1))}
+                                disabled={selectedFileIndex === currentFiles.length - 1}
                                 style={{
                                   padding: '0.5rem 0.75rem',
-                                  border: selectedFileIndex === attempt.examFiles.length - 1 ? '1px solid #e2e8f0' : '1px solid #6366f1',
-                                  background: selectedFileIndex === attempt.examFiles.length - 1 ? '#f8fafc' : 'white',
-                                  color: selectedFileIndex === attempt.examFiles.length - 1 ? '#94a3b8' : '#6366f1',
+                                  border: selectedFileIndex === currentFiles.length - 1 ? '1px solid #e2e8f0' : '1px solid #6366f1',
+                                  background: selectedFileIndex === currentFiles.length - 1 ? '#f8fafc' : 'white',
+                                  color: selectedFileIndex === currentFiles.length - 1 ? '#94a3b8' : '#6366f1',
                                   borderRadius: '0.375rem',
-                                  cursor: selectedFileIndex === attempt.examFiles.length - 1 ? 'not-allowed' : 'pointer',
+                                  cursor: selectedFileIndex === currentFiles.length - 1 ? 'not-allowed' : 'pointer',
                                   transition: 'all 0.2s ease',
                                   fontSize: '0.85rem',
                                   fontWeight: '500'
@@ -339,7 +553,7 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
                       )}
                       
                       {/* Vista de pestañas con scroll para caso intermedio */}
-                      {attempt.examFiles.length > 6 && attempt.examFiles.length <= 12 && (
+                      {currentFiles.length > 6 && currentFiles.length <= 12 && (
                         <div style={{
                           marginTop: '0.5rem',
                           overflowX: 'auto',
@@ -350,14 +564,18 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
                             gap: '2px',
                             minWidth: 'max-content'
                           }}>
-                            {attempt.examFiles.map((file, index) => (
+                            {currentFiles.map((file, index) => (
                               <button
                                 key={file.id}
                                 onClick={() => setSelectedFileIndex(index)}
                                 style={{
                                   padding: '0.5rem 0.75rem',
                                   border: selectedFileIndex === index ? 'none' : '1px solid #e2e8f0',
-                                  background: selectedFileIndex === index ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'white',
+                                  background: selectedFileIndex === index 
+                                    ? (fileVersion === 'manual' 
+                                        ? 'var(--primary-color, #6366f1)' 
+                                        : 'linear-gradient(135deg, var(--success-color, #10b981), #059669)')
+                                    : 'white',
                                   color: selectedFileIndex === index ? 'white' : '#64748b',
                                   cursor: 'pointer',
                                   fontSize: '0.8rem',
@@ -379,7 +597,7 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
                     </div>
 
                     {/* Contenido del archivo seleccionado */}
-                    {attempt.examFiles[selectedFileIndex] && (
+                    {currentFiles[selectedFileIndex] && (
                       <div>
                         {/* Header del archivo */}
                         <div style={{
@@ -395,30 +613,40 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
                                 fontWeight: '600',
                                 fontSize: '1.1rem'
                               }}>
-                                <i className="fas fa-file-code me-2 text-primary"></i>
-                                {attempt.examFiles[selectedFileIndex].filename}
+                                <i className={`fas ${fileVersion === 'manual' ? 'fa-save' : 'fa-paper-plane'} me-2`}
+                                   style={{ color: fileVersion === 'manual' ? 'var(--primary-color, #6366f1)' : 'var(--success-color, #10b981)' }}></i>
+                                {currentFiles[selectedFileIndex].filename}
                               </h5>
                               <small className="text-muted">
                                 <i className="fas fa-clock me-1"></i>
-                                Última modificación: {new Date(attempt.examFiles[selectedFileIndex].updatedAt).toLocaleString()}
+                                Última modificación: {new Date(currentFiles[selectedFileIndex].updatedAt).toLocaleString()}
+                                <span className={`ms-3 badge ${fileVersion === 'manual' ? 'bg-primary' : 'bg-success'}`}
+                                      style={{
+                                        background: fileVersion === 'manual' ? 'var(--primary-color, #6366f1)' : 'var(--success-color, #10b981)',
+                                        color: 'white'
+                                      }}>
+                                  {fileVersion === 'manual' ? 'Guardado Manual' : 'Al Enviar'}
+                                </span>
                               </small>
                             </div>
                             <span style={{
-                              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                              background: fileVersion === 'manual' 
+                                ? 'var(--primary-color, #6366f1)' 
+                                : 'linear-gradient(135deg, var(--success-color, #10b981), #059669)',
                               color: 'white',
                               padding: '0.25rem 0.75rem',
                               borderRadius: '1rem',
                               fontSize: '0.75rem',
                               fontWeight: '600'
                             }}>
-                              Archivo {selectedFileIndex + 1} de {attempt.examFiles.length}
+                              Archivo {selectedFileIndex + 1} de {currentFiles.length}
                             </span>
                           </div>
                         </div>
 
                         {/* Contenido del código */}
                         <div>
-                          {attempt.examFiles[selectedFileIndex].content ? (
+                          {currentFiles[selectedFileIndex].content ? (
                             <pre style={{
                               whiteSpace: 'pre-wrap',
                               fontFamily: 'Monaco, Consolas, "Courier New", monospace',
@@ -433,7 +661,7 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
                               maxHeight: '600px',
                               minHeight: '300px'
                             }}>
-                              {attempt.examFiles[selectedFileIndex].content}
+                              {currentFiles[selectedFileIndex].content}
                             </pre>
                           ) : (
                             <div style={{
@@ -457,9 +685,50 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
                     )}
                   </div>
                 </div>
-              ) : attempt.codigoProgramacion ? (
-                /* Fallback al código antiguo si no hay archivos guardados */
-                <div className="code-solution">
+                ) : (
+                  /* Sin archivos en la versión seleccionada */
+                  <div className="empty-state">
+                    <div className="empty-icon">
+                      <i className={`fas ${fileVersion === 'manual' ? 'fa-save' : 'fa-paper-plane'}`}></i>
+                    </div>
+                    <h4 className="empty-title">
+                      {fileVersion === 'manual' ? 'Sin archivos guardados manualmente' : 'Sin archivos de envío'}
+                    </h4>
+                    <p className="empty-subtitle">
+                      {fileVersion === 'manual' 
+                        ? 'No hay archivos guardados con Ctrl+S durante el examen'
+                        : 'No hay archivos guardados al momento de enviar el examen'
+                      }
+                    </p>
+                    {fileVersion === 'manual' && submissionFiles.length > 0 && (
+                      <button 
+                        className="modern-btn modern-btn-success mt-3"
+                        onClick={() => handleVersionChange('submission')}
+                      >
+                        <i className="fas fa-paper-plane me-2"></i>
+                        <span className="btn-text">Ver archivos al enviar examen</span>
+                      </button>
+                    )}
+                    {fileVersion === 'submission' && manualFiles.length > 0 && (
+                      <button 
+                        className="modern-btn modern-btn-primary mt-3"
+                        onClick={() => handleVersionChange('manual')}
+                      >
+                        <i className="fas fa-save me-2"></i>
+                        <span className="btn-text">Ver archivos guardados manualmente</span>
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
+              
+              {/* Fallback al código antiguo si no hay archivos en ninguna versión */}
+              {manualFiles.length === 0 && submissionFiles.length === 0 && attempt.codigoProgramacion && (
+                <div className="code-solution mt-3">
+                  <div className="alert alert-info">
+                    <i className="fas fa-info-circle me-2"></i>
+                    Este examen se realizó con el sistema anterior. Solo se muestra el código final.
+                  </div>
                   <div className="code-header mb-2">
                     <small className="text-muted">
                       <i className="fas fa-file-code me-1"></i>
@@ -483,7 +752,9 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
                     {attempt.codigoProgramacion}
                   </pre>
                 </div>
-              ) : (
+              )}
+              
+              {manualFiles.length === 0 && submissionFiles.length === 0 && !attempt.codigoProgramacion && (
                 <div className="empty-state">
                   <div className="empty-icon">
                     <i className="fas fa-code"></i>
@@ -647,6 +918,15 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
           .file-selector-dropdown {
             width: 100% !important;
           }
+          
+          .version-selector .btn-group {
+            width: 100%;
+          }
+          
+          .version-selector .modern-btn {
+            flex: 1;
+            justify-content: center;
+          }
         }
         
         @media (max-width: 576px) {
@@ -669,11 +949,19 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
             font-size: 0.7rem !important;
             padding: 0.4rem 0.6rem !important;
           }
+          
+          .version-selector .modern-btn span:not(.badge) {
+            display: none;
+          }
+          
+          .version-selector .modern-btn i {
+            margin: 0 !important;
+          }
         }
         
         /* Estados de focus y hover mejorados */
         button:focus {
-          outline: 2px solid #6366f1;
+          outline: 2px solid var(--primary-color, #6366f1);
           outline-offset: -2px;
         }
         
@@ -689,17 +977,6 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
         /* Animaciones suaves */
         .file-navigation-container * {
           transition: all 0.2s ease;
-        }
-        
-        /* Indicador visual para muchos archivos */
-        .many-files-indicator {
-          background: linear-gradient(135deg, #f59e0b, #ef4444);
-          color: white;
-          border-radius: 1rem;
-          padding: 0.25rem 0.75rem;
-          font-size: 0.75rem;
-          font-weight: 600;
-          box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);
         }
       `}</style>
 
