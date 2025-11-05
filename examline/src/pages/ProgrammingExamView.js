@@ -410,7 +410,7 @@ const ProgrammingExamView = () => {
   }, [exam, attempt, fetchFiles]);
 
   // Efecto para guardado automático cada 30 segundos
-  useEffect(() => {
+/*  useEffect(() => {
     if (!attempt || attempt.estado !== 'en_progreso') return;
     
     const interval = setInterval(() => {
@@ -419,6 +419,7 @@ const ProgrammingExamView = () => {
     
     return () => clearInterval(interval);
   }, [code, attempt, saveCode]);
+*/
 
   // Manejar cambios en el editor con debounce para reducir actualizaciones
   const handleEditorChange = useCallback((value) => {
