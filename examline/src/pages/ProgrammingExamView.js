@@ -491,31 +491,32 @@ const ProgrammingExamView = () => {
     }
   }, [examId, currentFileName, code, attempt]);
 
-  // Función para forzar guardado manual - guarda TODOS los archivos
+  // Función para forzar guardado manual - guarda SOLO el archivo actual
   const handleManualSave = useCallback(async () => {
+    if (!currentFileName) return;
+    
     try {
       setSaving(true);
 
-      // 💾 Guardar TODOS los archivos del caché
-      console.log('Guardando todos los archivos...');
-      const filesToSave = Object.keys(fileCache);
+      // 💾 Guardar SOLO el archivo actual
+      console.log(`Guardando archivo actual: ${currentFileName}`);
+      const content = fileCache[currentFileName] || code;
+      await saveCurrentFile(currentFileName, content);
 
-      for (const filename of filesToSave) {
-        const content = fileCache[filename];
-        console.log(`Guardando archivo: ${filename}`);
-        await saveCurrentFile(filename, content);
-      }
+      // ✅ Limpiar marca de archivo sin guardar (solo el actual)
+      setUnsavedFiles(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(currentFileName);
+        return newSet;
+      });
 
-      // ✅ Limpiar marca de archivos sin guardar
-      setUnsavedFiles(new Set());
-
-      console.log('Todos los archivos guardados correctamente');
+      console.log('Archivo guardado correctamente');
     } catch (error) {
-      console.error('Error guardando archivos:', error);
+      console.error('Error guardando archivo:', error);
     } finally {
       setSaving(false);
     }
-  }, [fileCache, saveCurrentFile]);
+  }, [currentFileName, fileCache, code, saveCurrentFile]);
 
   const loadFile = useCallback((filename) => {
     // 💾 Guardar el contenido actual en el caché ANTES de cambiar
