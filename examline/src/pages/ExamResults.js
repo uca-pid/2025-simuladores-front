@@ -118,6 +118,32 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
     return false;
   };
 
+  // Función para cambiar de versión manteniendo el archivo actual si existe
+  const handleVersionChange = (newVersion) => {
+    const currentFiles = fileVersion === 'manual' ? manualFiles : submissionFiles;
+    const newFiles = newVersion === 'manual' ? manualFiles : submissionFiles;
+    
+    // Obtener el nombre del archivo actualmente seleccionado
+    const currentFileName = currentFiles[selectedFileIndex]?.filename;
+    
+    if (currentFileName) {
+      // Buscar el mismo archivo en la nueva versión
+      const sameFileIndex = newFiles.findIndex(f => f.filename === currentFileName);
+      
+      if (sameFileIndex !== -1) {
+        // Si existe el mismo archivo, mantener la selección
+        setSelectedFileIndex(sameFileIndex);
+      } else {
+        // Si no existe, seleccionar el primer archivo
+        setSelectedFileIndex(0);
+      }
+    } else {
+      setSelectedFileIndex(0);
+    }
+    
+    setFileVersion(newVersion);
+  };
+
   const handleBack = () => {
     if (onBack) {
       onBack();
@@ -259,10 +285,7 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
                       <button
                         type="button"
                         className={`modern-btn ${fileVersion === 'manual' ? 'modern-btn-primary' : 'modern-btn-outline'}`}
-                        onClick={() => {
-                          setFileVersion('manual');
-                          setSelectedFileIndex(0);
-                        }}
+                        onClick={() => handleVersionChange('manual')}
                         style={{
                           display: 'flex',
                           alignItems: 'center',
@@ -295,10 +318,7 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
                       <button
                         type="button"
                         className={`modern-btn ${fileVersion === 'submission' ? 'modern-btn-success' : 'modern-btn-outline'}`}
-                        onClick={() => {
-                          setFileVersion('submission');
-                          setSelectedFileIndex(0);
-                        }}
+                        onClick={() => handleVersionChange('submission')}
                         style={{
                           display: 'flex',
                           alignItems: 'center',
@@ -683,7 +703,7 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
                     {fileVersion === 'manual' && submissionFiles.length > 0 && (
                       <button 
                         className="modern-btn modern-btn-success mt-3"
-                        onClick={() => setFileVersion('submission')}
+                        onClick={() => handleVersionChange('submission')}
                       >
                         <i className="fas fa-paper-plane me-2"></i>
                         <span className="btn-text">Ver archivos al enviar examen</span>
@@ -692,7 +712,7 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
                     {fileVersion === 'submission' && manualFiles.length > 0 && (
                       <button 
                         className="modern-btn modern-btn-primary mt-3"
-                        onClick={() => setFileVersion('manual')}
+                        onClick={() => handleVersionChange('manual')}
                       >
                         <i className="fas fa-save me-2"></i>
                         <span className="btn-text">Ver archivos guardados manualmente</span>
