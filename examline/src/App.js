@@ -7,7 +7,8 @@ import Principal from "./pages/Principal";
 import ExamCreator from "./pages/ExamCreator";
 import ExamView from "./pages/ExamView";
 import UserSettingsPage from "./pages/userSettings";
-import StudentExamPage from "./pages/StudentExamPage"; // 👈 NUEVO
+import StudentExamPage from "./pages/StudentExamPage";
+import StudentProgress from "./pages/StudentProgress";
 import ExamAttempt from "./pages/ExamAttempt";
 import ExamResults from "./pages/ExamResults";
 import ProgrammingExamView from "./pages/ProgrammingExamView";
@@ -42,6 +43,11 @@ function App() {
           <Route path="/student-exam" element={
             <StudentRoute>
               <StudentExamPage />
+            </StudentRoute>
+          } />
+          <Route path="/student-progress" element={
+            <StudentRoute>
+              <StudentProgress />
             </StudentRoute>
           } />
           <Route path="/seb-exam-launcher" element={
