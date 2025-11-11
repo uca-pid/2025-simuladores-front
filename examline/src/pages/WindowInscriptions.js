@@ -315,7 +315,18 @@ export default function WindowInscriptionsPage() {
               </h1>
             </div>
             <div className="header-actions-section">
-              <div className="window-inscriptions-actions">
+              <div className="header-actions">
+                <button 
+                  className="modern-btn modern-btn-primary compact-btn me-3" 
+                  onClick={() => navigate(`/ranking/window/${windowId}`)}
+                  title="Ver Ranking de este Examen"
+                >
+                  <i className="fas fa-trophy me-2"></i>
+                  <span className="btn-text">
+                    <span className="d-none d-lg-inline">Ver Ranking</span>
+                    <span className="d-lg-none">Ranking</span>
+                  </span>
+                </button>
                 <button 
                   className="modern-btn modern-btn-secondary compact-btn" 
                   onClick={() => navigate('/exam-windows')}

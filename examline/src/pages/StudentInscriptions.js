@@ -734,6 +734,18 @@ const openExam = async (examId, windowId, token, window) => {
                                 <i className="fas fa-chart-bar me-2"></i>
                                 Ver Resultados
                               </button>
+                              <button 
+                                className="modern-btn modern-btn-secondary"
+                                onClick={() => navigate(`/ranking/window/${window.id}`)}
+                                style={{
+                                  background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                                  color: 'white',
+                                  border: 'none'
+                                }}
+                              >
+                                <i className="fas fa-trophy me-2"></i>
+                                Ver Ranking
+                              </button>
                             </div>
                           ) : canTake ? (
                             <div className="d-grid gap-2">

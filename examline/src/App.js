@@ -16,6 +16,7 @@ import ExamWindows from "./pages/ExamWindows";
 import StudentInscriptions from "./pages/StudentInscriptions";
 import WindowInscriptions from "./pages/WindowInscriptions";
 import SEBExamLauncher from "./pages/SEBExamLauncher";
+import ExamRanking from "./pages/ExamRanking";
 import "./modern-examline.css";
 
 function App() {
@@ -84,6 +85,11 @@ function App() {
             <StudentRoute>
               <StudentInscriptions />
             </StudentRoute>
+          } />
+          <Route path="/ranking/window/:windowId" element={
+            <AuthenticatedRoute>
+              <ExamRanking />
+            </AuthenticatedRoute>
           } />
           <Route path="/user-settings" element={
             <AuthenticatedRoute>
