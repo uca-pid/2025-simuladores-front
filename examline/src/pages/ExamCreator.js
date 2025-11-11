@@ -24,6 +24,9 @@ const ExamCreator = () => {
   const [intellisenseHabilitado, setIntellisenseHabilitado] = useState(false);
   const [enunciadoProgramacion, setEnunciadoProgramacion] = useState("");
   const [codigoInicial, setCodigoInicial] = useState("");
+  const [testCases, setTestCases] = useState([
+    { description: "", input: "", expectedOutput: "", puntos: 25 }
+  ]);
   
   const [error, setError] = useState("");
   const [isPublishing, setIsPublishing] = useState(false);
@@ -94,6 +97,23 @@ const ExamCreator = () => {
     setError("");
   };
 
+  // Funciones para manejar test cases
+  const handleAddTestCase = () => {
+    setTestCases([...testCases, { description: "", input: "", expectedOutput: "", puntos: 25 }]);
+  };
+
+  const handleRemoveTestCase = (index) => {
+    if (testCases.length > 1) {
+      setTestCases(testCases.filter((_, i) => i !== index));
+    }
+  };
+
+  const handleTestCaseChange = (index, field, value) => {
+    const updatedTestCases = [...testCases];
+    updatedTestCases[index][field] = value;
+    setTestCases(updatedTestCases);
+  };
+
   // Función que realmente publica el examen
   const proceedWithPublishing = async () => {
     setIsPublishing(true);
@@ -111,6 +131,7 @@ const ExamCreator = () => {
         examData.intellisenseHabilitado = intellisenseHabilitado;
         examData.enunciadoProgramacion = enunciadoProgramacion;
         examData.codigoInicial = codigoInicial;
+        examData.testCases = testCases;
       }
 
       const data = await createExam(examData);
@@ -339,6 +360,118 @@ const ExamCreator = () => {
                 <small className="form-text text-muted">
                   Código que aparecerá precargado en el editor del estudiante
                 </small>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Test Cases para exámenes de programación */}
+        {tipoExamen === "programming" && (
+          <div className="modern-card mb-4">
+            <div className="modern-card-header">
+              <h3 className="modern-card-title">
+                <i className="fas fa-vial me-2"></i>
+                Test Cases (Evaluación Automática)
+              </h3>
+            </div>
+            <div className="modern-card-body">
+              <p className="text-muted mb-3">
+                <i className="fas fa-info-circle me-2"></i>
+                Define los casos de prueba que se ejecutarán automáticamente para calificar el código del estudiante.
+                Los test cases NO son visibles para los estudiantes.
+              </p>
+
+              {testCases.map((testCase, index) => (
+                <div key={index} className="card mb-3" style={{ border: '1px solid var(--border-color)' }}>
+                  <div className="card-header d-flex justify-content-between align-items-center" style={{ backgroundColor: '#f8f9fa' }}>
+                    <strong>
+                      <i className="fas fa-flask me-2"></i>
+                      Test Case {index + 1}
+                    </strong>
+                    {testCases.length > 1 && (
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline-danger"
+                        onClick={() => handleRemoveTestCase(index)}
+                      >
+                        <i className="fas fa-trash"></i>
+                      </button>
+                    )}
+                  </div>
+                  <div className="card-body">
+                    <div className="mb-3">
+                      <label className="form-label">Descripción del Test</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        placeholder="Ej: Suma de números positivos"
+                        value={testCase.description}
+                        onChange={(e) => handleTestCaseChange(index, 'description', e.target.value)}
+                      />
+                    </div>
+
+                    <div className="row">
+                      <div className="col-md-6 mb-3">
+                        <label className="form-label">Input (una línea por entrada)</label>
+                        <textarea
+                          className="form-control"
+                          rows="3"
+                          placeholder="2&#10;3"
+                          value={testCase.input}
+                          onChange={(e) => handleTestCaseChange(index, 'input', e.target.value)}
+                          style={{ fontFamily: 'monospace', fontSize: '0.9rem' }}
+                        />
+                        <small className="form-text text-muted">
+                          Cada línea será una entrada separada
+                        </small>
+                      </div>
+
+                      <div className="col-md-6 mb-3">
+                        <label className="form-label">Output Esperado</label>
+                        <textarea
+                          className="form-control"
+                          rows="3"
+                          placeholder="5"
+                          value={testCase.expectedOutput}
+                          onChange={(e) => handleTestCaseChange(index, 'expectedOutput', e.target.value)}
+                          style={{ fontFamily: 'monospace', fontSize: '0.9rem' }}
+                        />
+                        <small className="form-text text-muted">
+                          Resultado que debe producir el código
+                        </small>
+                      </div>
+                    </div>
+
+                    <div className="mb-0">
+                      <label className="form-label">Puntos (de 100 total)</label>
+                      <input
+                        type="number"
+                        className="form-control"
+                        min="0"
+                        max="100"
+                        value={testCase.puntos}
+                        onChange={(e) => handleTestCaseChange(index, 'puntos', parseInt(e.target.value) || 0)}
+                        style={{ maxWidth: '150px' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              <button
+                type="button"
+                className="btn btn-outline-primary"
+                onClick={handleAddTestCase}
+              >
+                <i className="fas fa-plus me-2"></i>
+                Agregar Test Case
+              </button>
+
+              <div className="alert alert-info mt-3 mb-0">
+                <i className="fas fa-calculator me-2"></i>
+                <strong>Puntos totales: {testCases.reduce((sum, tc) => sum + (tc.puntos || 0), 0)}/100</strong>
+                <br/>
+                <small>Asegúrate de que los puntos sumen 100 para una evaluación balanceada.</small>
               </div>
             </div>
           </div>

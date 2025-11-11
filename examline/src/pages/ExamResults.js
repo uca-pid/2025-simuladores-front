@@ -772,6 +772,131 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
             </div>
           </div>
 
+          {/* Resultados de Test Cases */}
+          {attempt.testResults && Array.isArray(attempt.testResults) && attempt.testResults.length > 0 && (
+            <div className="modern-card mb-4">
+              <div className="modern-card-header">
+                <h3 className="modern-card-title">
+                  <i className="fas fa-vial me-2"></i>
+                  Resultados de Test Cases
+                </h3>
+              </div>
+              <div className="modern-card-body">
+                <div className="alert alert-info mb-4">
+                  <i className="fas fa-info-circle me-2"></i>
+                  <strong>Puntaje Total: {attempt.puntaje?.toFixed(1) || 0}/100</strong>
+                  <br/>
+                  <small>Tu código fue evaluado automáticamente contra {attempt.testResults.length} casos de prueba.</small>
+                </div>
+
+                {attempt.testResults.map((test, index) => (
+                  <div 
+                    key={index} 
+                    className="card mb-3"
+                    style={{ 
+                      border: `1px solid ${test.passed ? '#10b981' : '#ef4444'}`,
+                      borderLeft: `4px solid ${test.passed ? '#10b981' : '#ef4444'}`
+                    }}
+                  >
+                    <div className="card-header d-flex justify-content-between align-items-center" style={{
+                      backgroundColor: test.passed ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)'
+                    }}>
+                      <div className="d-flex align-items-center gap-2">
+                        <span style={{ 
+                          fontSize: '1.5rem',
+                          color: test.passed ? '#10b981' : '#ef4444'
+                        }}>
+                          {test.passed ? '✅' : '❌'}
+                        </span>
+                        <strong>{test.description || `Test Case ${index + 1}`}</strong>
+                      </div>
+                      <span className={`badge ${test.passed ? 'bg-success' : 'bg-danger'}`}>
+                        {test.puntosObtenidos || 0}/{test.puntos || 0} pts
+                      </span>
+                    </div>
+                    <div className="card-body">
+                      <div className="row">
+                        {test.expected !== undefined && (
+                          <div className="col-md-6 mb-2">
+                            <small className="text-muted d-block mb-1">
+                              <i className="fas fa-check-circle me-1"></i>
+                              <strong>Output Esperado:</strong>
+                            </small>
+                            <pre style={{
+                              margin: 0,
+                              padding: '0.75rem',
+                              backgroundColor: '#f8f9fa',
+                              borderRadius: '0.375rem',
+                              fontSize: '0.85rem',
+                              fontFamily: 'monospace',
+                              border: '1px solid #dee2e6',
+                              maxHeight: '150px',
+                              overflow: 'auto'
+                            }}>
+                              {test.expected || '(vacío)'}
+                            </pre>
+                          </div>
+                        )}
+                        
+                        <div className="col-md-6 mb-2">
+                          <small className="text-muted d-block mb-1">
+                            <i className="fas fa-terminal me-1"></i>
+                            <strong>Tu Output:</strong>
+                          </small>
+                          <pre style={{
+                            margin: 0,
+                            padding: '0.75rem',
+                            backgroundColor: test.passed ? '#f0fdf4' : '#fef2f2',
+                            borderRadius: '0.375rem',
+                            fontSize: '0.85rem',
+                            fontFamily: 'monospace',
+                            border: `1px solid ${test.passed ? '#bbf7d0' : '#fecaca'}`,
+                            maxHeight: '150px',
+                            overflow: 'auto'
+                          }}>
+                            {test.actual || '(vacío)'}
+                          </pre>
+                        </div>
+                      </div>
+
+                      {test.error && (
+                        <div className="mt-2">
+                          <small className="text-danger d-block mb-1">
+                            <i className="fas fa-exclamation-triangle me-1"></i>
+                            <strong>Error:</strong>
+                          </small>
+                          <pre style={{
+                            margin: 0,
+                            padding: '0.75rem',
+                            backgroundColor: '#fef2f2',
+                            borderRadius: '0.375rem',
+                            fontSize: '0.8rem',
+                            fontFamily: 'monospace',
+                            border: '1px solid #fecaca',
+                            color: '#dc2626',
+                            maxHeight: '100px',
+                            overflow: 'auto'
+                          }}>
+                            {test.error}
+                          </pre>
+                        </div>
+                      )}
+
+                      {test.executionTime !== undefined && (
+                        <div className="mt-2">
+                          <small className="text-muted">
+                            <i className="fas fa-clock me-1"></i>
+                            Tiempo de ejecución: <strong>{test.executionTime}ms</strong>
+                          </small>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Información adicional */}
           <div className="modern-card">
             <div className="modern-card-header">
