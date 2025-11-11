@@ -31,6 +31,12 @@ const ExamRanking = () => {
           console.log('📊 Ranking data recibida:', data);
           console.log('📊 Estadísticas:', data.estadisticas);
           setRankingData(data);
+          
+          // Auto-seleccionar el ranking que tenga datos
+          // Si el ranking de puntaje está vacío pero hay datos de tiempo, cambiar a tiempo
+          if (data.rankingPorPuntaje?.length === 0 && data.rankingPorTiempo?.length > 0) {
+            setTipoRanking('tiempo');
+          }
         } else {
           const errorData = await response.json();
           setError(errorData.error || 'Error cargando ranking');
@@ -97,7 +103,12 @@ const ExamRanking = () => {
   const estadisticasActual = tipoRanking === 'puntaje' ? rankingData?.estadisticasPuntaje : rankingData?.estadisticasTiempo;
   const posicionActual = tipoRanking === 'puntaje' ? rankingData?.posicionUsuarioPuntaje : rankingData?.posicionUsuarioTiempo;
 
-  if (!rankingData || (rankingActual && rankingActual.length === 0)) {
+  // Mostrar "sin datos" solo si AMBOS rankings están vacíos
+  const sinDatos = !rankingData || 
+    ((rankingData.rankingPorPuntaje?.length === 0 || !rankingData.rankingPorPuntaje) && 
+     (rankingData.rankingPorTiempo?.length === 0 || !rankingData.rankingPorTiempo));
+
+  if (sinDatos) {
     return (
       <div className="container-fluid container-lg py-5">
         <div className="modern-card">
