@@ -13,6 +13,7 @@ const ExamRanking = () => {
   const [loading, setLoading] = useState(true);
   const [rankingData, setRankingData] = useState(null);
   const [error, setError] = useState(null);
+  const [tipoRanking, setTipoRanking] = useState('puntaje'); // 'puntaje' o 'tiempo'
 
   useEffect(() => {
     const fetchRanking = async () => {
@@ -92,7 +93,11 @@ const ExamRanking = () => {
     );
   }
 
-  if (!rankingData || rankingData.ranking.length === 0) {
+  const rankingActual = tipoRanking === 'puntaje' ? rankingData?.rankingPorPuntaje : rankingData?.rankingPorTiempo;
+  const estadisticasActual = tipoRanking === 'puntaje' ? rankingData?.estadisticasPuntaje : rankingData?.estadisticasTiempo;
+  const posicionActual = tipoRanking === 'puntaje' ? rankingData?.posicionUsuarioPuntaje : rankingData?.posicionUsuarioTiempo;
+
+  if (!rankingData || (rankingActual && rankingActual.length === 0)) {
     return (
       <div className="container-fluid container-lg py-5">
         <div className="modern-card">
@@ -113,7 +118,8 @@ const ExamRanking = () => {
     );
   }
 
-  const { examWindow, ranking, totalParticipantes, posicionUsuario, estadisticas } = rankingData;
+  const { examWindow, totalParticipantes } = rankingData;
+  const ranking = rankingActual || [];
 
   return (
     <div className="container-fluid container-lg py-5 px-3 px-md-4">
@@ -137,8 +143,52 @@ const ExamRanking = () => {
         </div>
       </div>
 
+      {/* Tabs para elegir tipo de ranking */}
+      <div className="modern-card mb-4">
+        <div className="modern-card-body p-0">
+          <div className="d-flex" style={{ borderBottom: '2px solid #e5e7eb' }}>
+            <button
+              className={`flex-fill py-3 px-4 ${tipoRanking === 'puntaje' ? 'bg-primary text-white' : 'bg-white text-dark'}`}
+              style={{
+                border: 'none',
+                fontWeight: '600',
+                borderRadius: '8px 0 0 0',
+                transition: 'all 0.2s ease'
+              }}
+              onClick={() => setTipoRanking('puntaje')}
+            >
+              <i className="fas fa-star me-2"></i>
+              Ranking por Puntaje
+              {rankingData?.rankingPorPuntaje?.length > 0 && (
+                <span className={`ms-2 badge ${tipoRanking === 'puntaje' ? 'bg-white text-primary' : 'bg-primary text-white'}`}>
+                  {rankingData.rankingPorPuntaje.length}
+                </span>
+              )}
+            </button>
+            <button
+              className={`flex-fill py-3 px-4 ${tipoRanking === 'tiempo' ? 'bg-primary text-white' : 'bg-white text-dark'}`}
+              style={{
+                border: 'none',
+                fontWeight: '600',
+                borderRadius: '0 8px 0 0',
+                transition: 'all 0.2s ease'
+              }}
+              onClick={() => setTipoRanking('tiempo')}
+            >
+              <i className="fas fa-stopwatch me-2"></i>
+              Ranking por Tiempo
+              {rankingData?.rankingPorTiempo?.length > 0 && (
+                <span className={`ms-2 badge ${tipoRanking === 'tiempo' ? 'bg-white text-primary' : 'bg-primary text-white'}`}>
+                  {rankingData.rankingPorTiempo.length}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Posición del usuario (si es estudiante) */}
-      {user?.rol === 'student' && posicionUsuario && (
+      {user?.rol === 'student' && posicionActual && (
         <div className="modern-card mb-4" style={{
           background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)',
           border: '2px solid var(--primary-color)'
@@ -148,20 +198,31 @@ const ExamRanking = () => {
               <div>
                 <h5 className="mb-1" style={{ color: 'var(--primary-color)' }}>
                   <i className="fas fa-user-circle me-2"></i>
-                  Tu Posición
+                  Tu Posición {tipoRanking === 'puntaje' ? '(por Puntaje)' : '(por Tiempo)'}
                 </h5>
                 <p className="mb-0 text-muted">
-                  Estás en el puesto {getMedalEmoji(posicionUsuario)} de {totalParticipantes} participantes
+                  Estás en el puesto {getMedalEmoji(posicionActual)} de {totalParticipantes} participantes
                 </p>
               </div>
               <div className="text-end">
-                <div>
-                  <small className="text-muted d-block">Tu Tiempo</small>
-                  <strong style={{ fontSize: '1.8rem', color: 'var(--primary-color)' }}>
-                    <i className="fas fa-stopwatch me-2"></i>
-                    {ranking.find(r => r.esUsuarioActual)?.tiempoFormateado}
-                  </strong>
-                </div>
+                {tipoRanking === 'puntaje' && ranking.find(r => r.esUsuarioActual)?.puntaje !== null && (
+                  <div>
+                    <small className="text-muted d-block">Tu Puntaje</small>
+                    <strong style={{ fontSize: '1.8rem', color: 'var(--primary-color)' }}>
+                      <i className="fas fa-star me-2"></i>
+                      {ranking.find(r => r.esUsuarioActual)?.puntaje?.toFixed(1)}%
+                    </strong>
+                  </div>
+                )}
+                {tipoRanking === 'tiempo' && (
+                  <div>
+                    <small className="text-muted d-block">Tu Tiempo</small>
+                    <strong style={{ fontSize: '1.8rem', color: 'var(--primary-color)' }}>
+                      <i className="fas fa-stopwatch me-2"></i>
+                      {ranking.find(r => r.esUsuarioActual)?.tiempoFormateado}
+                    </strong>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -180,81 +241,120 @@ const ExamRanking = () => {
                 <i className="fas fa-users"></i>
               </div>
               <h3 className="mb-1" style={{ color: 'var(--primary-color)', fontSize: '2rem' }}>
-                {totalParticipantes}
+                {ranking.length}
               </h3>
-              <small className="text-muted">Participantes</small>
+              <small className="text-muted">Participantes en este Ranking</small>
             </div>
           </div>
         </div>
         
-        <div className="col-md-3 col-sm-6 mb-3">
-          <div className="modern-card" style={{ height: '100%' }}>
-            <div className="modern-card-body text-center">
-              <div className="stat-icon mb-2" style={{ 
-                fontSize: '2rem', 
-                color: 'var(--success-color)' 
-              }}>
-                <i className="fas fa-clock"></i>
+        {tipoRanking === 'puntaje' ? (
+          <>
+            <div className="col-md-3 col-sm-6 mb-3">
+              <div className="modern-card" style={{ height: '100%' }}>
+                <div className="modern-card-body text-center">
+                  <div className="stat-icon mb-2" style={{ 
+                    fontSize: '2rem', 
+                    color: 'var(--success-color)' 
+                  }}>
+                    <i className="fas fa-trophy"></i>
+                  </div>
+                  <h3 className="mb-1" style={{ color: 'var(--success-color)', fontSize: '2rem' }}>
+                    {estadisticasActual?.mejorPuntaje !== null ? `${estadisticasActual?.mejorPuntaje?.toFixed(1)}%` : 'N/A'}
+                  </h3>
+                  <small className="text-muted">Mejor Puntaje</small>
+                </div>
               </div>
-              <h3 className="mb-1" style={{ color: 'var(--success-color)', fontSize: '2rem' }}>
-                {estadisticas.mejorTiempoFormateado || 'N/A'}
-              </h3>
-              <small className="text-muted">Mejor Tiempo</small>
             </div>
-          </div>
-        </div>
-        
-        <div className="col-md-3 col-sm-6 mb-3">
-          <div className="modern-card" style={{ height: '100%' }}>
-            <div className="modern-card-body text-center">
-              <div className="stat-icon mb-2" style={{ 
-                fontSize: '2rem', 
-                color: 'var(--warning-color)' 
-              }}>
-                <i className="fas fa-hourglass-end"></i>
+            
+            <div className="col-md-3 col-sm-6 mb-3">
+              <div className="modern-card" style={{ height: '100%' }}>
+                <div className="modern-card-body text-center">
+                  <div className="stat-icon mb-2" style={{ 
+                    fontSize: '2rem', 
+                    color: 'var(--warning-color)' 
+                  }}>
+                    <i className="fas fa-chart-line-down"></i>
+                  </div>
+                  <h3 className="mb-1" style={{ color: 'var(--warning-color)', fontSize: '2rem' }}>
+                    {estadisticasActual?.peorPuntaje !== null ? `${estadisticasActual?.peorPuntaje?.toFixed(1)}%` : 'N/A'}
+                  </h3>
+                  <small className="text-muted">Puntaje Más Bajo</small>
+                </div>
               </div>
-              <h3 className="mb-1" style={{ color: 'var(--warning-color)', fontSize: '2rem' }}>
-                {(() => {
-                  console.log('🔍 peorTiempoFormateado:', estadisticas?.peorTiempoFormateado);
-                  console.log('🔍 peorTiempo:', estadisticas?.peorTiempo);
-                  
-                  if (estadisticas?.peorTiempoFormateado) {
-                    return estadisticas.peorTiempoFormateado;
-                  } else if (estadisticas?.peorTiempo) {
-                    const mins = Math.floor(estadisticas.peorTiempo / 60);
-                    const secs = estadisticas.peorTiempo % 60;
-                    return `${mins}m ${secs}s`;
-                  }
-                  return 'N/A';
-                })()}
-              </h3>
-              <small className="text-muted">Tiempo Más Lento</small>
             </div>
-          </div>
-        </div>
-        
-        <div className="col-md-3 col-sm-6 mb-3">
-          <div className="modern-card" style={{ height: '100%' }}>
-            <div className="modern-card-body text-center">
-              <div className="stat-icon mb-2" style={{ 
-                fontSize: '2rem', 
-                color: 'var(--info-color)' 
-              }}>
-                <i className="fas fa-chart-line"></i>
+            
+            <div className="col-md-3 col-sm-6 mb-3">
+              <div className="modern-card" style={{ height: '100%' }}>
+                <div className="modern-card-body text-center">
+                  <div className="stat-icon mb-2" style={{ 
+                    fontSize: '2rem', 
+                    color: 'var(--info-color)' 
+                  }}>
+                    <i className="fas fa-chart-bar"></i>
+                  </div>
+                  <h3 className="mb-1" style={{ color: 'var(--info-color)', fontSize: '2rem' }}>
+                    {estadisticasActual?.promedioPuntaje !== null ? `${estadisticasActual?.promedioPuntaje?.toFixed(1)}%` : 'N/A'}
+                  </h3>
+                  <small className="text-muted">Puntaje Promedio</small>
+                </div>
               </div>
-              <h3 className="mb-1" style={{ color: 'var(--info-color)', fontSize: '2rem' }}>
-                {estadisticas?.promedioTiempoFormateado || (() => {
-                  const avg = estadisticas?.promedioTiempo;
-                  if (!avg) return 'N/A';
-                  const mins = Math.floor(avg / 60);
-                  const secs = avg % 60;
-                  return `${mins}m ${secs}s`;
-                })()}
-              </h3>
-              <small className="text-muted">Tiempo Promedio</small>
             </div>
-          </div>
-        </div>
+          </>
+        ) : (
+          <>
+            <div className="col-md-3 col-sm-6 mb-3">
+              <div className="modern-card" style={{ height: '100%' }}>
+                <div className="modern-card-body text-center">
+                  <div className="stat-icon mb-2" style={{ 
+                    fontSize: '2rem', 
+                    color: 'var(--success-color)' 
+                  }}>
+                    <i className="fas fa-clock"></i>
+                  </div>
+                  <h3 className="mb-1" style={{ color: 'var(--success-color)', fontSize: '2rem' }}>
+                    {estadisticasActual?.mejorTiempoFormateado || 'N/A'}
+                  </h3>
+                  <small className="text-muted">Mejor Tiempo</small>
+                </div>
+              </div>
+            </div>
+            
+            <div className="col-md-3 col-sm-6 mb-3">
+              <div className="modern-card" style={{ height: '100%' }}>
+                <div className="modern-card-body text-center">
+                  <div className="stat-icon mb-2" style={{ 
+                    fontSize: '2rem', 
+                    color: 'var(--warning-color)' 
+                  }}>
+                    <i className="fas fa-hourglass-end"></i>
+                  </div>
+                  <h3 className="mb-1" style={{ color: 'var(--warning-color)', fontSize: '2rem' }}>
+                    {estadisticasActual?.peorTiempoFormateado || 'N/A'}
+                  </h3>
+                  <small className="text-muted">Tiempo Más Lento</small>
+                </div>
+              </div>
+            </div>
+            
+            <div className="col-md-3 col-sm-6 mb-3">
+              <div className="modern-card" style={{ height: '100%' }}>
+                <div className="modern-card-body text-center">
+                  <div className="stat-icon mb-2" style={{ 
+                    fontSize: '2rem', 
+                    color: 'var(--info-color)' 
+                  }}>
+                    <i className="fas fa-chart-line"></i>
+                  </div>
+                  <h3 className="mb-1" style={{ color: 'var(--info-color)', fontSize: '2rem' }}>
+                    {estadisticasActual?.promedioTiempoFormateado || 'N/A'}
+                  </h3>
+                  <small className="text-muted">Tiempo Promedio</small>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Tabla de ranking */}
@@ -276,6 +376,12 @@ const ExamRanking = () => {
                   <th style={{ width: '100px', textAlign: 'center' }}>Posición</th>
                   <th>Estudiante</th>
                   {user?.rol === 'professor' && <th>Email</th>}
+                  {tipoRanking === 'puntaje' && (
+                    <th style={{ width: '150px', textAlign: 'center' }}>
+                      <i className="fas fa-star me-2"></i>
+                      Puntaje
+                    </th>
+                  )}
                   <th style={{ width: '200px', textAlign: 'center' }}>
                     <i className="fas fa-stopwatch me-2"></i>
                     Tiempo de Realización
@@ -290,14 +396,14 @@ const ExamRanking = () => {
                 {ranking.map((item) => (
                   <tr 
                     key={item.userId}
-                    className={`${getPosicionClass(item.posicion)} ${item.esUsuarioActual ? 'table-primary' : ''}`}
+                    className={`${getPosicionClass(tipoRanking === 'puntaje' ? item.posicionPuntaje : item.posicionTiempo)} ${item.esUsuarioActual ? 'table-primary' : ''}`}
                     style={{
                       backgroundColor: item.esUsuarioActual ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
                       fontWeight: item.esUsuarioActual ? '600' : 'normal'
                     }}
                   >
                     <td style={{ textAlign: 'center', fontSize: '1.2rem' }}>
-                      {getMedalEmoji(item.posicion)}
+                      {getMedalEmoji(tipoRanking === 'puntaje' ? item.posicionPuntaje : item.posicionTiempo)}
                     </td>
                     <td>
                       <div className="d-flex align-items-center">
@@ -328,13 +434,40 @@ const ExamRanking = () => {
                         {item.email}
                       </td>
                     )}
+                    {tipoRanking === 'puntaje' && (
+                      <td style={{ textAlign: 'center' }}>
+                        <div style={{ 
+                          display: 'inline-flex', 
+                          alignItems: 'center', 
+                          gap: '8px',
+                          padding: '8px 16px',
+                          background: item.puntaje >= 70
+                            ? 'rgba(34, 197, 94, 0.1)'
+                            : item.puntaje >= 40
+                            ? 'rgba(251, 191, 36, 0.1)'
+                            : 'rgba(239, 68, 68, 0.1)',
+                          borderRadius: '8px',
+                          fontSize: '1.2rem',
+                          fontWeight: '700'
+                        }}>
+                          <i className="fas fa-star" style={{ 
+                            color: item.puntaje >= 70 ? '#22c55e' : item.puntaje >= 40 ? '#fbbf24' : '#ef4444'
+                          }}></i>
+                          <span style={{ 
+                            color: item.puntaje >= 70 ? '#22c55e' : item.puntaje >= 40 ? '#fbbf24' : '#ef4444'
+                          }}>
+                            {item.puntaje !== null ? `${item.puntaje.toFixed(1)}%` : 'N/A'}
+                          </span>
+                        </div>
+                      </td>
+                    )}
                     <td style={{ textAlign: 'center' }}>
                       <div style={{ 
                         display: 'inline-flex', 
                         alignItems: 'center', 
                         gap: '8px',
                         padding: '8px 16px',
-                        background: item.posicion <= 3 
+                        background: tipoRanking === 'tiempo' && (item.posicionTiempo || item.posicion) <= 3
                           ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)'
                           : 'rgba(0,0,0,0.05)',
                         borderRadius: '8px',
@@ -343,13 +476,15 @@ const ExamRanking = () => {
                         fontWeight: '600'
                       }}>
                         <i className="fas fa-stopwatch" style={{ 
-                          color: item.posicion === 1 ? '#FFD700' : 
-                                 item.posicion === 2 ? '#C0C0C0' : 
-                                 item.posicion === 3 ? '#CD7F32' : 
-                                 'var(--primary-color)' 
+                          color: tipoRanking === 'tiempo' && (
+                                   (item.posicionTiempo || item.posicion) === 1 ? '#FFD700' : 
+                                   (item.posicionTiempo || item.posicion) === 2 ? '#C0C0C0' : 
+                                   (item.posicionTiempo || item.posicion) === 3 ? '#CD7F32' : 
+                                   'var(--primary-color)'
+                                 ) || '#6b7280'
                         }}></i>
                         <span style={{ 
-                          color: item.posicion <= 3 ? 'var(--primary-color)' : '#374151' 
+                          color: tipoRanking === 'tiempo' && (item.posicionTiempo || item.posicion) <= 3 ? 'var(--primary-color)' : '#374151' 
                         }}>
                           {item.tiempoFormateado}
                         </span>
