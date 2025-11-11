@@ -36,6 +36,10 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
 
         if (response.ok) {
           const data = await response.json();
+          console.log('🎯 ExamResults - Datos recibidos:', data);
+          console.log('💯 ExamResults - Puntaje:', data.puntaje);
+          console.log('📝 ExamResults - Respuestas:', data.respuestas);
+          console.log('📋 ExamResults - Tipo examen:', data.exam?.tipo);
           setAttempt(data);
           
           // Si es un examen de programación, cargar ambas versiones de archivos
@@ -811,15 +815,60 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
         </div>
       ) : (
         /* Vista para exámenes de múltiple choice */
-        <div className="modern-card mb-4">
-          <div className="modern-card-header">
-            <h3 className="modern-card-title">
-              <i className="fas fa-clipboard-list me-2"></i>
-              Respuestas Correctas
-            </h3>
+        <>
+          {/* Puntaje del examen */}
+          <div className="modern-card mb-4">
+            <div className="modern-card-header">
+              <h3 className="modern-card-title">
+                <i className="fas fa-chart-bar me-2"></i>
+                Tu Puntaje
+              </h3>
+            </div>
+            <div className="modern-card-body">
+              <div className="text-center py-4">
+                <div className="display-4 fw-bold mb-3" style={{
+                  color: attempt.puntaje >= 70 ? '#198754' : attempt.puntaje >= 40 ? '#ffc107' : '#dc3545'
+                }}>
+                  {attempt.puntaje !== null && attempt.puntaje !== undefined 
+                    ? `${attempt.puntaje.toFixed(1)}%` 
+                    : 'Sin calificar'}
+                </div>
+                {attempt.puntaje !== null && attempt.puntaje !== undefined && (
+                  <>
+                    <div className="mb-3">
+                      <span className={`badge ${
+                        attempt.puntaje >= 70 ? 'bg-success' : 
+                        attempt.puntaje >= 40 ? 'bg-warning text-dark' : 
+                        'bg-danger'
+                      } fs-6 px-4 py-2`}>
+                        {attempt.puntaje >= 70 ? '✅ Aprobado' : 
+                         attempt.puntaje >= 40 ? '⚠️ Regular' : 
+                         '❌ Desaprobado'}
+                      </span>
+                    </div>
+                    <p className="text-muted">
+                      {(() => {
+                        const totalPreguntas = attempt.exam.preguntas?.length || 0;
+                        const correctas = Math.round((attempt.puntaje / 100) * totalPreguntas);
+                        return `${correctas} de ${totalPreguntas} preguntas correctas`;
+                      })()}
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
-          <div className="modern-card-body">
-            {!attempt.exam.preguntas || attempt.exam.preguntas.length === 0 ? (
+
+          {/* Preguntas y respuestas */}
+          <div className="modern-card mb-4">
+            <div className="modern-card-header">
+              <h3 className="modern-card-title">
+                <i className="fas fa-clipboard-list me-2"></i>
+                Revisión de Respuestas
+              </h3>
+            </div>
+            <div className="modern-card-body">
+              {!attempt.exam.preguntas || attempt.exam.preguntas.length === 0 ? (
               <div className="empty-state">
                 <div className="empty-icon">
                   <i className="fas fa-question-circle"></i>
@@ -847,24 +896,75 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
                             <span className="options-label">Opciones de respuesta:</span>
                           </h6>
                           <div className="exam-results-options-list">
-                            {question.opciones?.map((option, optionIndex) => {
-                              const isCorrect = optionIndex === question.correcta;
+                            {(() => {
+                              const studentAnswer = attempt.respuestas?.[index];
+                              
+                              return question.opciones?.map((option, optionIndex) => {
+                                const isCorrect = optionIndex === question.correcta;
+                                const isStudentAnswer = studentAnswer === optionIndex;
+                                const isWrongAnswer = isStudentAnswer && !isCorrect;
                               
                               return (
-                                <div key={optionIndex} className={`exam-info-item ${isCorrect ? 'bg-success bg-opacity-10 border-success rounded p-2 mb-2' : ''}`}>
-                                  <i className={isCorrect ? "fas fa-check-circle me-2 text-success" : "fas fa-circle me-2 text-muted"} 
-                                     style={{fontSize: isCorrect ? '14px' : '8px'}}></i>
-                                  <span className={isCorrect ? "fw-bold text-success" : ""}>
-                                    {option || "Opción vacía"}
-                                    {isCorrect && (
-                                      <span className="ms-2 badge bg-success text-white correct-badge">
-                                        <span className="badge-text">Respuesta Correcta</span>
+                                <div 
+                                  key={optionIndex} 
+                                  className={`exam-info-item ${
+                                    isCorrect ? 'bg-success bg-opacity-10 border-success' : 
+                                    isWrongAnswer ? 'bg-danger bg-opacity-10 border-danger' : 
+                                    ''
+                                  } rounded p-2 mb-2`}
+                                  style={{
+                                    border: isCorrect || isWrongAnswer ? '2px solid' : '1px solid #dee2e6'
+                                  }}
+                                >
+                                  <div className="d-flex align-items-center justify-content-between">
+                                    <div className="d-flex align-items-center">
+                                      <i className={
+                                        isCorrect ? "fas fa-check-circle me-2 text-success" : 
+                                        isWrongAnswer ? "fas fa-times-circle me-2 text-danger" :
+                                        "fas fa-circle me-2 text-muted"
+                                      } 
+                                         style={{fontSize: (isCorrect || isWrongAnswer) ? '14px' : '8px'}}></i>
+                                      <span className={
+                                        isCorrect ? "fw-bold text-success" : 
+                                        isWrongAnswer ? "fw-bold text-danger" : ""
+                                      }>
+                                        {option || "Opción vacía"}
                                       </span>
-                                    )}
-                                  </span>
+                                    </div>
+                                    <div>
+                                      {isCorrect && (
+                                        <span className="badge bg-success text-white ms-2">
+                                          <i className="fas fa-check me-1"></i>
+                                          Correcta
+                                        </span>
+                                      )}
+                                      {isStudentAnswer && !isCorrect && (
+                                        <span className="badge bg-danger text-white ms-2">
+                                          <i className="fas fa-user me-1"></i>
+                                          Tu respuesta
+                                        </span>
+                                      )}
+                                      {isStudentAnswer && isCorrect && (
+                                        <span className="badge bg-primary text-white ms-2">
+                                          <i className="fas fa-user-check me-1"></i>
+                                          Tu respuesta
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
                                 </div>
                               );
-                            })}
+                              });
+                            })()}
+                            {(() => {
+                              const studentAnswer = attempt.respuestas?.[index];
+                              return studentAnswer === undefined && (
+                                <div className="alert alert-warning mt-3 mb-0" role="alert">
+                                  <i className="fas fa-exclamation-triangle me-2"></i>
+                                  No respondiste esta pregunta
+                                </div>
+                              );
+                            })()}
                           </div>
                         </div>
                       </div>
@@ -875,6 +975,7 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
             )}
           </div>
         </div>
+        </>
       )}
 
       {/* Estilos adicionales para mejorar la experiencia */}

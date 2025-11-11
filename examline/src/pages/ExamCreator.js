@@ -16,7 +16,7 @@ const ExamCreator = () => {
   // Estados para exámenes de multiple choice
   const [preguntas, setPreguntas] = useState([]);
   const [textoPregunta, setTextoPregunta] = useState("");
-  const [opciones, setOpciones] = useState(["", "", "", ""]);
+  const [opciones, setOpciones] = useState(["", ""]);
   const [correcta, setCorrecta] = useState(0);
   
   // Estados para exámenes de programación
@@ -46,10 +46,39 @@ const ExamCreator = () => {
     setModal(prev => ({ ...prev, show: false }));
   };
 
+  // Agregar opción nueva
+  const handleAgregarOpcion = () => {
+    if (opciones.length < 10) { // Máximo 10 opciones
+      setOpciones([...opciones, ""]);
+    }
+  };
+
+  // Eliminar opción
+  const handleEliminarOpcion = (index) => {
+    if (opciones.length > 2) { // Mínimo 2 opciones
+      const nuevasOpciones = opciones.filter((_, i) => i !== index);
+      setOpciones(nuevasOpciones);
+      // Ajustar la respuesta correcta si es necesario
+      if (correcta >= nuevasOpciones.length) {
+        setCorrecta(nuevasOpciones.length - 1);
+      }
+    }
+  };
+
   // Agregar pregunta al listado
   const handleAgregarPregunta = () => {
-    if (!textoPregunta || opciones.some(o => !o)) {
-      setError("Complete la pregunta y todas las opciones");
+    if (!textoPregunta.trim()) {
+      setError("Ingrese el texto de la pregunta");
+      return;
+    }
+    
+    if (opciones.length < 2) {
+      setError("La pregunta debe tener al menos 2 opciones");
+      return;
+    }
+    
+    if (opciones.some(o => !o.trim())) {
+      setError("Complete todas las opciones antes de agregar la pregunta");
       return;
     }
 
@@ -60,7 +89,7 @@ const ExamCreator = () => {
 
     // Limpiar inputs
     setTextoPregunta("");
-    setOpciones(["", "", "", ""]);
+    setOpciones(["", ""]);
     setCorrecta(0);
     setError("");
   };
@@ -348,11 +377,11 @@ const ExamCreator = () => {
           <div className="mb-4">
             <label className="form-label d-flex align-items-center gap-2">
               <i className="fas fa-list text-muted"></i>
-              Opciones de respuesta
+              Opciones de respuesta (mínimo 2, máximo 10)
             </label>
             <div className="exam-creator-options-list">
               {opciones.map((op, i) => (
-                <div key={i} className="exam-creator-option-item mb-2">
+                <div key={i} className="exam-creator-option-item mb-2 d-flex gap-2">
                   <input
                     type="text"
                     className="form-control"
@@ -370,9 +399,30 @@ const ExamCreator = () => {
                       fontSize: '0.9rem'
                     }}
                   />
+                  {opciones.length > 2 && (
+                    <button
+                      type="button"
+                      className="btn btn-outline-danger btn-sm"
+                      onClick={() => handleEliminarOpcion(i)}
+                      title="Eliminar opción"
+                      style={{ minWidth: '40px' }}
+                    >
+                      <i className="fas fa-trash"></i>
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
+            {opciones.length < 10 && (
+              <button
+                type="button"
+                className="btn btn-outline-primary btn-sm mt-2"
+                onClick={handleAgregarOpcion}
+              >
+                <i className="fas fa-plus me-2"></i>
+                Agregar opción
+              </button>
+            )}
           </div>
 
           <div className="mb-4">
