@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import BackToMainButton from '../components/BackToMainButton';
 
@@ -8,7 +8,6 @@ const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simula
 const ExamRanking = () => {
   const { windowId } = useParams();
   const { token, user } = useAuth();
-  const navigate = useNavigate();
   
   const [loading, setLoading] = useState(true);
   const [rankingData, setRankingData] = useState(null);
@@ -28,8 +27,6 @@ const ExamRanking = () => {
 
         if (response.ok) {
           const data = await response.json();
-          console.log('📊 Ranking data recibida:', data);
-          console.log('📊 Estadísticas:', data.estadisticas);
           setRankingData(data);
           
           // Auto-seleccionar el ranking que tenga datos
@@ -487,12 +484,12 @@ const ExamRanking = () => {
                         fontWeight: '600'
                       }}>
                         <i className="fas fa-stopwatch" style={{ 
-                          color: tipoRanking === 'tiempo' && (
+                          color: (tipoRanking === 'tiempo' && (
                                    (item.posicionTiempo || item.posicion) === 1 ? '#FFD700' : 
                                    (item.posicionTiempo || item.posicion) === 2 ? '#C0C0C0' : 
                                    (item.posicionTiempo || item.posicion) === 3 ? '#CD7F32' : 
                                    'var(--primary-color)'
-                                 ) || '#6b7280'
+                                 )) || '#6b7280'
                         }}></i>
                         <span style={{ 
                           color: tipoRanking === 'tiempo' && (item.posicionTiempo || item.posicion) <= 3 ? 'var(--primary-color)' : '#374151' 

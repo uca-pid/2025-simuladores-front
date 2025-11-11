@@ -11,7 +11,7 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
   const { attemptId: routeAttemptId } = useParams();
   const navigate = useNavigate();
   const attemptId = propAttemptId || routeAttemptId;
-  const { user, token } = useAuth();
+  const { token } = useAuth();
 
   const [attempt, setAttempt] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -36,10 +36,6 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
 
         if (response.ok) {
           const data = await response.json();
-          console.log('🎯 ExamResults - Datos recibidos:', data);
-          console.log('💯 ExamResults - Puntaje:', data.puntaje);
-          console.log('📝 ExamResults - Respuestas:', data.respuestas);
-          console.log('📋 ExamResults - Tipo examen:', data.exam?.tipo);
           setAttempt(data);
           
           // Si es un examen de programación, cargar ambas versiones de archivos
@@ -61,6 +57,7 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
     };
 
     fetchResults();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attemptId, token]);
 
   // Función para cargar ambas versiones de archivos

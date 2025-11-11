@@ -41,7 +41,6 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
     
     const inSEB = checkSEB();
     setIsInSEB(inSEB);
-    console.log('Ejecutando en SEB:', inSEB);
   }, []);
 
   // Modal helper functions
@@ -56,10 +55,9 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
   // 🚪 Función para redireccionar al terminar examen
 const closeSEB = () => {
   try {
-    console.log('Redirigiendo a Google.com al terminar el examen');
     window.location.href = 'https://ferrocarriloeste.com.ar/';
   } catch (error) {
-    console.log('Error al redireccionar:', error);
+    console.error('Error al redireccionar:', error);
   }
 };
 
@@ -69,7 +67,6 @@ const closeSEB = () => {
     const tokenFromUrl = params.get('token');
     
     if (tokenFromUrl) {
-      console.log('Token recibido desde URL, guardando en localStorage');
       localStorage.setItem('token', tokenFromUrl);
     }
 
@@ -169,10 +166,6 @@ const closeSEB = () => {
           const body = exam.tipo === 'multiple_choice' 
             ? { respuestas } 
             : {};
-
-          console.log('🚀 Finalizando examen con respuestas:', respuestas);
-          console.log('📦 Body a enviar:', body);
-          console.log('📋 Tipo de examen:', exam.tipo);
 
           const response = await fetch(`${API_BASE_URL}/exam-attempts/${attempt.id}/finish`, {
             method: 'PUT',
@@ -345,6 +338,7 @@ const closeSEB = () => {
     };
 
     loadExamAndAttempt();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [examId, windowId]);
 
   // Add page leave confirmation for exam security

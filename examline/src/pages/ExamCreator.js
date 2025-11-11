@@ -4,12 +4,10 @@ import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import BackToMainButton from "../components/BackToMainButton";
 import Modal from "../components/Modal";
-import { useAuth } from "../contexts/AuthContext";
 import { createExam } from "../services/api";
 
 const ExamCreator = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [titulo, setTitulo] = useState("");
   const [tipoExamen, setTipoExamen] = useState("multiple_choice"); // "multiple_choice" | "programming"
   
@@ -134,7 +132,7 @@ const ExamCreator = () => {
         examData.testCases = testCases;
       }
 
-      const data = await createExam(examData);
+      await createExam(examData);
       
       // Volver a la Página Principal
       navigate("/principal");

@@ -7,6 +7,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import '../modern-examline.css';
 
 // Función auxiliar para convertir fechas del servidor a zona horaria local automáticamente
+// eslint-disable-next-line no-unused-vars
 const adjustDateFromServer = (serverDateString) => {
   // JavaScript maneja automáticamente la conversión de UTC a zona horaria local
   return new Date(serverDateString);
@@ -32,13 +33,7 @@ export default function WindowInscriptionsPage() {
 
   // Verificar que es profesor
   useEffect(() => {
-    console.log('WindowInscriptions - useEffect ejecutado');
-    console.log('windowId:', windowId);
-    console.log('user:', user);
-    console.log('token:', token ? 'exists' : 'missing');
-    
     if (!user || user.rol !== 'professor') {
-      console.log('Usuario no es profesor, redirigiendo a /');
       navigate('/');
       return;
     }
