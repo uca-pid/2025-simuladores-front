@@ -782,12 +782,47 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
                 </h3>
               </div>
               <div className="modern-card-body">
-                <div className="alert alert-info mb-4">
-                  <i className="fas fa-info-circle me-2"></i>
-                  <strong>Puntaje Total: {attempt.puntaje?.toFixed(1) || 0}/100</strong>
-                  <br/>
-                  <small>Tu código fue evaluado automáticamente contra {attempt.testResults.length} casos de prueba.</small>
-                </div>
+                {(() => {
+                  const testsPasados = attempt.testResults.filter(t => t.passed).length;
+                  const totalTests = attempt.testResults.length;
+                  const porcentaje = attempt.puntaje?.toFixed(1) || 0;
+                  
+                  return (
+                    <>
+                      <div className="alert alert-info mb-4">
+                        <div className="d-flex align-items-center justify-content-between">
+                          <div>
+                            <i className="fas fa-chart-bar me-2"></i>
+                            <strong style={{ fontSize: '1.1rem' }}>
+                              Puntaje: {porcentaje}% 
+                            </strong>
+                            <span className="ms-2 text-muted">
+                              ({testsPasados} de {totalTests} tests pasados)
+                            </span>
+                          </div>
+                          <div style={{
+                            fontSize: '2rem',
+                            color: porcentaje >= 70 ? '#10b981' : porcentaje >= 40 ? '#f59e0b' : '#ef4444'
+                          }}>
+                            {porcentaje >= 70 ? '🎉' : porcentaje >= 40 ? '😐' : '😞'}
+                          </div>
+                        </div>
+                        <div className="progress mt-3" style={{ height: '25px' }}>
+                          <div 
+                            className={`progress-bar ${
+                              porcentaje >= 70 ? 'bg-success' : 
+                              porcentaje >= 40 ? 'bg-warning' : 
+                              'bg-danger'
+                            }`}
+                            style={{ width: `${porcentaje}%` }}
+                          >
+                            {porcentaje}%
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
 
                 {attempt.testResults.map((test, index) => (
                   <div 
@@ -810,8 +845,8 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
                         </span>
                         <strong>{test.description || `Test Case ${index + 1}`}</strong>
                       </div>
-                      <span className={`badge ${test.passed ? 'bg-success' : 'bg-danger'}`}>
-                        {test.puntosObtenidos || 0}/{test.puntos || 0} pts
+                      <span className={`badge ${test.passed ? 'bg-success' : 'bg-secondary'}`}>
+                        {test.passed ? 'PASÓ' : 'FALLÓ'}
                       </span>
                     </div>
                     <div className="card-body">

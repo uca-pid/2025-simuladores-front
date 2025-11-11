@@ -25,7 +25,7 @@ const ExamCreator = () => {
   const [enunciadoProgramacion, setEnunciadoProgramacion] = useState("");
   const [codigoInicial, setCodigoInicial] = useState("");
   const [testCases, setTestCases] = useState([
-    { description: "", input: "", expectedOutput: "", puntos: 25 }
+    { description: "", input: "", expectedOutput: "" }
   ]);
   
   const [error, setError] = useState("");
@@ -99,7 +99,7 @@ const ExamCreator = () => {
 
   // Funciones para manejar test cases
   const handleAddTestCase = () => {
-    setTestCases([...testCases, { description: "", input: "", expectedOutput: "", puntos: 25 }]);
+    setTestCases([...testCases, { description: "", input: "", expectedOutput: "" }]);
   };
 
   const handleRemoveTestCase = (index) => {
@@ -375,11 +375,15 @@ const ExamCreator = () => {
               </h3>
             </div>
             <div className="modern-card-body">
-              <p className="text-muted mb-3">
+              <div className="alert alert-info mb-3">
                 <i className="fas fa-info-circle me-2"></i>
-                Define los casos de prueba que se ejecutarán automáticamente para calificar el código del estudiante.
-                Los test cases NO son visibles para los estudiantes.
-              </p>
+                <strong>Define los casos de prueba que se ejecutarán automáticamente.</strong>
+                <ul className="mb-0 mt-2">
+                  <li>Los test cases NO son visibles para los estudiantes</li>
+                  <li>El puntaje se calcula como: <strong>(tests pasados / total tests) × 100</strong></li>
+                  <li>Ejemplo: 3 de 4 tests correctos = 75%</li>
+                </ul>
+              </div>
 
               {testCases.map((testCase, index) => (
                 <div key={index} className="card mb-3" style={{ border: '1px solid var(--border-color)' }}>
@@ -422,7 +426,7 @@ const ExamCreator = () => {
                           style={{ fontFamily: 'monospace', fontSize: '0.9rem' }}
                         />
                         <small className="form-text text-muted">
-                          Cada línea será una entrada separada
+                          Deja vacío si el código no requiere input. Cada línea será una entrada separada.
                         </small>
                       </div>
 
@@ -437,22 +441,9 @@ const ExamCreator = () => {
                           style={{ fontFamily: 'monospace', fontSize: '0.9rem' }}
                         />
                         <small className="form-text text-muted">
-                          Resultado que debe producir el código
+                          Resultado exacto que debe producir el código
                         </small>
                       </div>
-                    </div>
-
-                    <div className="mb-0">
-                      <label className="form-label">Puntos (de 100 total)</label>
-                      <input
-                        type="number"
-                        className="form-control"
-                        min="0"
-                        max="100"
-                        value={testCase.puntos}
-                        onChange={(e) => handleTestCaseChange(index, 'puntos', parseInt(e.target.value) || 0)}
-                        style={{ maxWidth: '150px' }}
-                      />
                     </div>
                   </div>
                 </div>
@@ -467,11 +458,14 @@ const ExamCreator = () => {
                 Agregar Test Case
               </button>
 
-              <div className="alert alert-info mt-3 mb-0">
+              <div className="alert alert-success mt-3 mb-0">
                 <i className="fas fa-calculator me-2"></i>
-                <strong>Puntos totales: {testCases.reduce((sum, tc) => sum + (tc.puntos || 0), 0)}/100</strong>
+                <strong>Total: {testCases.length} test case{testCases.length !== 1 ? 's' : ''}</strong>
                 <br/>
-                <small>Asegúrate de que los puntos sumen 100 para una evaluación balanceada.</small>
+                <small>
+                  Cada test vale <strong>{testCases.length > 0 ? (100 / testCases.length).toFixed(1) : 0}%</strong> del puntaje final.
+                  El puntaje se calcula automáticamente.
+                </small>
               </div>
             </div>
           </div>
