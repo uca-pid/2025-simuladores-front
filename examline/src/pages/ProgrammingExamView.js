@@ -1221,7 +1221,7 @@ const ProgrammingExamView = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .programming-exam-container {
           height: 100vh;
           display: flex;
@@ -2076,7 +2076,7 @@ const ProgrammingExamView = () => {
         }
       `}</style>
       {/* Estilos del nuevo layout con sidebar */}
-      <style jsx>{`
+      <style>{`
         .exam-shell {
           display: grid;
           grid-template-columns: 260px 1fr;
@@ -2857,7 +2857,7 @@ const ProgrammingExamView = () => {
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         .modal-overlay {
           position: fixed;
           top: 0;

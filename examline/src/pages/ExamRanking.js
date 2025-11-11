@@ -510,7 +510,7 @@ const ExamRanking = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .ranking-first td {
           background: linear-gradient(90deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 215, 0, 0.05) 100%) !important;
           border-left: 4px solid #FFD700;
