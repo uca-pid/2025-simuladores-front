@@ -70,16 +70,14 @@ const ProgrammingExamView = () => {
     
     const inSEB = checkSEB();
     setIsInSEB(inSEB);
-    console.log('Ejecutando en SEB:', inSEB);
   }, []);
 
   // 🚪 Función para redireccionar al terminar examen
   const closeSEB = () => {
     try {
-      console.log('Redirigiendo desde examen de programación');
       window.location.href = 'https://ferrocarriloeste.com.ar/';
     } catch (error) {
-      console.log('Error al redireccionar:', error);
+      console.error('Error al redireccionar:', error);
     }
   };
 
@@ -254,8 +252,6 @@ const ProgrammingExamView = () => {
             }]);
             
             setFileCache({ [defaultFileName]: defaultContent });
-            
-            console.log(`Archivo por defecto creado: ${defaultFileName}`);
           } catch (error) {
             console.error('Error creando archivo por defecto:', error);
           }
@@ -264,8 +260,6 @@ const ProgrammingExamView = () => {
           const firstFile = sortedFiles[0];
           setCurrentFileName(firstFile.filename);
           setCode(firstFile.content || '');
-          
-          console.log(`Archivos cargados del servidor:`, sortedFiles.map(f => f.filename));
         }
       }
     } catch (error) {
@@ -273,7 +267,8 @@ const ProgrammingExamView = () => {
     }
   }, [examId, exam]);
 
-  // Función para guardar código automáticamente
+  // Función para guardar código automáticamente (no se usa actualmente pero se deja por si se necesita)
+  // eslint-disable-next-line no-unused-vars
   const saveCode = useCallback(async (currentCode) => {
     if (!attempt || attempt.estado !== 'en_progreso') return;
     
@@ -316,7 +311,6 @@ const ProgrammingExamView = () => {
       
       // � PASO 1: Crear versión de "submission" (snapshot del envío)
       // Recolectar todos los archivos con su contenido actual
-      console.log('Creando snapshot de archivos para envío...');
       const submissionFiles = [];
       
       // Agregar archivos del caché (archivos con cambios no guardados)
@@ -350,7 +344,6 @@ const ProgrammingExamView = () => {
       const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
       
       // Guardar archivos como versión de envío (submission)
-      console.log(`Guardando ${submissionFiles.length} archivos como versión de envío (submission)...`);
       await fetch(`${API_BASE_URL}/exam-files/${examId}/files/submission`, {
         method: 'POST',
         headers: {
@@ -361,8 +354,6 @@ const ProgrammingExamView = () => {
           files: submissionFiles
         })
       });
-      
-      console.log('✅ Versión de envío creada. Finalizando examen...');
       
       // 🏁 PASO 2: Finalizar el examen
       await fetch(`${API_BASE_URL}/exam-attempts/${attempt.id}/finish`, {
@@ -378,7 +369,6 @@ const ProgrammingExamView = () => {
 
       // Manejar cierre según si está en SEB o no
       if (isInSEB) {
-        console.log('Examen de programación finalizado en SEB - cerrando...');
         closeSEB();
       } else {
         navigate('/student-exam');
@@ -481,7 +471,6 @@ const ProgrammingExamView = () => {
           a.filename.localeCompare(b.filename)
         );
         setFiles(sortedFiles);
-        console.log('Lista de archivos actualizada sin cambiar archivo actual');
       }
     } catch (error) {
       console.error('Error saving file:', error);
@@ -499,7 +488,6 @@ const ProgrammingExamView = () => {
       setSaving(true);
 
       // 💾 Guardar SOLO el archivo actual
-      console.log(`Guardando archivo actual: ${currentFileName}`);
       const content = fileCache[currentFileName] || code;
       await saveCurrentFile(currentFileName, content);
 
@@ -509,8 +497,6 @@ const ProgrammingExamView = () => {
         newSet.delete(currentFileName);
         return newSet;
       });
-
-      console.log('Archivo guardado correctamente');
     } catch (error) {
       console.error('Error guardando archivo:', error);
     } finally {
@@ -532,7 +518,6 @@ const ProgrammingExamView = () => {
       const content = prev[filename] || '';
       setCode(content);
       setCurrentFileName(filename);
-      console.log(`Cargando ${filename} desde caché`);
       return prev;
     });
   }, [currentFileName, code]);
@@ -657,9 +642,6 @@ const ProgrammingExamView = () => {
     try {
       setIsCompiling(true);
       setCompilationResult(null);
-      console.log('Compilando código...', currentFileName);
-      console.log('Input del usuario:', userInput);
-      
       const token = localStorage.getItem('token');
       const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
       
@@ -680,7 +662,6 @@ const ProgrammingExamView = () => {
       const result = await response.json();
       
       if (response.ok) {
-        console.log('Resultado de compilación:', result);
         setCompilationResult({
           success: true,
           output: result.output,
@@ -737,7 +718,6 @@ const ProgrammingExamView = () => {
     newFiles.splice(dropIndex, 0, draggedFile);
     
     setFiles(newFiles);
-    console.log(`Movido ${draggedFile.filename} de posición ${draggedTab} a ${dropIndex}`);
   };
 
   // ⌨️ Atajo de teclado Ctrl+S para guardar
@@ -1241,7 +1221,7 @@ const ProgrammingExamView = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .programming-exam-container {
           height: 100vh;
           display: flex;
@@ -2096,7 +2076,7 @@ const ProgrammingExamView = () => {
         }
       `}</style>
       {/* Estilos del nuevo layout con sidebar */}
-      <style jsx>{`
+      <style>{`
         .exam-shell {
           display: grid;
           grid-template-columns: 260px 1fr;
@@ -2877,7 +2857,7 @@ const ProgrammingExamView = () => {
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         .modal-overlay {
           position: fixed;
           top: 0;

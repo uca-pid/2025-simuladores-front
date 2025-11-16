@@ -4,19 +4,17 @@ import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import BackToMainButton from "../components/BackToMainButton";
 import Modal from "../components/Modal";
-import { useAuth } from "../contexts/AuthContext";
 import { createExam } from "../services/api";
 
 const ExamCreator = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [titulo, setTitulo] = useState("");
   const [tipoExamen, setTipoExamen] = useState("multiple_choice"); // "multiple_choice" | "programming"
   
   // Estados para exámenes de multiple choice
   const [preguntas, setPreguntas] = useState([]);
   const [textoPregunta, setTextoPregunta] = useState("");
-  const [opciones, setOpciones] = useState(["", "", "", ""]);
+  const [opciones, setOpciones] = useState(["", ""]);
   const [correcta, setCorrecta] = useState(0);
   
   // Estados para exámenes de programación
@@ -24,6 +22,9 @@ const ExamCreator = () => {
   const [intellisenseHabilitado, setIntellisenseHabilitado] = useState(false);
   const [enunciadoProgramacion, setEnunciadoProgramacion] = useState("");
   const [codigoInicial, setCodigoInicial] = useState("");
+  const [testCases, setTestCases] = useState([
+    { description: "", input: "", expectedOutput: "" }
+  ]);
   
   const [error, setError] = useState("");
   const [isPublishing, setIsPublishing] = useState(false);
@@ -46,10 +47,39 @@ const ExamCreator = () => {
     setModal(prev => ({ ...prev, show: false }));
   };
 
+  // Agregar opción nueva
+  const handleAgregarOpcion = () => {
+    if (opciones.length < 10) { // Máximo 10 opciones
+      setOpciones([...opciones, ""]);
+    }
+  };
+
+  // Eliminar opción
+  const handleEliminarOpcion = (index) => {
+    if (opciones.length > 2) { // Mínimo 2 opciones
+      const nuevasOpciones = opciones.filter((_, i) => i !== index);
+      setOpciones(nuevasOpciones);
+      // Ajustar la respuesta correcta si es necesario
+      if (correcta >= nuevasOpciones.length) {
+        setCorrecta(nuevasOpciones.length - 1);
+      }
+    }
+  };
+
   // Agregar pregunta al listado
   const handleAgregarPregunta = () => {
-    if (!textoPregunta || opciones.some(o => !o)) {
-      setError("Complete la pregunta y todas las opciones");
+    if (!textoPregunta.trim()) {
+      setError("Ingrese el texto de la pregunta");
+      return;
+    }
+    
+    if (opciones.length < 2) {
+      setError("La pregunta debe tener al menos 2 opciones");
+      return;
+    }
+    
+    if (opciones.some(o => !o.trim())) {
+      setError("Complete todas las opciones antes de agregar la pregunta");
       return;
     }
 
@@ -60,9 +90,26 @@ const ExamCreator = () => {
 
     // Limpiar inputs
     setTextoPregunta("");
-    setOpciones(["", "", "", ""]);
+    setOpciones(["", ""]);
     setCorrecta(0);
     setError("");
+  };
+
+  // Funciones para manejar test cases
+  const handleAddTestCase = () => {
+    setTestCases([...testCases, { description: "", input: "", expectedOutput: "" }]);
+  };
+
+  const handleRemoveTestCase = (index) => {
+    if (testCases.length > 1) {
+      setTestCases(testCases.filter((_, i) => i !== index));
+    }
+  };
+
+  const handleTestCaseChange = (index, field, value) => {
+    const updatedTestCases = [...testCases];
+    updatedTestCases[index][field] = value;
+    setTestCases(updatedTestCases);
   };
 
   // Función que realmente publica el examen
@@ -82,9 +129,10 @@ const ExamCreator = () => {
         examData.intellisenseHabilitado = intellisenseHabilitado;
         examData.enunciadoProgramacion = enunciadoProgramacion;
         examData.codigoInicial = codigoInicial;
+        examData.testCases = testCases;
       }
 
-      const data = await createExam(examData);
+      await createExam(examData);
       
       // Volver a la Página Principal
       navigate("/principal");
@@ -315,6 +363,112 @@ const ExamCreator = () => {
           </div>
         )}
 
+        {/* Test Cases para exámenes de programación */}
+        {tipoExamen === "programming" && (
+          <div className="modern-card mb-4">
+            <div className="modern-card-header">
+              <h3 className="modern-card-title">
+                <i className="fas fa-vial me-2"></i>
+                Test Cases (Evaluación Automática)
+              </h3>
+            </div>
+            <div className="modern-card-body">
+              <div className="alert alert-info mb-3">
+                <i className="fas fa-info-circle me-2"></i>
+                <strong>Define los casos de prueba que se ejecutarán automáticamente.</strong>
+                <ul className="mb-0 mt-2">
+                  <li>Los test cases NO son visibles para los estudiantes</li>
+                  <li>El puntaje se calcula como: <strong>(tests pasados / total tests) × 100</strong></li>
+                  <li>Ejemplo: 3 de 4 tests correctos = 75%</li>
+                </ul>
+              </div>
+
+              {testCases.map((testCase, index) => (
+                <div key={index} className="card mb-3" style={{ border: '1px solid var(--border-color)' }}>
+                  <div className="card-header d-flex justify-content-between align-items-center" style={{ backgroundColor: '#f8f9fa' }}>
+                    <strong>
+                      <i className="fas fa-flask me-2"></i>
+                      Test Case {index + 1}
+                    </strong>
+                    {testCases.length > 1 && (
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline-danger"
+                        onClick={() => handleRemoveTestCase(index)}
+                      >
+                        <i className="fas fa-trash"></i>
+                      </button>
+                    )}
+                  </div>
+                  <div className="card-body">
+                    <div className="mb-3">
+                      <label className="form-label">Descripción del Test</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        placeholder="Ej: Suma de números positivos"
+                        value={testCase.description}
+                        onChange={(e) => handleTestCaseChange(index, 'description', e.target.value)}
+                      />
+                    </div>
+
+                    <div className="row">
+                      <div className="col-md-6 mb-3">
+                        <label className="form-label">Input (una línea por entrada)</label>
+                        <textarea
+                          className="form-control"
+                          rows="3"
+                          placeholder="2&#10;3"
+                          value={testCase.input}
+                          onChange={(e) => handleTestCaseChange(index, 'input', e.target.value)}
+                          style={{ fontFamily: 'monospace', fontSize: '0.9rem' }}
+                        />
+                        <small className="form-text text-muted">
+                          Deja vacío si el código no requiere input. Cada línea será una entrada separada.
+                        </small>
+                      </div>
+
+                      <div className="col-md-6 mb-3">
+                        <label className="form-label">Output Esperado</label>
+                        <textarea
+                          className="form-control"
+                          rows="3"
+                          placeholder="5"
+                          value={testCase.expectedOutput}
+                          onChange={(e) => handleTestCaseChange(index, 'expectedOutput', e.target.value)}
+                          style={{ fontFamily: 'monospace', fontSize: '0.9rem' }}
+                        />
+                        <small className="form-text text-muted">
+                          Resultado exacto que debe producir el código
+                        </small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              <button
+                type="button"
+                className="btn btn-outline-primary"
+                onClick={handleAddTestCase}
+              >
+                <i className="fas fa-plus me-2"></i>
+                Agregar Test Case
+              </button>
+
+              <div className="alert alert-success mt-3 mb-0">
+                <i className="fas fa-calculator me-2"></i>
+                <strong>Total: {testCases.length} test case{testCases.length !== 1 ? 's' : ''}</strong>
+                <br/>
+                <small>
+                  Cada test vale <strong>{testCases.length > 0 ? (100 / testCases.length).toFixed(1) : 0}%</strong> del puntaje final.
+                  El puntaje se calcula automáticamente.
+                </small>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Agregar pregunta - Solo para múltiple choice */}
         {tipoExamen === "multiple_choice" && (
           <div className="modern-card mb-4">
@@ -348,11 +502,11 @@ const ExamCreator = () => {
           <div className="mb-4">
             <label className="form-label d-flex align-items-center gap-2">
               <i className="fas fa-list text-muted"></i>
-              Opciones de respuesta
+              Opciones de respuesta (mínimo 2, máximo 10)
             </label>
             <div className="exam-creator-options-list">
               {opciones.map((op, i) => (
-                <div key={i} className="exam-creator-option-item mb-2">
+                <div key={i} className="exam-creator-option-item mb-2 d-flex gap-2">
                   <input
                     type="text"
                     className="form-control"
@@ -370,9 +524,30 @@ const ExamCreator = () => {
                       fontSize: '0.9rem'
                     }}
                   />
+                  {opciones.length > 2 && (
+                    <button
+                      type="button"
+                      className="btn btn-outline-danger btn-sm"
+                      onClick={() => handleEliminarOpcion(i)}
+                      title="Eliminar opción"
+                      style={{ minWidth: '40px' }}
+                    >
+                      <i className="fas fa-trash"></i>
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
+            {opciones.length < 10 && (
+              <button
+                type="button"
+                className="btn btn-outline-primary btn-sm mt-2"
+                onClick={handleAgregarOpcion}
+              >
+                <i className="fas fa-plus me-2"></i>
+                Agregar opción
+              </button>
+            )}
           </div>
 
           <div className="mb-4">

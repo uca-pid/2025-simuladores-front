@@ -7,6 +7,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import '../modern-examline.css';
 
 // Función auxiliar para convertir fechas del servidor a zona horaria local automáticamente
+// eslint-disable-next-line no-unused-vars
 const adjustDateFromServer = (serverDateString) => {
   // JavaScript maneja automáticamente la conversión de UTC a zona horaria local
   return new Date(serverDateString);
@@ -32,13 +33,7 @@ export default function WindowInscriptionsPage() {
 
   // Verificar que es profesor
   useEffect(() => {
-    console.log('WindowInscriptions - useEffect ejecutado');
-    console.log('windowId:', windowId);
-    console.log('user:', user);
-    console.log('token:', token ? 'exists' : 'missing');
-    
     if (!user || user.rol !== 'professor') {
-      console.log('Usuario no es profesor, redirigiendo a /');
       navigate('/');
       return;
     }
@@ -315,7 +310,18 @@ export default function WindowInscriptionsPage() {
               </h1>
             </div>
             <div className="header-actions-section">
-              <div className="window-inscriptions-actions">
+              <div className="header-actions">
+                <button 
+                  className="modern-btn modern-btn-primary compact-btn me-3" 
+                  onClick={() => navigate(`/ranking/window/${windowId}`)}
+                  title="Ver Ranking de este Examen"
+                >
+                  <i className="fas fa-trophy me-2"></i>
+                  <span className="btn-text">
+                    <span className="d-none d-lg-inline">Ver Ranking</span>
+                    <span className="d-lg-none">Ranking</span>
+                  </span>
+                </button>
                 <button 
                   className="modern-btn modern-btn-secondary compact-btn" 
                   onClick={() => navigate('/exam-windows')}

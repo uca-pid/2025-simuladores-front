@@ -7,7 +7,8 @@ import Principal from "./pages/Principal";
 import ExamCreator from "./pages/ExamCreator";
 import ExamView from "./pages/ExamView";
 import UserSettingsPage from "./pages/userSettings";
-import StudentExamPage from "./pages/StudentExamPage"; // 👈 NUEVO
+import StudentExamPage from "./pages/StudentExamPage";
+import StudentProgress from "./pages/StudentProgress";
 import ExamAttempt from "./pages/ExamAttempt";
 import ExamResults from "./pages/ExamResults";
 import ProgrammingExamView from "./pages/ProgrammingExamView";
@@ -15,6 +16,7 @@ import ExamWindows from "./pages/ExamWindows";
 import StudentInscriptions from "./pages/StudentInscriptions";
 import WindowInscriptions from "./pages/WindowInscriptions";
 import SEBExamLauncher from "./pages/SEBExamLauncher";
+import ExamRanking from "./pages/ExamRanking";
 import "./modern-examline.css";
 
 function App() {
@@ -42,6 +44,11 @@ function App() {
           <Route path="/student-exam" element={
             <StudentRoute>
               <StudentExamPage />
+            </StudentRoute>
+          } />
+          <Route path="/student-progress" element={
+            <StudentRoute>
+              <StudentProgress />
             </StudentRoute>
           } />
           <Route path="/seb-exam-launcher" element={
@@ -78,6 +85,11 @@ function App() {
             <StudentRoute>
               <StudentInscriptions />
             </StudentRoute>
+          } />
+          <Route path="/ranking/window/:windowId" element={
+            <AuthenticatedRoute>
+              <ExamRanking />
+            </AuthenticatedRoute>
           } />
           <Route path="/user-settings" element={
             <AuthenticatedRoute>
