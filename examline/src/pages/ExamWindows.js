@@ -160,13 +160,12 @@ export default function ExamWindowsPage() {
         let latencyStats = { min: Infinity, max: 0, avg: 0, measurements: [] };
 
         socket.on('connect', () => {
-          console.log('Conectado a WebSocket');
           setIsAutoUpdating(false);
           socket.emit('join_professor_room');
         });
 
         socket.on('disconnect', () => {
-          console.log('Desconectado de WebSocket');
+          // Manejar desconexión si es necesario
         });
 
         const triggerSilentRefresh = () => {
@@ -209,8 +208,7 @@ export default function ExamWindowsPage() {
         });
 
         socket.on('statusUpdate', (data) => {
-          const receiveTime = Date.now();
-          const latency = receiveTime - (data.ts || receiveTime);
+          // Recibir actualización de estado en tiempo real
           
           if (data.type === 'status_change' && data.changes.length > 0) {
             requestAnimationFrame(() => {
@@ -274,8 +272,7 @@ export default function ExamWindowsPage() {
         });
 
         socket.on('pong', (data) => {
-          const roundTripTime = Date.now() - data.clientTimestamp;
-          console.log(`Latencia RTT: ${roundTripTime}ms`);
+          // RTT medido exitosamente
         });
 
         socket.on('connect_error', (error) => {
