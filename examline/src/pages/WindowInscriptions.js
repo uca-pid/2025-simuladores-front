@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import BackToMainButton from '../components/BackToMainButton';
 import Modal from '../components/Modal';
+import MoodleIntegration from '../components/MoodleIntegration';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../modern-examline.css';
 
@@ -22,6 +23,7 @@ export default function WindowInscriptionsPage() {
   const [examWindow, setExamWindow] = useState(null);
   const [inscriptions, setInscriptions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showMoodleModal, setShowMoodleModal] = useState(false);
   const [modal, setModal] = useState({
     show: false,
     type: 'info',
@@ -312,6 +314,22 @@ export default function WindowInscriptionsPage() {
             <div className="header-actions-section">
               <div className="header-actions">
                 <button 
+                  className="modern-btn compact-btn me-3" 
+                  onClick={() => setShowMoodleModal(true)}
+                  title="Sincronizar calificaciones con Moodle"
+                  style={{
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: 'white',
+                    border: 'none'
+                  }}
+                >
+                  <i className="fas fa-graduation-cap me-2"></i>
+                  <span className="btn-text">
+                    <span className="d-none d-lg-inline">Sincronizar Moodle</span>
+                    <span className="d-lg-none">Moodle</span>
+                  </span>
+                </button>
+                <button 
                   className="modern-btn modern-btn-primary compact-btn me-3" 
                   onClick={() => navigate(`/ranking/window/${windowId}`)}
                   title="Ver Ranking de este Examen"
@@ -563,6 +581,29 @@ export default function WindowInscriptionsPage() {
         confirmText={modal.type === 'confirm' ? 'Confirmar' : 'Aceptar'}
         cancelText="Cancelar"
       />
+
+      {/* Moodle Integration Modal */}
+      {showMoodleModal && (
+        <>
+          <div 
+            onClick={() => setShowMoodleModal(false)}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0, 0, 0, 0.5)',
+              zIndex: 999,
+              backdropFilter: 'blur(4px)'
+            }}
+          />
+          <MoodleIntegration 
+            windowId={parseInt(windowId)}
+            onClose={() => setShowMoodleModal(false)}
+          />
+        </>
+      )}
     </div>
   );
 }
