@@ -282,7 +282,7 @@ const ExamRanking = () => {
                     fontSize: '2rem', 
                     color: 'var(--warning-color)' 
                   }}>
-                    <i className="fas fa-chart-line-down"></i>
+                    <i className="fas fa-arrow-down"></i>
                   </div>
                   <h3 className="mb-1" style={{ color: 'var(--warning-color)', fontSize: '2rem' }}>
                     {estadisticasActual?.peorPuntaje !== null ? `${estadisticasActual?.peorPuntaje?.toFixed(1)}%` : 'N/A'}

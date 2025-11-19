@@ -314,14 +314,9 @@ export default function WindowInscriptionsPage() {
             <div className="header-actions-section">
               <div className="header-actions">
                 <button 
-                  className="modern-btn compact-btn me-3" 
+                  className="modern-btn modern-btn-primary compact-btn me-3" 
                   onClick={() => setShowMoodleModal(true)}
                   title="Sincronizar calificaciones con Moodle"
-                  style={{
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    color: 'white',
-                    border: 'none'
-                  }}
                 >
                   <i className="fas fa-graduation-cap me-2"></i>
                   <span className="btn-text">
@@ -341,7 +336,7 @@ export default function WindowInscriptionsPage() {
                   </span>
                 </button>
                 <button 
-                  className="modern-btn modern-btn-secondary compact-btn" 
+                  className="modern-btn modern-btn-secondary compact-btn me-3" 
                   onClick={() => navigate('/exam-windows')}
                   title="Volver a Ventanas de Examen"
                 >
@@ -372,15 +367,27 @@ export default function WindowInscriptionsPage() {
               <div className="exam-info">
                 <div className="exam-info-item">
                   <i className="fas fa-calendar"></i>
-                  <span><strong>Fecha:</strong> <span className="info-value">{new Date(examWindow.fechaInicio).toLocaleDateString()}</span></span>
+                  <span><strong>Fecha:</strong> <span className="info-value">
+                    {examWindow.sinTiempo || !examWindow.fechaInicio 
+                      ? 'Sin límite de tiempo' 
+                      : new Date(examWindow.fechaInicio).toLocaleDateString()}
+                  </span></span>
                 </div>
                 <div className="exam-info-item">
                   <i className="fas fa-clock"></i>
-                  <span><strong>Hora de inicio:</strong> <span className="info-value">{new Date(examWindow.fechaInicio).toLocaleTimeString()}</span></span>
+                  <span><strong>Hora de inicio:</strong> <span className="info-value">
+                    {examWindow.sinTiempo || !examWindow.fechaInicio 
+                      ? 'Disponible siempre' 
+                      : new Date(examWindow.fechaInicio).toLocaleTimeString()}
+                  </span></span>
                 </div>
                 <div className="exam-info-item">
                   <i className="fas fa-hourglass-half"></i>
-                  <span><strong>Duración:</strong> <span className="info-value">{examWindow.duracion} minutos</span></span>
+                  <span><strong>Duración:</strong> <span className="info-value">
+                    {examWindow.sinTiempo || !examWindow.duracion 
+                      ? 'Sin límite' 
+                      : `${examWindow.duracion} minutos`}
+                  </span></span>
                 </div>
               </div>
             </div>
