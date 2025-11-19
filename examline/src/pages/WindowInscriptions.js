@@ -331,66 +331,6 @@ export default function WindowInscriptionsPage() {
         </div>
       </div>
 
-      {/* Información de la ventana */}
-      <div className="modern-card mb-4">
-        <div className="modern-card-header">
-          <h3 className="modern-card-title">
-            <i className="fas fa-info-circle me-2"></i>
-            Información de la Ventana
-          </h3>
-        </div>
-        <div className="modern-card-body">
-          <div className="window-inscriptions-info-grid">
-            <div className="info-section">
-              <div className="exam-info">
-                <div className="exam-info-item">
-                  <i className="fas fa-calendar"></i>
-                  <span><strong>Fecha:</strong> <span className="info-value">
-                    {examWindow.sinTiempo || !examWindow.fechaInicio 
-                      ? 'Sin límite de tiempo' 
-                      : new Date(examWindow.fechaInicio).toLocaleDateString()}
-                  </span></span>
-                </div>
-                <div className="exam-info-item">
-                  <i className="fas fa-clock"></i>
-                  <span><strong>Hora de inicio:</strong> <span className="info-value">
-                    {examWindow.sinTiempo || !examWindow.fechaInicio 
-                      ? 'Disponible siempre' 
-                      : new Date(examWindow.fechaInicio).toLocaleTimeString()}
-                  </span></span>
-                </div>
-                <div className="exam-info-item">
-                  <i className="fas fa-hourglass-half"></i>
-                  <span><strong>Duración:</strong> <span className="info-value">
-                    {examWindow.sinTiempo || !examWindow.duracion 
-                      ? 'Sin límite' 
-                      : `${examWindow.duracion} minutos`}
-                  </span></span>
-                </div>
-              </div>
-            </div>
-            <div className="info-section">
-              <div className="exam-info">
-                <div className="exam-info-item">
-                  <i className="fas fa-laptop"></i>
-                  <span><strong>Modalidad:</strong> <span className="info-value">{examWindow.modalidad?.charAt(0).toUpperCase() + examWindow.modalidad?.slice(1).toLowerCase()}</span></span>
-                </div>
-                <div className="exam-info-item">
-                  <i className="fas fa-users"></i>
-                  <span><strong>Inscritos:</strong> <span className="info-value">{inscriptions.length}/{examWindow.cupoMaximo}</span></span>
-                </div>
-              </div>
-            </div>
-          </div>
-          {examWindow.notas && (
-            <div className="alert alert-light mt-3">
-              <i className="fas fa-sticky-note me-2"></i>
-              <strong>Notas:</strong> {examWindow.notas}
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* Controles de gestión */}
       {!isFinished && inscriptions.length > 0 && (
         <div className="modern-card mb-4">

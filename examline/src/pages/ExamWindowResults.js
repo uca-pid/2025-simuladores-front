@@ -14,6 +14,7 @@ export default function ExamWindowResultsPage() {
   const { user, token } = useAuth();
   const navigate = useNavigate();
   const [examWindow, setExamWindow] = useState(null);
+  const [inscriptions, setInscriptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showMoodleModal, setShowMoodleModal] = useState(false);
   const [rankingData, setRankingData] = useState(null);
@@ -53,6 +54,16 @@ export default function ExamWindowResultsPage() {
             navigate('/exam-windows');
             return;
           }
+        }
+
+        // Cargar inscripciones para contar los inscritos
+        const inscriptionsResponse = await fetch(`${API_BASE_URL}/inscriptions/ventana/${windowId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (inscriptionsResponse.ok) {
+          const inscriptionsData = await inscriptionsResponse.json();
+          setInscriptions(inscriptionsData);
         }
       } catch (error) {
         console.error('Error cargando datos:', error);
@@ -232,7 +243,7 @@ export default function ExamWindowResultsPage() {
                 </div>
                 <div className="exam-info-item">
                   <i className="fas fa-users"></i>
-                  <span><strong>Inscritos:</strong> <span className="info-value">{examWindow.inscritosCount || 0}/{examWindow.cupoMaximo}</span></span>
+                  <span><strong>Inscritos:</strong> <span className="info-value">{inscriptions.length}/{examWindow.cupoMaximo}</span></span>
                 </div>
               </div>
             </div>
