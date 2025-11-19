@@ -267,7 +267,7 @@ const MoodleIntegration = ({ windowId, onClose }) => {
                     onChange={(e) => setMoodleSyncEnabled(e.target.checked)}
                     disabled={loading}
                   />
-                  <span>Habilitar sincronización automática con Moodle</span>
+                  <span>Habilitar sincronización con Moodle</span>
                 </label>
               </div>
 
