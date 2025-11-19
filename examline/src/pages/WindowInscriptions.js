@@ -164,6 +164,13 @@ export default function WindowInscriptionsPage() {
     }
   };
 
+  // Cargar ranking automáticamente al montar el componente
+  useEffect(() => {
+    if (examWindow && !rankingData && !rankingLoading) {
+      loadRankingData();
+    }
+  }, [examWindow]);
+
   const toggleRanking = () => {
     if (!showRanking && !rankingData) {
       loadRankingData();
