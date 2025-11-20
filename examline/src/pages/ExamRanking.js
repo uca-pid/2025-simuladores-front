@@ -268,7 +268,7 @@ const ExamRanking = () => {
                     <i className="fas fa-trophy"></i>
                   </div>
                   <h3 className="mb-1" style={{ color: 'var(--success-color)', fontSize: '2rem' }}>
-                    {estadisticasActual?.mejorPuntaje !== null ? `${estadisticasActual?.mejorPuntaje?.toFixed(1)}%` : 'N/A'}
+                    {estadisticasActual?.mejorPuntaje !== null ? `${estadisticasActual?.mejorPuntaje?.toFixed(1)}%` : '0.0%'}
                   </h3>
                   <small className="text-muted">Mejor Puntaje</small>
                 </div>
@@ -285,7 +285,7 @@ const ExamRanking = () => {
                     <i className="fas fa-arrow-down"></i>
                   </div>
                   <h3 className="mb-1" style={{ color: 'var(--warning-color)', fontSize: '2rem' }}>
-                    {estadisticasActual?.peorPuntaje !== null ? `${estadisticasActual?.peorPuntaje?.toFixed(1)}%` : 'N/A'}
+                    {estadisticasActual?.peorPuntaje !== null ? `${estadisticasActual?.peorPuntaje?.toFixed(1)}%` : '0.0%'}
                   </h3>
                   <small className="text-muted">Puntaje Más Bajo</small>
                 </div>
@@ -302,7 +302,7 @@ const ExamRanking = () => {
                     <i className="fas fa-chart-bar"></i>
                   </div>
                   <h3 className="mb-1" style={{ color: 'var(--info-color)', fontSize: '2rem' }}>
-                    {estadisticasActual?.promedioPuntaje !== null ? `${estadisticasActual?.promedioPuntaje?.toFixed(1)}%` : 'N/A'}
+                    {estadisticasActual?.promedioPuntaje !== null ? `${estadisticasActual?.promedioPuntaje?.toFixed(1)}%` : '0.0%'}
                   </h3>
                   <small className="text-muted">Puntaje Promedio</small>
                 </div>
@@ -321,7 +321,7 @@ const ExamRanking = () => {
                     <i className="fas fa-clock"></i>
                   </div>
                   <h3 className="mb-1" style={{ color: 'var(--success-color)', fontSize: '2rem' }}>
-                    {estadisticasActual?.mejorTiempoFormateado || 'N/A'}
+                    {estadisticasActual?.mejorTiempoFormateado || '0.0%'}
                   </h3>
                   <small className="text-muted">Mejor Tiempo</small>
                 </div>
@@ -338,7 +338,7 @@ const ExamRanking = () => {
                     <i className="fas fa-hourglass-end"></i>
                   </div>
                   <h3 className="mb-1" style={{ color: 'var(--warning-color)', fontSize: '2rem' }}>
-                    {estadisticasActual?.peorTiempoFormateado || 'N/A'}
+                    {estadisticasActual?.peorTiempoFormateado || '0.0%'}
                   </h3>
                   <small className="text-muted">Tiempo Más Lento</small>
                 </div>
@@ -355,7 +355,7 @@ const ExamRanking = () => {
                     <i className="fas fa-chart-line"></i>
                   </div>
                   <h3 className="mb-1" style={{ color: 'var(--info-color)', fontSize: '2rem' }}>
-                    {estadisticasActual?.promedioTiempoFormateado || 'N/A'}
+                    {estadisticasActual?.promedioTiempoFormateado || '0.0%'}
                   </h3>
                   <small className="text-muted">Tiempo Promedio</small>
                 </div>
@@ -464,7 +464,7 @@ const ExamRanking = () => {
                           <span style={{ 
                             color: item.puntaje >= 70 ? '#22c55e' : item.puntaje >= 40 ? '#fbbf24' : '#ef4444'
                           }}>
-                            {item.puntaje !== null ? `${item.puntaje.toFixed(1)}%` : 'N/A'}
+                            {item.puntaje !== null ? `${item.puntaje.toFixed(1)}%` : '0.0%'}
                           </span>
                         </div>
                       </td>
