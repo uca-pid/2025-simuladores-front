@@ -115,7 +115,7 @@ const Registro = () => {
         <div className="row g-0">
           {/* Columna izquierda: Logo y título */}
           <div className="col-md-4 d-flex flex-column justify-content-center align-items-center p-4" style={{ background: 'white' }}>
-            <img src="/logo.png" alt="ExamLine" className="mb-3" style={{ width: "80px", height: "auto" }} />
+            <img src="/logo.png" alt="ExamLine" className="mb-3" style={{ width: "120px", height: "auto" }} />
             <h3 className="fw-bold text-center mb-2" style={{ fontSize: '1.4rem' }}>Únete a Examline</h3>
             <p className="text-center px-2" style={{ fontSize: '0.9rem', color: 'var(--text-color-1)' }}>Crea tu cuenta y gestiona exámenes</p>
             <div className="mt-3">

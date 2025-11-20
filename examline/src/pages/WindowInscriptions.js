@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import BackToMainButton from '../components/BackToMainButton';
 import Modal from '../components/Modal';
-import MoodleIntegration from '../components/MoodleIntegration';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../modern-examline.css';
 
@@ -23,7 +22,6 @@ export default function WindowInscriptionsPage() {
   const [examWindow, setExamWindow] = useState(null);
   const [inscriptions, setInscriptions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showMoodleModal, setShowMoodleModal] = useState(false);
   const [modal, setModal] = useState({
     show: false,
     type: 'info',
@@ -133,6 +131,8 @@ export default function WindowInscriptionsPage() {
       setLoading(false);
     }
   };
+
+
 
   const showModal = (type, title, message, onConfirm = null, showCancel = false) => {
     setModal({ show: true, type, title, message, onConfirm, showCancel });
@@ -314,34 +314,7 @@ export default function WindowInscriptionsPage() {
             <div className="header-actions-section">
               <div className="header-actions">
                 <button 
-                  className="modern-btn compact-btn me-3" 
-                  onClick={() => setShowMoodleModal(true)}
-                  title="Sincronizar calificaciones con Moodle"
-                  style={{
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    color: 'white',
-                    border: 'none'
-                  }}
-                >
-                  <i className="fas fa-graduation-cap me-2"></i>
-                  <span className="btn-text">
-                    <span className="d-none d-lg-inline">Sincronizar Moodle</span>
-                    <span className="d-lg-none">Moodle</span>
-                  </span>
-                </button>
-                <button 
-                  className="modern-btn modern-btn-primary compact-btn me-3" 
-                  onClick={() => navigate(`/ranking/window/${windowId}`)}
-                  title="Ver Ranking de este Examen"
-                >
-                  <i className="fas fa-trophy me-2"></i>
-                  <span className="btn-text">
-                    <span className="d-none d-lg-inline">Ver Ranking</span>
-                    <span className="d-lg-none">Ranking</span>
-                  </span>
-                </button>
-                <button 
-                  className="modern-btn modern-btn-secondary compact-btn" 
+                  className="modern-btn modern-btn-secondary compact-btn me-3" 
                   onClick={() => navigate('/exam-windows')}
                   title="Volver a Ventanas de Examen"
                 >
@@ -355,54 +328,6 @@ export default function WindowInscriptionsPage() {
               </div>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Información de la ventana */}
-      <div className="modern-card mb-4">
-        <div className="modern-card-header">
-          <h3 className="modern-card-title">
-            <i className="fas fa-info-circle me-2"></i>
-            Información de la Ventana
-          </h3>
-        </div>
-        <div className="modern-card-body">
-          <div className="window-inscriptions-info-grid">
-            <div className="info-section">
-              <div className="exam-info">
-                <div className="exam-info-item">
-                  <i className="fas fa-calendar"></i>
-                  <span><strong>Fecha:</strong> <span className="info-value">{new Date(examWindow.fechaInicio).toLocaleDateString()}</span></span>
-                </div>
-                <div className="exam-info-item">
-                  <i className="fas fa-clock"></i>
-                  <span><strong>Hora de inicio:</strong> <span className="info-value">{new Date(examWindow.fechaInicio).toLocaleTimeString()}</span></span>
-                </div>
-                <div className="exam-info-item">
-                  <i className="fas fa-hourglass-half"></i>
-                  <span><strong>Duración:</strong> <span className="info-value">{examWindow.duracion} minutos</span></span>
-                </div>
-              </div>
-            </div>
-            <div className="info-section">
-              <div className="exam-info">
-                <div className="exam-info-item">
-                  <i className="fas fa-laptop"></i>
-                  <span><strong>Modalidad:</strong> <span className="info-value">{examWindow.modalidad?.charAt(0).toUpperCase() + examWindow.modalidad?.slice(1).toLowerCase()}</span></span>
-                </div>
-                <div className="exam-info-item">
-                  <i className="fas fa-users"></i>
-                  <span><strong>Inscritos:</strong> <span className="info-value">{inscriptions.length}/{examWindow.cupoMaximo}</span></span>
-                </div>
-              </div>
-            </div>
-          </div>
-          {examWindow.notas && (
-            <div className="alert alert-light mt-3">
-              <i className="fas fa-sticky-note me-2"></i>
-              <strong>Notas:</strong> {examWindow.notas}
-            </div>
-          )}
         </div>
       </div>
 
@@ -581,29 +506,6 @@ export default function WindowInscriptionsPage() {
         confirmText={modal.type === 'confirm' ? 'Confirmar' : 'Aceptar'}
         cancelText="Cancelar"
       />
-
-      {/* Moodle Integration Modal */}
-      {showMoodleModal && (
-        <>
-          <div 
-            onClick={() => setShowMoodleModal(false)}
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'rgba(0, 0, 0, 0.5)',
-              zIndex: 999,
-              backdropFilter: 'blur(4px)'
-            }}
-          />
-          <MoodleIntegration 
-            windowId={parseInt(windowId)}
-            onClose={() => setShowMoodleModal(false)}
-          />
-        </>
-      )}
     </div>
   );
 }
