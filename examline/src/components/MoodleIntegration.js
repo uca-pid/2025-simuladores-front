@@ -13,7 +13,6 @@ const MoodleIntegration = ({ windowId, onClose }) => {
   const [moodleToken, setMoodleToken] = useState('');
   const [moodleCourseId, setMoodleCourseId] = useState('');
   const [moodleActivityId, setMoodleActivityId] = useState('');
-  const [moodleSyncEnabled, setMoodleSyncEnabled] = useState(false);
   
   const [assignments, setAssignments] = useState([]);
   const [connectionVerified, setConnectionVerified] = useState(false);
@@ -37,7 +36,6 @@ const MoodleIntegration = ({ windowId, onClose }) => {
         setMoodleUrl(status.moodleUrl || '');
         setMoodleCourseId(status.moodleCourseId || '');
         setMoodleActivityId(status.moodleActivityId || '');
-        setMoodleSyncEnabled(status.moodleSyncEnabled || false);
         setConnectionVerified(true);
       }
     } catch (err) {
@@ -110,7 +108,7 @@ const MoodleIntegration = ({ windowId, onClose }) => {
         moodleToken,
         moodleCourseId: moodleCourseId ? parseInt(moodleCourseId) : null,
         moodleActivityId: moodleActivityId ? parseInt(moodleActivityId) : null,
-        moodleSyncEnabled
+        moodleSyncEnabled: true
       };
 
       await updateWindowMoodleConfig(windowId, config);
@@ -124,9 +122,6 @@ const MoodleIntegration = ({ windowId, onClose }) => {
   };
 
   const handleSyncGrades = async () => {
-    if (!window.confirm('¿Está seguro de sincronizar las calificaciones con Moodle? Esta acción enviará las notas de todos los estudiantes.')) {
-      return;
-    }
 
     setSyncing(true);
     setError('');
@@ -173,7 +168,7 @@ const MoodleIntegration = ({ windowId, onClose }) => {
               placeholder="https://moodle.ejemplo.com"
               disabled={loading}
             />
-            <small>Ejemplo: https://moodle.uca.edu.ar</small>
+            <small>Ejemplo: https:/eva.uca.edu.ar</small>
           </div>
 
           <div className="form-group">
@@ -185,15 +180,6 @@ const MoodleIntegration = ({ windowId, onClose }) => {
               placeholder="Token de acceso de Moodle"
               disabled={loading}
             />
-            <small>
-              <a 
-                href={`${moodleUrl}/user/security.php`} 
-                target="_blank" 
-                rel="noopener noreferrer"
-              >
-                ¿Cómo obtener el token?
-              </a>
-            </small>
           </div>
 
           <button 
@@ -257,23 +243,11 @@ const MoodleIntegration = ({ windowId, onClose }) => {
             )}
 
             <div className="form-section">
-              <h3>4. Activar Sincronización</h3>
-              
-              <div className="form-group checkbox-group">
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={moodleSyncEnabled}
-                    onChange={(e) => setMoodleSyncEnabled(e.target.checked)}
-                    disabled={loading}
-                  />
-                  <span>Habilitar sincronización automática con Moodle</span>
-                </label>
-              </div>
+              <h3>4. Guardar Configuración</h3>
 
               <button 
                 onClick={handleSaveConfiguration}
-                disabled={loading}
+                disabled={loading || syncing}
                 className="btn-primary btn-large"
               >
                 {loading ? '⏳ Guardando...' : '💾 Guardar Configuración'}
@@ -282,7 +256,7 @@ const MoodleIntegration = ({ windowId, onClose }) => {
           </>
         )}
 
-        {moodleSyncEnabled && moodleActivityId && (
+        {moodleActivityId && (
           <div className="form-section sync-section">
             <h3>5. Sincronizar Calificaciones</h3>
             
@@ -292,7 +266,7 @@ const MoodleIntegration = ({ windowId, onClose }) => {
 
             <button 
               onClick={handleSyncGrades}
-              disabled={syncing}
+              disabled={syncing || loading}
               className="btn-sync"
             >
               {syncing ? '⏳ Sincronizando...' : '🔄 Sincronizar Ahora'}
@@ -302,7 +276,7 @@ const MoodleIntegration = ({ windowId, onClose }) => {
       </div>
 
       <div className="moodle-integration-footer">
-        <button onClick={onClose} className="btn-secondary">
+        <button onClick={onClose} className="btn-secondary" disabled={loading || syncing}>
           Cerrar
         </button>
       </div>

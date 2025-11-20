@@ -15,6 +15,7 @@ import ProgrammingExamView from "./pages/ProgrammingExamView";
 import ExamWindows from "./pages/ExamWindows";
 import StudentInscriptions from "./pages/StudentInscriptions";
 import WindowInscriptions from "./pages/WindowInscriptions";
+import ExamWindowResults from "./pages/ExamWindowResults";
 import SEBExamLauncher from "./pages/SEBExamLauncher";
 import ExamRanking from "./pages/ExamRanking";
 import "./modern-examline.css";
@@ -79,6 +80,11 @@ function App() {
           <Route path="/exam-windows/:windowId/inscriptions" element={
             <ProfessorRoute>
               <WindowInscriptions />
+            </ProfessorRoute>
+          } />
+          <Route path="/exam-windows/:windowId/results" element={
+            <ProfessorRoute>
+              <ExamWindowResults />
             </ProfessorRoute>
           } />
           <Route path="/student-inscriptions" element={

@@ -86,7 +86,7 @@ const Login = () => {
             src="/logo.png"
             alt="ExamLine"
             className="mb-3"
-            style={{ width: "80px", height: "auto" }}
+            style={{ width: "120px", height: "auto" }}
           />
           <h2 className="mb-3 text-dark">Examen finalizado</h2>
           <p className="text-muted mb-4">
@@ -122,7 +122,7 @@ const Login = () => {
               src="/logo.png"
               alt="ExamLine"
               className="mb-3"
-              style={{ width: "80px", height: "auto" }}
+              style={{ width: "120px", height: "auto" }}
             />
             <h1 className="page-title mb-2">Bienvenido</h1>
             <p className="page-subtitle">Ingresa a tu cuenta de Examline</p>

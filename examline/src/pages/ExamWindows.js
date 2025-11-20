@@ -798,14 +798,25 @@ export default function ExamWindowsPage() {
                     Editar
                   </button>
                 )}
+                {window.requierePresente && (
+                  <button 
+                    className="modern-btn modern-btn-secondary modern-btn-sm w-100"
+                    onClick={() => {
+                      navigate(`/exam-windows/${window.id}/inscriptions`);
+                    }}
+                  >
+                    <i className="fas fa-user-check"></i>
+                    Presentismo
+                  </button>
+                )}
                 <button 
-                  className="modern-btn modern-btn-secondary modern-btn-sm w-100"
+                  className="modern-btn modern-btn-primary modern-btn-sm w-100"
                   onClick={() => {
-                    navigate(`/exam-windows/${window.id}/inscriptions`);
+                    navigate(`/exam-windows/${window.id}/results`);
                   }}
                 >
-                  <i className="fas fa-info-circle"></i>
-                  Información y Lista de Inscriptos
+                  <i className="fas fa-trophy"></i>
+                  Resultados
                 </button>
               </div>
             </div>
