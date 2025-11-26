@@ -172,7 +172,7 @@ const ExamView = ({ examId: propExamId, onBack }) => {
 
           {/* Código inicial */}
           {exam.codigoInicial && (
-            <div className="modern-card">
+            <div className="modern-card mb-4">
               <div className="modern-card-header">
                 <h3 className="modern-card-title">
                   <i className="fas fa-code me-2"></i>
@@ -197,6 +197,86 @@ const ExamView = ({ examId: propExamId, onBack }) => {
                     {exam.codigoInicial}
                   </pre>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Test Cases estilo ExamResults (sin distinción público/privado) */}
+          {exam.testCases && exam.testCases.length > 0 && (
+            <div className="modern-card mb-4">
+              <div className="modern-card-header">
+                <h3 className="modern-card-title">
+                  <i className="fas fa-vial me-2"></i>
+                  Test Cases
+                </h3>
+              </div>
+              <div className="modern-card-body">
+                {exam.testCases.map((test, index) => (
+                  <div
+                    key={index}
+                    className="card mb-3"
+                    style={{
+                      border: '1px solid #6366f1',
+                      borderLeft: '4px solid #6366f1'
+                    }}
+                  >
+                    <div
+                      className="card-header d-flex justify-content-between align-items-center"
+                      style={{
+                        backgroundColor: 'rgba(99, 102, 241, 0.08)'
+                      }}
+                    >
+                      <div className="d-flex align-items-center gap-2">
+                        <span style={{ fontSize: '1.5rem', color: '#6366f1' }}>
+                          🧪
+                        </span>
+                        <strong>{test.description || `Test Case ${index + 1}`}</strong>
+                      </div>
+                    </div>
+                    <div className="card-body">
+                      <div className="row">
+                        <div className="col-md-6 mb-2">
+                          <small className="text-muted d-block mb-1">
+                            <i className="fas fa-arrow-right me-1"></i>
+                            <strong>Input:</strong>
+                          </small>
+                          <pre style={{
+                            margin: 0,
+                            padding: '0.75rem',
+                            backgroundColor: '#f8f9fa',
+                            borderRadius: '0.375rem',
+                            fontSize: '0.85rem',
+                            fontFamily: 'monospace',
+                            border: '1px solid #dee2e6',
+                            maxHeight: '150px',
+                            overflow: 'auto'
+                          }}>
+                            {test.input || '(vacío)'}
+                          </pre>
+                        </div>
+                        <div className="col-md-6 mb-2">
+                          <small className="text-muted d-block mb-1">
+                            <i className="fas fa-check-circle me-1"></i>
+                            <strong>Output Esperado:</strong>
+                          </small>
+                          <pre style={{
+                            margin: 0,
+                            padding: '0.75rem',
+                            backgroundColor: '#f8f9fa',
+                            borderRadius: '0.375rem',
+                            fontSize: '0.85rem',
+                            fontFamily: 'monospace',
+                            border: '1px solid #dee2e6',
+                            maxHeight: '150px',
+                            overflow: 'auto'
+                          }}>
+                            {test.expectedOutput || '(vacío)'}
+                          </pre>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}

@@ -7,6 +7,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import '../modern-examline.css';
 
 // Función auxiliar para convertir fechas del servidor a zona horaria local automáticamente
+// eslint-disable-next-line no-unused-vars
 const adjustDateFromServer = (serverDateString) => {
   // JavaScript maneja automáticamente la conversión de UTC a zona horaria local
   return new Date(serverDateString);
@@ -32,13 +33,7 @@ export default function WindowInscriptionsPage() {
 
   // Verificar que es profesor
   useEffect(() => {
-    console.log('WindowInscriptions - useEffect ejecutado');
-    console.log('windowId:', windowId);
-    console.log('user:', user);
-    console.log('token:', token ? 'exists' : 'missing');
-    
     if (!user || user.rol !== 'professor') {
-      console.log('Usuario no es profesor, redirigiendo a /');
       navigate('/');
       return;
     }
@@ -136,6 +131,8 @@ export default function WindowInscriptionsPage() {
       setLoading(false);
     }
   };
+
+
 
   const showModal = (type, title, message, onConfirm = null, showCancel = false) => {
     setModal({ show: true, type, title, message, onConfirm, showCancel });
@@ -315,9 +312,9 @@ export default function WindowInscriptionsPage() {
               </h1>
             </div>
             <div className="header-actions-section">
-              <div className="window-inscriptions-actions">
+              <div className="header-actions">
                 <button 
-                  className="modern-btn modern-btn-secondary compact-btn" 
+                  className="modern-btn modern-btn-secondary compact-btn me-3" 
                   onClick={() => navigate('/exam-windows')}
                   title="Volver a Ventanas de Examen"
                 >
@@ -331,54 +328,6 @@ export default function WindowInscriptionsPage() {
               </div>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Información de la ventana */}
-      <div className="modern-card mb-4">
-        <div className="modern-card-header">
-          <h3 className="modern-card-title">
-            <i className="fas fa-info-circle me-2"></i>
-            Información de la Ventana
-          </h3>
-        </div>
-        <div className="modern-card-body">
-          <div className="window-inscriptions-info-grid">
-            <div className="info-section">
-              <div className="exam-info">
-                <div className="exam-info-item">
-                  <i className="fas fa-calendar"></i>
-                  <span><strong>Fecha:</strong> <span className="info-value">{new Date(examWindow.fechaInicio).toLocaleDateString()}</span></span>
-                </div>
-                <div className="exam-info-item">
-                  <i className="fas fa-clock"></i>
-                  <span><strong>Hora de inicio:</strong> <span className="info-value">{new Date(examWindow.fechaInicio).toLocaleTimeString()}</span></span>
-                </div>
-                <div className="exam-info-item">
-                  <i className="fas fa-hourglass-half"></i>
-                  <span><strong>Duración:</strong> <span className="info-value">{examWindow.duracion} minutos</span></span>
-                </div>
-              </div>
-            </div>
-            <div className="info-section">
-              <div className="exam-info">
-                <div className="exam-info-item">
-                  <i className="fas fa-laptop"></i>
-                  <span><strong>Modalidad:</strong> <span className="info-value">{examWindow.modalidad?.charAt(0).toUpperCase() + examWindow.modalidad?.slice(1).toLowerCase()}</span></span>
-                </div>
-                <div className="exam-info-item">
-                  <i className="fas fa-users"></i>
-                  <span><strong>Inscritos:</strong> <span className="info-value">{inscriptions.length}/{examWindow.cupoMaximo}</span></span>
-                </div>
-              </div>
-            </div>
-          </div>
-          {examWindow.notas && (
-            <div className="alert alert-light mt-3">
-              <i className="fas fa-sticky-note me-2"></i>
-              <strong>Notas:</strong> {examWindow.notas}
-            </div>
-          )}
         </div>
       </div>
 

@@ -23,17 +23,16 @@ const Login = () => {
         setIsSEB(true);
       }
     } catch (err) {
-      console.log("Error detectando SEB:", err);
+      console.error("Error detectando SEB:", err);
     }
   }, []);
 
   // Función para cerrar/redirigir SEB
   const closeSEB = () => {
     try {
-      console.log("Redirigiendo a ferrocarriloeste.com.ar al terminar el examen");
       window.location.href = "https://ferrocarriloeste.com.ar/";
     } catch (error) {
-      console.log("Error al redireccionar:", error);
+      console.error("Error al redireccionar:", error);
     }
   };
 
@@ -87,7 +86,7 @@ const Login = () => {
             src="/logo.png"
             alt="ExamLine"
             className="mb-3"
-            style={{ width: "80px", height: "auto" }}
+            style={{ width: "120px", height: "auto" }}
           />
           <h2 className="mb-3 text-dark">Examen finalizado</h2>
           <p className="text-muted mb-4">
@@ -123,7 +122,7 @@ const Login = () => {
               src="/logo.png"
               alt="ExamLine"
               className="mb-3"
-              style={{ width: "80px", height: "auto" }}
+              style={{ width: "120px", height: "auto" }}
             />
             <h1 className="page-title mb-2">Bienvenido</h1>
             <p className="page-subtitle">Ingresa a tu cuenta de Examline</p>

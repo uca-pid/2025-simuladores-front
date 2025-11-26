@@ -1,16 +1,48 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import UserHeader from "../components/UserHeader";
-import { useAuth } from "../contexts/AuthContext";
 import StudentInscriptionsPage from "./StudentInscriptions";
 
 const StudentExamPage = () => {
-  const { user } = useAuth();
+  const navigate = useNavigate();
   const [showInstructivo, setShowInstructivo] = useState(false);
 
   return (
     <div className="container py-5">
       {/* Header con información del usuario */}
       <UserHeader />
+
+      {/* Banner de Progreso */}
+      <div className="modern-card mb-4" style={{ 
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        border: 'none'
+      }}>
+        <div className="modern-card-body">
+          <div className="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+              <h3 className="mb-2" style={{ color: 'white', fontWeight: '600' }}>
+                <i className="fas fa-trophy me-2"></i>
+                ¿Quieres ver tu progreso?
+              </h3>
+              <p className="mb-0" style={{ color: 'rgba(255, 255, 255, 0.9)' }}>
+                Revisa tu nivel, logros y estadísticas de rendimiento
+              </p>
+            </div>
+            <button
+              className="modern-btn modern-btn-lg"
+              style={{ 
+                background: 'white',
+                color: '#667eea',
+                fontWeight: '600'
+              }}
+              onClick={() => navigate('/student-progress')}
+            >
+              <i className="fas fa-chart-line me-2"></i>
+              Ver mi progreso
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* Instructivo colapsable */}
       <div className="modern-card mb-4">

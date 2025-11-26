@@ -213,3 +213,84 @@ export async function getExamHistory(userId) {
     throw err;
   }
 }
+
+// Moodle Integration endpoints
+export async function verifyMoodleConnection({ moodleUrl, moodleToken }) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/moodle/verify`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ moodleUrl, moodleToken }),
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
+export async function getMoodleCourseInfo(courseId, moodleUrl, moodleToken) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/moodle/courses/${courseId}?moodleUrl=${encodeURIComponent(moodleUrl)}&moodleToken=${encodeURIComponent(moodleToken)}`, {
+      method: "GET",
+      headers: getAuthHeaders(),
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
+export async function getMoodleCourseAssignments(courseId, moodleUrl, moodleToken) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/moodle/courses/${courseId}/assignments?moodleUrl=${encodeURIComponent(moodleUrl)}&moodleToken=${encodeURIComponent(moodleToken)}`, {
+      method: "GET",
+      headers: getAuthHeaders(),
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
+export async function updateWindowMoodleConfig(windowId, config) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/moodle/exam-windows/${windowId}/config`, {
+      method: "PUT",
+      headers: getAuthHeaders(),
+      body: JSON.stringify(config),
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
+export async function syncGradesToMoodle(windowId) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/moodle/exam-windows/${windowId}/sync-grades`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
+export async function getMoodleSyncStatus(windowId) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/moodle/exam-windows/${windowId}/sync-status`, {
+      method: "GET",
+      headers: getAuthHeaders(),
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}

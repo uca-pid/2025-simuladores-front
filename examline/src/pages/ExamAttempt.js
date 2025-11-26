@@ -18,6 +18,7 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [isInSEB, setIsInSEB] = useState(false);
+  const [respuestas, setRespuestas] = useState({}); // { preguntaIndex: opcionIndex }
   const [modal, setModal] = useState({
     show: false,
     type: 'info',
@@ -40,7 +41,6 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
     
     const inSEB = checkSEB();
     setIsInSEB(inSEB);
-    console.log('Ejecutando en SEB:', inSEB);
   }, []);
 
   // Modal helper functions
@@ -55,10 +55,9 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
   // 🚪 Función para redireccionar al terminar examen
 const closeSEB = () => {
   try {
-    console.log('Redirigiendo a Google.com al terminar el examen');
     window.location.href = 'https://ferrocarriloeste.com.ar/';
   } catch (error) {
-    console.log('Error al redireccionar:', error);
+    console.error('Error al redireccionar:', error);
   }
 };
 
@@ -68,7 +67,6 @@ const closeSEB = () => {
     const tokenFromUrl = params.get('token');
     
     if (tokenFromUrl) {
-      console.log('Token recibido desde URL, guardando en localStorage');
       localStorage.setItem('token', tokenFromUrl);
     }
 
@@ -129,6 +127,32 @@ const closeSEB = () => {
       return;
     }
 
+    // Para exámenes múltiple choice, advertir si no se respondieron todas las preguntas
+    if (exam.tipo === 'multiple_choice') {
+      const totalPreguntas = exam.preguntas?.length || 0;
+      const preguntasRespondidas = Object.keys(respuestas).length;
+      
+      if (preguntasRespondidas < totalPreguntas) {
+        showModal(
+          'warning',
+          '⚠️ Preguntas sin responder',
+          `Has respondido ${preguntasRespondidas} de ${totalPreguntas} preguntas. Las preguntas sin responder se contarán como incorrectas. ¿Deseas finalizar de todos modos?`,
+          () => {
+            closeModal();
+            // Confirmar finalización después de advertencia
+            proceedWithFinalization();
+          },
+          true
+        );
+        return;
+      }
+    }
+
+    proceedWithFinalization();
+  };
+
+  // Función auxiliar para proceder con la finalización
+  const proceedWithFinalization = () => {
     showModal(
       'confirm',
       'Terminar Intento',
@@ -138,12 +162,18 @@ const closeSEB = () => {
           setSubmitting(true);
           const token = localStorage.getItem('token');
 
+          // Preparar el body según el tipo de examen
+          const body = exam.tipo === 'multiple_choice' 
+            ? { respuestas } 
+            : {};
+
           const response = await fetch(`${API_BASE_URL}/exam-attempts/${attempt.id}/finish`, {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${token}`
-            }
+            },
+            body: JSON.stringify(body)
           });
 
           if (response.ok) {
@@ -308,6 +338,7 @@ const closeSEB = () => {
     };
 
     loadExamAndAttempt();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [examId, windowId]);
 
   // Add page leave confirmation for exam security
@@ -404,6 +435,14 @@ const closeSEB = () => {
                   <i className="fas fa-question-circle me-2"></i>
                   <span className="count-text">{exam.preguntas?.length || 0} preguntas</span>
                 </span>
+                {exam.tipo === 'multiple_choice' && (
+                  <span className={`badge ${Object.keys(respuestas).length === exam.preguntas?.length ? 'bg-success' : 'bg-secondary'}`}>
+                    <i className={`fas ${Object.keys(respuestas).length === exam.preguntas?.length ? 'fa-check-circle' : 'fa-list-check'} me-2`}></i>
+                    <span className="count-text">
+                      {Object.keys(respuestas).length} / {exam.preguntas?.length || 0} respondidas
+                    </span>
+                  </span>
+                )}
               {isInSEB && (
                 <span className="badge bg-success ms-2">
                   <i className="fas fa-lock me-1"></i>
@@ -446,13 +485,59 @@ const closeSEB = () => {
                     <div className="exam-info">
                       <h6 className="mb-3">
                         <i className="fas fa-list-ul me-2"></i>
-                        <span className="options-label">Opciones de respuesta:</span>
+                        <span className="options-label">Selecciona tu respuesta:</span>
                       </h6>
                       <div className="exam-options-list">
                         {p.opciones?.map((o, j) => (
-                          <div key={j} className="exam-info-item">
-                            <i className="fas fa-circle me-2" style={{fontSize: '8px'}}></i>
-                            <span>{o || "Opción vacía"}</span>
+                          <div 
+                            key={j} 
+                            className={`exam-option-item ${respuestas[i] === j ? 'selected' : ''}`}
+                            onClick={() => {
+                              setRespuestas(prev => ({
+                                ...prev,
+                                [i]: j
+                              }));
+                            }}
+                            style={{
+                              padding: '0.75rem 1rem',
+                              marginBottom: '0.5rem',
+                              border: respuestas[i] === j ? '2px solid #0d6efd' : '1px solid #dee2e6',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                              backgroundColor: respuestas[i] === j ? '#e7f1ff' : 'white',
+                              transition: 'all 0.2s ease',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.75rem'
+                            }}
+                            onMouseEnter={(e) => {
+                              if (respuestas[i] !== j) {
+                                e.currentTarget.style.backgroundColor = '#f8f9fa';
+                                e.currentTarget.style.borderColor = '#adb5bd';
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (respuestas[i] !== j) {
+                                e.currentTarget.style.backgroundColor = 'white';
+                                e.currentTarget.style.borderColor = '#dee2e6';
+                              }
+                            }}
+                          >
+                            <div style={{
+                              width: '20px',
+                              height: '20px',
+                              borderRadius: '50%',
+                              border: respuestas[i] === j ? '6px solid #0d6efd' : '2px solid #adb5bd',
+                              flexShrink: 0,
+                              transition: 'all 0.2s ease'
+                            }}></div>
+                            <span style={{
+                              fontSize: '0.95rem',
+                              color: respuestas[i] === j ? '#0d6efd' : '#212529',
+                              fontWeight: respuestas[i] === j ? '500' : '400'
+                            }}>
+                              {o || "Opción vacía"}
+                            </span>
                           </div>
                         ))}
                       </div>

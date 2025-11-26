@@ -11,7 +11,7 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
   const { attemptId: routeAttemptId } = useParams();
   const navigate = useNavigate();
   const attemptId = propAttemptId || routeAttemptId;
-  const { user, token } = useAuth();
+  const { token } = useAuth();
 
   const [attempt, setAttempt] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -57,6 +57,7 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
     };
 
     fetchResults();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attemptId, token]);
 
   // Función para cargar ambas versiones de archivos
@@ -768,6 +769,166 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
             </div>
           </div>
 
+          {/* Resultados de Test Cases */}
+          {attempt.testResults && Array.isArray(attempt.testResults) && attempt.testResults.length > 0 && (
+            <div className="modern-card mb-4">
+              <div className="modern-card-header">
+                <h3 className="modern-card-title">
+                  <i className="fas fa-vial me-2"></i>
+                  Resultados de Test Cases
+                </h3>
+              </div>
+              <div className="modern-card-body">
+                {(() => {
+                  const testsPasados = attempt.testResults.filter(t => t.passed).length;
+                  const totalTests = attempt.testResults.length;
+                  const porcentaje = attempt.puntaje?.toFixed(1) || 0;
+                  
+                  return (
+                    <>
+                      <div className="alert alert-info mb-4">
+                        <div className="d-flex align-items-center justify-content-between">
+                          <div>
+                            <i className="fas fa-chart-bar me-2"></i>
+                            <strong style={{ fontSize: '1.1rem' }}>
+                              Puntaje: {porcentaje}% 
+                            </strong>
+                            <span className="ms-2 text-muted">
+                              ({testsPasados} de {totalTests} tests pasados)
+                            </span>
+                          </div>
+                          <div style={{
+                            fontSize: '2rem',
+                            color: porcentaje >= 70 ? '#10b981' : porcentaje >= 40 ? '#f59e0b' : '#ef4444'
+                          }}>
+                            {porcentaje >= 70 ? '🎉' : porcentaje >= 40 ? '😐' : '😞'}
+                          </div>
+                        </div>
+                        <div className="progress mt-3" style={{ height: '25px' }}>
+                          <div 
+                            className={`progress-bar ${
+                              porcentaje >= 70 ? 'bg-success' : 
+                              porcentaje >= 40 ? 'bg-warning' : 
+                              'bg-danger'
+                            }`}
+                            style={{ width: `${porcentaje}%` }}
+                          >
+                            {porcentaje}%
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
+
+                {attempt.testResults.map((test, index) => (
+                  <div 
+                    key={index} 
+                    className="card mb-3"
+                    style={{ 
+                      border: `1px solid ${test.passed ? '#10b981' : '#ef4444'}`,
+                      borderLeft: `4px solid ${test.passed ? '#10b981' : '#ef4444'}`
+                    }}
+                  >
+                    <div className="card-header d-flex justify-content-between align-items-center" style={{
+                      backgroundColor: test.passed ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)'
+                    }}>
+                      <div className="d-flex align-items-center gap-2">
+                        <span style={{ 
+                          fontSize: '1.5rem',
+                          color: test.passed ? '#10b981' : '#ef4444'
+                        }}>
+                          {test.passed ? '✅' : '❌'}
+                        </span>
+                        <strong>{test.description || `Test Case ${index + 1}`}</strong>
+                      </div>
+                      <span className={`badge ${test.passed ? 'bg-success' : 'bg-secondary'}`}>
+                        {test.passed ? 'PASÓ' : 'FALLÓ'}
+                      </span>
+                    </div>
+                    <div className="card-body">
+                      <div className="row">
+                        {test.expected !== undefined && (
+                          <div className="col-md-6 mb-2">
+                            <small className="text-muted d-block mb-1">
+                              <i className="fas fa-check-circle me-1"></i>
+                              <strong>Output Esperado:</strong>
+                            </small>
+                            <pre style={{
+                              margin: 0,
+                              padding: '0.75rem',
+                              backgroundColor: '#f8f9fa',
+                              borderRadius: '0.375rem',
+                              fontSize: '0.85rem',
+                              fontFamily: 'monospace',
+                              border: '1px solid #dee2e6',
+                              maxHeight: '150px',
+                              overflow: 'auto'
+                            }}>
+                              {test.expected || '(vacío)'}
+                            </pre>
+                          </div>
+                        )}
+                        
+                        <div className="col-md-6 mb-2">
+                          <small className="text-muted d-block mb-1">
+                            <i className="fas fa-terminal me-1"></i>
+                            <strong>Tu Output:</strong>
+                          </small>
+                          <pre style={{
+                            margin: 0,
+                            padding: '0.75rem',
+                            backgroundColor: test.passed ? '#f0fdf4' : '#fef2f2',
+                            borderRadius: '0.375rem',
+                            fontSize: '0.85rem',
+                            fontFamily: 'monospace',
+                            border: `1px solid ${test.passed ? '#bbf7d0' : '#fecaca'}`,
+                            maxHeight: '150px',
+                            overflow: 'auto'
+                          }}>
+                            {test.actual || '(vacío)'}
+                          </pre>
+                        </div>
+                      </div>
+
+                      {test.error && (
+                        <div className="mt-2">
+                          <small className="text-danger d-block mb-1">
+                            <i className="fas fa-exclamation-triangle me-1"></i>
+                            <strong>Error:</strong>
+                          </small>
+                          <pre style={{
+                            margin: 0,
+                            padding: '0.75rem',
+                            backgroundColor: '#fef2f2',
+                            borderRadius: '0.375rem',
+                            fontSize: '0.8rem',
+                            fontFamily: 'monospace',
+                            border: '1px solid #fecaca',
+                            color: '#dc2626',
+                            maxHeight: '100px',
+                            overflow: 'auto'
+                          }}>
+                            {test.error}
+                          </pre>
+                        </div>
+                      )}
+
+                      {test.executionTime !== undefined && (
+                        <div className="mt-2">
+                          <small className="text-muted">
+                            <i className="fas fa-clock me-1"></i>
+                            Tiempo de ejecución: <strong>{test.executionTime}ms</strong>
+                          </small>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Información adicional */}
           <div className="modern-card">
             <div className="modern-card-header">
@@ -811,15 +972,60 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
         </div>
       ) : (
         /* Vista para exámenes de múltiple choice */
-        <div className="modern-card mb-4">
-          <div className="modern-card-header">
-            <h3 className="modern-card-title">
-              <i className="fas fa-clipboard-list me-2"></i>
-              Respuestas Correctas
-            </h3>
+        <>
+          {/* Puntaje del examen */}
+          <div className="modern-card mb-4">
+            <div className="modern-card-header">
+              <h3 className="modern-card-title">
+                <i className="fas fa-chart-bar me-2"></i>
+                Tu Puntaje
+              </h3>
+            </div>
+            <div className="modern-card-body">
+              <div className="text-center py-4">
+                <div className="display-4 fw-bold mb-3" style={{
+                  color: attempt.puntaje >= 70 ? '#198754' : attempt.puntaje >= 40 ? '#ffc107' : '#dc3545'
+                }}>
+                  {attempt.puntaje !== null && attempt.puntaje !== undefined 
+                    ? `${attempt.puntaje.toFixed(1)}%` 
+                    : 'Sin calificar'}
+                </div>
+                {attempt.puntaje !== null && attempt.puntaje !== undefined && (
+                  <>
+                    <div className="mb-3">
+                      <span className={`badge ${
+                        attempt.puntaje >= 70 ? 'bg-success' : 
+                        attempt.puntaje >= 40 ? 'bg-warning text-dark' : 
+                        'bg-danger'
+                      } fs-6 px-4 py-2`}>
+                        {attempt.puntaje >= 70 ? '✅ Aprobado' : 
+                         attempt.puntaje >= 40 ? '⚠️ Regular' : 
+                         '❌ Desaprobado'}
+                      </span>
+                    </div>
+                    <p className="text-muted">
+                      {(() => {
+                        const totalPreguntas = attempt.exam.preguntas?.length || 0;
+                        const correctas = Math.round((attempt.puntaje / 100) * totalPreguntas);
+                        return `${correctas} de ${totalPreguntas} preguntas correctas`;
+                      })()}
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
-          <div className="modern-card-body">
-            {!attempt.exam.preguntas || attempt.exam.preguntas.length === 0 ? (
+
+          {/* Preguntas y respuestas */}
+          <div className="modern-card mb-4">
+            <div className="modern-card-header">
+              <h3 className="modern-card-title">
+                <i className="fas fa-clipboard-list me-2"></i>
+                Revisión de Respuestas
+              </h3>
+            </div>
+            <div className="modern-card-body">
+              {!attempt.exam.preguntas || attempt.exam.preguntas.length === 0 ? (
               <div className="empty-state">
                 <div className="empty-icon">
                   <i className="fas fa-question-circle"></i>
@@ -847,24 +1053,75 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
                             <span className="options-label">Opciones de respuesta:</span>
                           </h6>
                           <div className="exam-results-options-list">
-                            {question.opciones?.map((option, optionIndex) => {
-                              const isCorrect = optionIndex === question.correcta;
+                            {(() => {
+                              const studentAnswer = attempt.respuestas?.[index];
+                              
+                              return question.opciones?.map((option, optionIndex) => {
+                                const isCorrect = optionIndex === question.correcta;
+                                const isStudentAnswer = studentAnswer === optionIndex;
+                                const isWrongAnswer = isStudentAnswer && !isCorrect;
                               
                               return (
-                                <div key={optionIndex} className={`exam-info-item ${isCorrect ? 'bg-success bg-opacity-10 border-success rounded p-2 mb-2' : ''}`}>
-                                  <i className={isCorrect ? "fas fa-check-circle me-2 text-success" : "fas fa-circle me-2 text-muted"} 
-                                     style={{fontSize: isCorrect ? '14px' : '8px'}}></i>
-                                  <span className={isCorrect ? "fw-bold text-success" : ""}>
-                                    {option || "Opción vacía"}
-                                    {isCorrect && (
-                                      <span className="ms-2 badge bg-success text-white correct-badge">
-                                        <span className="badge-text">Respuesta Correcta</span>
+                                <div 
+                                  key={optionIndex} 
+                                  className={`exam-info-item ${
+                                    isCorrect ? 'bg-success bg-opacity-10 border-success' : 
+                                    isWrongAnswer ? 'bg-danger bg-opacity-10 border-danger' : 
+                                    ''
+                                  } rounded p-2 mb-2`}
+                                  style={{
+                                    border: isCorrect || isWrongAnswer ? '2px solid' : '1px solid #dee2e6'
+                                  }}
+                                >
+                                  <div className="d-flex align-items-center justify-content-between">
+                                    <div className="d-flex align-items-center">
+                                      <i className={
+                                        isCorrect ? "fas fa-check-circle me-2 text-success" : 
+                                        isWrongAnswer ? "fas fa-times-circle me-2 text-danger" :
+                                        "fas fa-circle me-2 text-muted"
+                                      } 
+                                         style={{fontSize: (isCorrect || isWrongAnswer) ? '14px' : '8px'}}></i>
+                                      <span className={
+                                        isCorrect ? "fw-bold text-success" : 
+                                        isWrongAnswer ? "fw-bold text-danger" : ""
+                                      }>
+                                        {option || "Opción vacía"}
                                       </span>
-                                    )}
-                                  </span>
+                                    </div>
+                                    <div>
+                                      {isCorrect && (
+                                        <span className="badge bg-success text-white ms-2">
+                                          <i className="fas fa-check me-1"></i>
+                                          Correcta
+                                        </span>
+                                      )}
+                                      {isStudentAnswer && !isCorrect && (
+                                        <span className="badge bg-danger text-white ms-2">
+                                          <i className="fas fa-user me-1"></i>
+                                          Tu respuesta
+                                        </span>
+                                      )}
+                                      {isStudentAnswer && isCorrect && (
+                                        <span className="badge bg-primary text-white ms-2">
+                                          <i className="fas fa-user-check me-1"></i>
+                                          Tu respuesta
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
                                 </div>
                               );
-                            })}
+                              });
+                            })()}
+                            {(() => {
+                              const studentAnswer = attempt.respuestas?.[index];
+                              return studentAnswer === undefined && (
+                                <div className="alert alert-warning mt-3 mb-0" role="alert">
+                                  <i className="fas fa-exclamation-triangle me-2"></i>
+                                  No respondiste esta pregunta
+                                </div>
+                              );
+                            })()}
                           </div>
                         </div>
                       </div>
@@ -875,6 +1132,7 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
             )}
           </div>
         </div>
+        </>
       )}
 
       {/* Estilos adicionales para mejorar la experiencia */}
