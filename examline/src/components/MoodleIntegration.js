@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   verifyMoodleConnection, 
   getMoodleCourseAssignments,
@@ -23,11 +23,7 @@ const MoodleIntegration = ({ windowId, onClose }) => {
   const [syncStatus, setSyncStatus] = useState(null);
 
   // Cargar configuración existente
-  useEffect(() => {
-    loadSyncStatus();
-  }, [windowId]);
-
-  const loadSyncStatus = async () => {
+  const loadSyncStatus = useCallback(async () => {
     try {
       const status = await getMoodleSyncStatus(windowId);
       setSyncStatus(status);
@@ -41,7 +37,11 @@ const MoodleIntegration = ({ windowId, onClose }) => {
     } catch (err) {
       console.error('Error loading sync status:', err);
     }
-  };
+  }, [windowId]);
+
+  useEffect(() => {
+    loadSyncStatus();
+  }, [loadSyncStatus]);
 
   const handleVerifyConnection = async () => {
     if (!moodleUrl || !moodleToken) {

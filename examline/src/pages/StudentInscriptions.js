@@ -6,11 +6,6 @@ import Modal from '../components/Modal';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../modern-examline.css';
 
-// Función auxiliar para convertir fechas del servidor a zona horaria local automáticamente
-const adjustDateFromServer = (serverDateString) => {
-  // JavaScript maneja automáticamente la conversión de UTC a zona horaria local
-  return new Date(serverDateString);
-};
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
 
