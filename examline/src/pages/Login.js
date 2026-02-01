@@ -73,7 +73,7 @@ const Login = () => {
             Podés salir de Safe Exam Browser haciendo clic en el siguiente botón.
           </p>
           <button
-            onClick={closeSEB}
+            onClick={() => closeSEB()}
             className="btn btn-danger w-100 py-2"
           >
             <i className="fas fa-sign-out-alt me-2"></i>
