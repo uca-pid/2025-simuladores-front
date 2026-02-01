@@ -52,13 +52,6 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
   const handleErrorBack = () => {
     if (isInSEB) {
       closeSEB();
-      setTimeout(() => {
-        if (onBack) {
-          onBack();
-        } else {
-          navigate('/student-exam');
-        }
-      }, 1000);
     } else {
       if (onBack) {
         onBack();
@@ -71,21 +64,11 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
   // Handle exam completion - finish attempt and return
   const handleExamCompletion = () => {
     if (!attempt) {
-      if (isInSEB) {
-        closeSEB();
-        setTimeout(() => {
-          if (onBack) {
-            onBack();
-          } else {
-            navigate('/student-exam');
-          }
-        }, 1000);
+      // Si no hay intento, navegar directamente
+      if (onBack) {
+        onBack();
       } else {
-        if (onBack) {
-          onBack();
-        } else {
-          navigate('/student-exam');
-        }
+        navigate('/student-exam');
       }
       return;
     }
@@ -148,19 +131,8 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
               closeModal();
               
               if (isInSEB) {
-                // Cerrar SEB después de 1.5 segundos
-                setTimeout(() => {
-                  closeSEB();
-                  
-                  // Fallback si no cierra
-                  setTimeout(() => {
-                    if (onBack) {
-                      onBack();
-                    } else {
-                      navigate('/student-exam');
-                    }
-                  }, 1000);
-                }, 1500);
+                // Cerrar SEB directamente sin setTimeout adicionales
+                closeSEB();
               } else {
                 // Navegación normal si no está en SEB
                 if (onBack) {
@@ -172,7 +144,17 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
             });
           } else {
             const errorData = await response.json();
-            showModal('error', 'Error', errorData.error || 'Error al finalizar intento');
+            const errorMessage = errorData.error || 'Error al finalizar intento';
+            
+            // Si el error es que el intento ya fue finalizado y estamos en SEB, mostrar botón para salir
+            if (errorMessage.includes('intento ya fue finalizado') && isInSEB) {
+              showModal('error', 'Error', errorMessage, () => {
+                closeModal();
+                closeSEB();
+              }, false, 'Salir del examen');
+            } else {
+              showModal('error', 'Error', errorMessage);
+            }
           }
         } catch (error) {
           console.error('Error finishing attempt:', error);
@@ -196,13 +178,6 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
         
         if (isInSEB) {
           closeSEB();
-          setTimeout(() => {
-            if (onBack) {
-              onBack();
-            } else {
-              navigate('/student-exam');
-            }
-          }, 1000);
         } else {
           if (onBack) {
             onBack();
@@ -353,6 +328,9 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
   }
   
   if (error || !exam) {
+    const isExamCompleted = error && (error.includes('Ya has completado') || error.includes('intento ya fue finalizado'));
+    const buttonText = isExamCompleted && isInSEB ? 'Salir del examen' : 'Volver';
+    
     return (
       <div className="container py-5">
         <div className="empty-state">
@@ -364,8 +342,8 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
             {error || "El examen solicitado no existe o no tienes permisos para acceder."}
           </p>
           <button className="modern-btn modern-btn-secondary" onClick={handleErrorBack}>
-            <i className="fas fa-arrow-left me-2"></i>
-            Volver
+            <i className={`fas ${isExamCompleted && isInSEB ? 'fa-sign-out-alt' : 'fa-arrow-left'} me-2`}></i>
+            {buttonText}
           </button>
         </div>
       </div>
@@ -568,8 +546,9 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
         message={modal.message}
         type={modal.type}
         showCancel={modal.showCancel}
-        confirmText={modal.type === 'warning' ? 'Salir del Examen' : modal.type === 'confirm' ? 'Finalizar' : 'Aceptar'}
+        confirmText={modal.confirmText || (modal.type === 'warning' ? 'Salir del Examen' : modal.type === 'confirm' ? 'Finalizar' : 'Aceptar')}
         cancelText={modal.type === 'confirm' ? 'Cancelar' : 'Continuar Examen'}
+        isProcessing={modal.isProcessing}
       />
     </div>
   );

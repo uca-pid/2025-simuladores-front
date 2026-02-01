@@ -21,13 +21,14 @@ export const useModal = () => {
     message: '',
     onConfirm: null,
     showCancel: false,
+    confirmText: 'Aceptar', // Texto personalizable para el botón de confirmar
     isProcessing: false // Nuevo estado para prevenir múltiples clicks
   });
 
   /**
    * Muestra un modal con configuración personalizada
    */
-  const showModal = useCallback((type, title, message, onConfirm = null, showCancel = false) => {
+  const showModal = useCallback((type, title, message, onConfirm = null, showCancel = false, confirmText = 'Aceptar') => {
     setModal({
       show: true,
       type,
@@ -35,6 +36,7 @@ export const useModal = () => {
       message,
       onConfirm,
       showCancel,
+      confirmText,
       isProcessing: false
     });
   }, []);
