@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import '../modern-examline.css';
-import { getExamById } from "../services/api";
+import { getExamById, API_BASE_URL } from "../services/api";
+import { useModal, useSEB } from "../hooks";
 import Modal from "../components/Modal";
 
 const ExamAttempt = ({ examId: propExamId, onBack }) => {
@@ -17,49 +18,11 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [isInSEB, setIsInSEB] = useState(false);
   const [respuestas, setRespuestas] = useState({}); // { preguntaIndex: opcionIndex }
-  const [modal, setModal] = useState({
-    show: false,
-    type: 'info',
-    title: '',
-    message: '',
-    onConfirm: null,
-    showCancel: false
-  });
-
-  const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
-
-  // Detectar si estamos en SEB
-  useEffect(() => {
-    const checkSEB = () => {
-      const userAgent = navigator.userAgent || '';
-      return userAgent.includes('SEB') || 
-             userAgent.includes('SafeExamBrowser') || 
-             window.SafeExamBrowser !== undefined;
-    };
-    
-    const inSEB = checkSEB();
-    setIsInSEB(inSEB);
-  }, []);
-
-  // Modal helper functions
-  const showModal = (type, title, message, onConfirm = null, showCancel = false) => {
-    setModal({ show: true, type, title, message, onConfirm, showCancel });
-  };
-
-  const closeModal = () => {
-    setModal(prev => ({ ...prev, show: false }));
-  };
-
-  // 🚪 Función para redireccionar al terminar examen
-const closeSEB = () => {
-  try {
-    window.location.href = 'https://ferrocarriloeste.com.ar/';
-  } catch (error) {
-    console.error('Error al redireccionar:', error);
-  }
-};
+  
+  // Usar hooks personalizados
+  const { modal, showModal, closeModal } = useModal();
+  const { isInSEB, closeSEB } = useSEB();
 
   // 🔒 Validación inicial de seguridad para estudiantes
   useEffect(() => {
@@ -376,7 +339,7 @@ const closeSEB = () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       window.removeEventListener('popstate', handlePopState);
     };
-  }, [exam, error, propExamId]);
+  }, [exam, error, propExamId, closeModal, showModal]);
 
   if (loading) {
     return (

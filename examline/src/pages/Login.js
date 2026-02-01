@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { useSEB } from "../hooks";
 import { loginUser } from "../services/api";
 import "bootstrap/dist/css/bootstrap.min.css";
 
@@ -11,30 +12,9 @@ const Login = () => {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isOnCooldown, setIsOnCooldown] = useState(false);
-  const [isSEB, setIsSEB] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
-
-  // Detectar si se está dentro de Safe Exam Browser
-  useEffect(() => {
-    try {
-      const ua = navigator.userAgent || "";
-      if (ua.includes("SEB") || ua.includes("SafeExamBrowser") || window.SafeExamBrowser) {
-        setIsSEB(true);
-      }
-    } catch (err) {
-      console.error("Error detectando SEB:", err);
-    }
-  }, []);
-
-  // Función para cerrar/redirigir SEB
-  const closeSEB = () => {
-    try {
-      window.location.href = "https://ferrocarriloeste.com.ar/";
-    } catch (error) {
-      console.error("Error al redireccionar:", error);
-    }
-  };
+  const { isInSEB: isSEB, closeSEB } = useSEB();
 
   const handleSubmit = async (e) => {
     e.preventDefault();

@@ -1,13 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useModal } from '../hooks';
+import { API_BASE_URL } from '../services/api';
 import BackToMainButton from '../components/BackToMainButton';
 import Modal from '../components/Modal';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../modern-examline.css';
-
-
-const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
 
 export default function StudentInscriptionsPage({ 
   embedded = false, 
@@ -15,6 +14,7 @@ export default function StudentInscriptionsPage({
 }) {
   const { user, token } = useAuth();
   const navigate = useNavigate();
+  const { modal, showModal, closeModal, setModalProcessing } = useModal();
   const [availableWindows, setAvailableWindows] = useState([]);
   const [myInscriptions, setMyInscriptions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -26,14 +26,6 @@ export default function StudentInscriptionsPage({
     materia: '',
     profesor: '',
     fecha: ''
-  });
-  const [modal, setModal] = useState({
-    show: false,
-    type: 'info',
-    title: '',
-    message: '',
-    onConfirm: null,
-    showCancel: false
   });
 
   const loadAvailableWindows = useCallback(async (searchFilters = {}) => {
@@ -95,10 +87,6 @@ export default function StudentInscriptionsPage({
       console.error('Error cargando mis inscripciones:', error);
     }
   }, [token]);
-
-  const showModal = useCallback((type, title, message, onConfirm = null, showCancel = false) => {
-    setModal({ show: true, type, title, message, onConfirm, showCancel });
-  }, []);
 
   const loadData = useCallback(async () => {
     try {
@@ -167,12 +155,6 @@ export default function StudentInscriptionsPage({
   return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
 }, []);
 
-
-
-
-  const closeModal = () => {
-    setModal(prev => ({ ...prev, show: false }));
-  };
 const isRunningSEB = () => {
   // Método 1: Verificar el User Agent
   const userAgent = navigator.userAgent || navigator.vendor || window.opera;
@@ -250,6 +232,7 @@ const openExam = async (examId, windowId, token, window) => {
       mensaje,
       async () => {
         try {
+          setModalProcessing(true);
           const response = await fetch(`${API_BASE_URL}/inscriptions`, {
             method: 'POST',
             headers: {
@@ -269,6 +252,8 @@ const openExam = async (examId, windowId, token, window) => {
         } catch (error) {
           console.error('Error en inscripción:', error);
           showModal('error', 'Error', 'Error de conexión');
+        } finally {
+          setModalProcessing(false);
         }
         closeModal();
       },
@@ -291,6 +276,7 @@ const openExam = async (examId, windowId, token, window) => {
       `¿Seguro que deseas cancelar tu inscripción al examen "${inscription.examWindow.exam.titulo}"?`,
       async () => {
         try {
+          setModalProcessing(true);
           const response = await fetch(`${API_BASE_URL}/inscriptions/${inscription.id}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
@@ -306,6 +292,8 @@ const openExam = async (examId, windowId, token, window) => {
         } catch (error) {
           console.error('Error cancelando inscripción:', error);
           showModal('error', 'Error', 'Error de conexión');
+        } finally {
+          setModalProcessing(false);
         }
         closeModal();
       },
@@ -814,6 +802,7 @@ const openExam = async (examId, windowId, token, window) => {
         message={modal.message}
         type={modal.type}
         showCancel={modal.showCancel}
+        isProcessing={modal.isProcessing}
         confirmText={modal.type === 'confirm' ? 'Confirmar' : 'Aceptar'}
         cancelText="Cancelar"
       />

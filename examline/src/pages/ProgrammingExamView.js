@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
-import { getExamById } from '../services/api';
+import { getExamById, API_BASE_URL } from '../services/api';
+import { useSEB } from '../hooks';
 import Modal from '../components/Modal';
 
 const ProgrammingExamView = () => {
@@ -16,7 +17,9 @@ const ProgrammingExamView = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [lastSaved, setLastSaved] = useState(null);
-  const [isInSEB, setIsInSEB] = useState(false);
+  
+  // Usar hook de SEB
+  const { isInSEB, closeSEB } = useSEB();
   
   // Estados para manejo de archivos
   const [files, setFiles] = useState([]);
@@ -58,28 +61,6 @@ const ProgrammingExamView = () => {
   // Obtener windowId de la URL
   const searchParams = new URLSearchParams(location.search);
   const windowId = searchParams.get('windowId');
-
-  // Detectar si estamos en SEB y función de cierre
-  useEffect(() => {
-    const checkSEB = () => {
-      const userAgent = navigator.userAgent || '';
-      return userAgent.includes('SEB') || 
-             userAgent.includes('SafeExamBrowser') || 
-             window.SafeExamBrowser !== undefined;
-    };
-    
-    const inSEB = checkSEB();
-    setIsInSEB(inSEB);
-  }, []);
-
-  // 🚪 Función para redireccionar al terminar examen
-  const closeSEB = () => {
-    try {
-      window.location.href = 'https://ferrocarriloeste.com.ar/';
-    } catch (error) {
-      console.error('Error al redireccionar:', error);
-    }
-  };
 
   // Configuración del editor Monaco optimizada para reducir ResizeObserver errors
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
@@ -148,7 +129,6 @@ const ProgrammingExamView = () => {
   const fetchOrCreateAttempt = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
-      const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
       
       // Verificar si ya existe un intento
       const checkResponse = await fetch(`${API_BASE_URL}/exam-attempts/check/${examId}?windowId=${windowId}`, {
@@ -198,7 +178,6 @@ const ProgrammingExamView = () => {
     
     try {
       const token = localStorage.getItem('token');
-      const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
       
       const response = await fetch(`${API_BASE_URL}/exam-files/${examId}/files`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -275,7 +254,6 @@ const ProgrammingExamView = () => {
     try {
       setSaving(true);
       const token = localStorage.getItem('token');
-      const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
       
       await fetch(`${API_BASE_URL}/exam-attempts/${attempt.id}/save-code`, {
         method: 'PUT',
@@ -341,7 +319,6 @@ const ProgrammingExamView = () => {
       }
       
       const token = localStorage.getItem('token');
-      const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
       
       // Guardar archivos como versión de envío (submission)
       await fetch(`${API_BASE_URL}/exam-files/${examId}/files/submission`, {
@@ -437,7 +414,6 @@ const ProgrammingExamView = () => {
     try {
       setFileOperationLoading(true);
       const token = localStorage.getItem('token');
-      const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
       
       await fetch(`${API_BASE_URL}/exam-files/${examId}/files`, {
         method: 'POST',
@@ -565,7 +541,6 @@ const ProgrammingExamView = () => {
     try {
       setFileOperationLoading(true);
       const token = localStorage.getItem('token');
-      const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
       
       await fetch(`${API_BASE_URL}/exam-files/${examId}/files/${fileToDelete}`, {
         method: 'DELETE',
@@ -643,7 +618,6 @@ const ProgrammingExamView = () => {
       setIsCompiling(true);
       setCompilationResult(null);
       const token = localStorage.getItem('token');
-      const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
       
       const response = await fetch(`${API_BASE_URL}/code-execution/run`, {
         method: 'POST',
