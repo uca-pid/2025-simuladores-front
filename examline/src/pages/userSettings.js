@@ -14,6 +14,8 @@ export default function UserSettingsPage() {
   const [nombreError, setNombreError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isOnCooldown, setIsOnCooldown] = useState(false);
   const [modal, setModal] = useState({
     show: false,
     type: 'info',
@@ -91,6 +93,8 @@ export default function UserSettingsPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (isSaving || isOnCooldown) return;
+
     const nombreErr = validateName(formData.nombre);
     const passwordErr = validatePassword(formData.password);
 
@@ -112,6 +116,7 @@ export default function UserSettingsPage() {
       submitData.currentPassword = formData.currentPassword;
     }
 
+    setIsSaving(true);
     try {
       const updatedUser = await updateUser(user.userId, submitData);
 
@@ -126,6 +131,10 @@ export default function UserSettingsPage() {
     } catch (err) {
       console.error("Error actualizando usuario", err);
       showModal('error', 'Error', err.message || 'Error actualizando usuario');
+    } finally {
+      setIsSaving(false);
+      setIsOnCooldown(true);
+      setTimeout(() => setIsOnCooldown(false), 1000);
     }
   };
 
@@ -277,9 +286,34 @@ export default function UserSettingsPage() {
             </div>
 
             <div className="mt-4 d-flex justify-content-center justify-content-md-end">
-              <button type="submit" className="modern-btn modern-btn-primary modern-btn-lg save-changes-btn">
-                <i className="fas fa-save me-2"></i>
-                Guardar cambios
+              <button 
+                type="submit" 
+                className="modern-btn modern-btn-primary modern-btn-lg save-changes-btn"
+                disabled={isSaving || isOnCooldown}
+              >
+                {isSaving ? (
+                  <>
+                    <div
+                      className="modern-spinner"
+                      style={{
+                        width: "16px",
+                        height: "16px",
+                        marginRight: "0.5rem",
+                      }}
+                    ></div>
+                    <span>Guardando...</span>
+                  </>
+                ) : isOnCooldown ? (
+                  <>
+                    <i className="fas fa-clock me-2"></i>
+                    <span>Espera...</span>
+                  </>
+                ) : (
+                  <>
+                    <i className="fas fa-save me-2"></i>
+                    Guardar cambios
+                  </>
+                )}
               </button>
             </div>
           </form>
