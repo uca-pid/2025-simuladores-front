@@ -12,7 +12,8 @@ const Modal = ({
   type = "info", // 'success', 'error', 'warning', 'confirm', 'info'
   confirmText = "Aceptar",
   cancelText = "Cancelar",
-  showCancel = false
+  showCancel = false,
+  isProcessing = false // Nuevo prop para deshabilitar botones durante el procesamiento
 }) => {
   if (!show) return null;
 
@@ -50,6 +51,9 @@ const Modal = ({
   };
 
   const handleBackdropClick = (e) => {
+    // No permitir cerrar el modal durante procesamiento
+    if (isProcessing) return;
+    
     if (e.target === e.currentTarget) {
       onClose();
     }
@@ -82,6 +86,7 @@ const Modal = ({
                     type="button"
                     className="responsive-btn responsive-btn-secondary"
                     onClick={onClose}
+                    disabled={isProcessing}
                   >
                     <i className="fas fa-times me-2"></i>
                     <span>{cancelText}</span>
@@ -97,16 +102,26 @@ const Modal = ({
                     'responsive-btn-primary'
                   }`}
                   onClick={onConfirm || onClose}
+                  disabled={isProcessing}
                   autoFocus
                 >
-                  <i className={`fas me-2 ${
-                    type === 'error' ? 'fa-trash' :
-                    type === 'success' ? 'fa-check' :
-                    type === 'warning' ? 'fa-exclamation' :
-                    type === 'confirm' ? 'fa-check' :
-                    'fa-info'
-                  }`}></i>
-                  <span>{confirmText}</span>
+                  {isProcessing ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      <span>Procesando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <i className={`fas me-2 ${
+                        type === 'error' ? 'fa-trash' :
+                        type === 'success' ? 'fa-check' :
+                        type === 'warning' ? 'fa-exclamation' :
+                        type === 'confirm' ? 'fa-check' :
+                        'fa-info'
+                      }`}></i>
+                      <span>{confirmText}</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>

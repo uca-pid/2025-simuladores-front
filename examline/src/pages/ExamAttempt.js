@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import '../modern-examline.css';
-import { getExamById } from "../services/api";
+import { getExamById, API_BASE_URL } from "../services/api";
+import { useModal, useSEB } from "../hooks";
 import Modal from "../components/Modal";
 
 const ExamAttempt = ({ examId: propExamId, onBack }) => {
@@ -17,49 +18,11 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [isInSEB, setIsInSEB] = useState(false);
   const [respuestas, setRespuestas] = useState({}); // { preguntaIndex: opcionIndex }
-  const [modal, setModal] = useState({
-    show: false,
-    type: 'info',
-    title: '',
-    message: '',
-    onConfirm: null,
-    showCancel: false
-  });
-
-  const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
-
-  // Detectar si estamos en SEB
-  useEffect(() => {
-    const checkSEB = () => {
-      const userAgent = navigator.userAgent || '';
-      return userAgent.includes('SEB') || 
-             userAgent.includes('SafeExamBrowser') || 
-             window.SafeExamBrowser !== undefined;
-    };
-    
-    const inSEB = checkSEB();
-    setIsInSEB(inSEB);
-  }, []);
-
-  // Modal helper functions
-  const showModal = (type, title, message, onConfirm = null, showCancel = false) => {
-    setModal({ show: true, type, title, message, onConfirm, showCancel });
-  };
-
-  const closeModal = () => {
-    setModal(prev => ({ ...prev, show: false }));
-  };
-
-  // 🚪 Función para redireccionar al terminar examen
-const closeSEB = () => {
-  try {
-    window.location.href = 'https://ferrocarriloeste.com.ar/';
-  } catch (error) {
-    console.error('Error al redireccionar:', error);
-  }
-};
+  
+  // Usar hooks personalizados
+  const { modal, showModal, closeModal, setModalProcessing } = useModal();
+  const { isInSEB, closeSEB, tryCloseSEB } = useSEB();
 
   // 🔒 Validación inicial de seguridad para estudiantes
   useEffect(() => {
@@ -86,16 +49,15 @@ const closeSEB = () => {
   }, [windowId, propExamId]);
 
   // Handle back navigation for errors only
-  const handleErrorBack = () => {
+  const handleErrorBack = async () => {
     if (isInSEB) {
-      closeSEB();
-      setTimeout(() => {
-        if (onBack) {
-          onBack();
-        } else {
-          navigate('/student-exam');
-        }
-      }, 1000);
+      // Intentar cerrar SEB automáticamente
+      const closed = await tryCloseSEB();
+      
+      // Si el usuario canceló (puso "NO"), redirigir a login
+      if (!closed) {
+        navigate('/login');
+      }
     } else {
       if (onBack) {
         onBack();
@@ -108,21 +70,11 @@ const closeSEB = () => {
   // Handle exam completion - finish attempt and return
   const handleExamCompletion = () => {
     if (!attempt) {
-      if (isInSEB) {
-        closeSEB();
-        setTimeout(() => {
-          if (onBack) {
-            onBack();
-          } else {
-            navigate('/student-exam');
-          }
-        }, 1000);
+      // Si no hay intento, navegar directamente
+      if (onBack) {
+        onBack();
       } else {
-        if (onBack) {
-          onBack();
-        } else {
-          navigate('/student-exam');
-        }
+        navigate(isInSEB ? '/login' : '/student-exam');
       }
       return;
     }
@@ -158,8 +110,12 @@ const closeSEB = () => {
       'Terminar Intento',
       '¿Estás seguro de que quieres terminar el intento? Una vez finalizado no podrás volver a entrar al examen.',
       async () => {
+        // Prevenir múltiples ejecuciones
+        if (submitting) return;
+        
         try {
           setSubmitting(true);
+          setModalProcessing(true); // Deshabilitar botón del modal
           const token = localStorage.getItem('token');
 
           // Preparar el body según el tipo de examen
@@ -177,45 +133,46 @@ const closeSEB = () => {
           });
 
           if (response.ok) {
-            const successMessage = isInSEB 
-              ? 'Has terminado el examen exitosamente. SEB se cerrará automáticamente.'
-              : 'Has terminado el examen exitosamente.';
-
-            showModal('success', '¡Intento Finalizado!', successMessage, () => {
-              closeModal();
+            // Redirigir directamente sin modal de éxito
+            closeModal();
+            
+            if (isInSEB) {
+              // Intentar cerrar SEB automáticamente
+              const closed = await tryCloseSEB();
               
-              if (isInSEB) {
-                // Cerrar SEB después de 1.5 segundos
-                setTimeout(() => {
-                  closeSEB();
-                  
-                  // Fallback si no cierra
-                  setTimeout(() => {
-                    if (onBack) {
-                      onBack();
-                    } else {
-                      navigate('/student-exam');
-                    }
-                  }, 1000);
-                }, 1500);
-              } else {
-                // Navegación normal si no está en SEB
-                if (onBack) {
-                  onBack();
-                } else {
-                  navigate('/student-exam');
-                }
+              // Si el usuario canceló el cierre (puso "NO"), redirigir a login
+              if (!closed) {
+                navigate('/login');
               }
-            });
+              // Si puso "SÍ", SEB se cerrará y no llegará aquí
+            } else {
+              // Navegación normal si no está en SEB
+              if (onBack) {
+                onBack();
+              } else {
+                navigate('/student-exam');
+              }
+            }
           } else {
             const errorData = await response.json();
-            showModal('error', 'Error', errorData.error || 'Error al finalizar intento');
+            const errorMessage = errorData.error || 'Error al finalizar intento';
+            
+            // Si el error es que el intento ya fue finalizado y estamos en SEB, redirigir a login
+            if (errorMessage.includes('intento ya fue finalizado') && isInSEB) {
+              showModal('error', 'Error', errorMessage, () => {
+                closeModal();
+                navigate('/login');
+              }, false, 'Salir del examen');
+            } else {
+              showModal('error', 'Error', errorMessage);
+            }
           }
         } catch (error) {
           console.error('Error finishing attempt:', error);
           showModal('error', 'Error', 'Error de conexión al finalizar intento');
         } finally {
           setSubmitting(false);
+          setModalProcessing(false);
         }
       },
       true
@@ -228,18 +185,17 @@ const closeSEB = () => {
       'warning',
       'Salir del Examen',
       '¿Estás seguro de que quieres salir del examen? Se perderá todo tu progreso y no podrás volver a intentarlo.',
-      () => {
+      async () => {
         closeModal();
         
         if (isInSEB) {
-          closeSEB();
-          setTimeout(() => {
-            if (onBack) {
-              onBack();
-            } else {
-              navigate('/student-exam');
-            }
-          }, 1000);
+          // Intentar cerrar SEB automáticamente
+          const closed = await tryCloseSEB();
+          
+          // Si el usuario canceló (puso "NO"), redirigir a login
+          if (!closed) {
+            navigate('/login');
+          }
         } else {
           if (onBack) {
             onBack();
@@ -376,7 +332,7 @@ const closeSEB = () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       window.removeEventListener('popstate', handlePopState);
     };
-  }, [exam, error, propExamId]);
+  }, [exam, error, propExamId, closeModal, showModal]);
 
   if (loading) {
     return (
@@ -390,6 +346,9 @@ const closeSEB = () => {
   }
   
   if (error || !exam) {
+    const isExamCompleted = error && (error.includes('Ya has completado') || error.includes('intento ya fue finalizado'));
+    const buttonText = isExamCompleted && isInSEB ? 'Salir del examen' : 'Volver';
+    
     return (
       <div className="container py-5">
         <div className="empty-state">
@@ -401,8 +360,8 @@ const closeSEB = () => {
             {error || "El examen solicitado no existe o no tienes permisos para acceder."}
           </p>
           <button className="modern-btn modern-btn-secondary" onClick={handleErrorBack}>
-            <i className="fas fa-arrow-left me-2"></i>
-            Volver
+            <i className={`fas ${isExamCompleted && isInSEB ? 'fa-sign-out-alt' : 'fa-arrow-left'} me-2`}></i>
+            {buttonText}
           </button>
         </div>
       </div>
@@ -577,12 +536,6 @@ const closeSEB = () => {
                       </>
                     )}
                   </button>
-                  {!propExamId && (
-                    <button className="modern-btn modern-btn-outline-danger modern-btn-lg" onClick={handleLeaveExam}>
-                      <i className="fas fa-times me-2"></i>
-                      <span className="btn-text">Salir sin finalizar</span>
-                    </button>
-                  )}
                   {propExamId && (
                     <button className="modern-btn modern-btn-secondary modern-btn-lg" onClick={handleExamCompletion}>
                       <i className="fas fa-arrow-left me-2"></i>
@@ -605,8 +558,9 @@ const closeSEB = () => {
         message={modal.message}
         type={modal.type}
         showCancel={modal.showCancel}
-        confirmText={modal.type === 'warning' ? 'Salir del Examen' : modal.type === 'confirm' ? 'Finalizar' : 'Aceptar'}
+        confirmText={modal.confirmText || (modal.type === 'warning' ? 'Salir del Examen' : modal.type === 'confirm' ? 'Finalizar' : 'Aceptar')}
         cancelText={modal.type === 'confirm' ? 'Cancelar' : 'Continuar Examen'}
+        isProcessing={modal.isProcessing}
       />
     </div>
   );

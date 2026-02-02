@@ -1,15 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useModal } from '../hooks';
+import { API_BASE_URL } from '../services/api';
 import BackToMainButton from '../components/BackToMainButton';
 import Modal from '../components/Modal';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../button-styles.css';
-const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
 
 export default function ExamWindowsPage() {
   const { user, token } = useAuth();
   const navigate = useNavigate();
+  const { modal, showModal, closeModal } = useModal();
   const [examWindows, setExamWindows] = useState([]);
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,23 +31,11 @@ export default function ExamWindowsPage() {
   });
   const [validationErrors, setValidationErrors] = useState({});
   const [isSavingWindow, setIsSavingWindow] = useState(false);
-  const [modal, setModal] = useState({
-    show: false,
-    type: 'info',
-    title: '',
-    message: '',
-    onConfirm: null,
-    showCancel: false
-  });
   const [, setIsAutoUpdating] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(null);
   const [activeTab, setActiveTab] = useState(() => {
     return localStorage.getItem('examWindows_activeTab') || 'current';
   });
-
-  const showModal = useCallback((type, title, message, onConfirm = null, showCancel = false) => {
-    setModal({ show: true, type, title, message, onConfirm, showCancel });
-  }, []);
 
   const adjustTextareaHeight = (textarea) => {
     if (!textarea) return;
@@ -325,10 +315,6 @@ export default function ExamWindowsPage() {
       }, 100);
     }
   }, [showCreateModal, editingWindow]);
-
-  const closeModal = () => {
-    setModal(prev => ({ ...prev, show: false }));
-  };
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;

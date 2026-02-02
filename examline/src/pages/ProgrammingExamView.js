@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
-import { getExamById } from '../services/api';
+import { getExamById, API_BASE_URL } from '../services/api';
+import { useSEB } from '../hooks';
 import Modal from '../components/Modal';
 
 const ProgrammingExamView = () => {
@@ -16,7 +17,9 @@ const ProgrammingExamView = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [lastSaved, setLastSaved] = useState(null);
-  const [isInSEB, setIsInSEB] = useState(false);
+  
+  // Usar hook de SEB
+  const { isInSEB, closeSEB } = useSEB();
   
   // Estados para manejo de archivos
   const [files, setFiles] = useState([]);
@@ -44,6 +47,8 @@ const ProgrammingExamView = () => {
   
   // Estado para compilación
   const [isCompiling, setIsCompiling] = useState(false);
+  const [isOnCompileCooldown, setIsOnCompileCooldown] = useState(false);
+  const [isOnSaveCooldown, setIsOnSaveCooldown] = useState(false);
   const [compilationResult, setCompilationResult] = useState(null);
   const [userInput, setUserInput] = useState('');
   // Navegación lateral (Consigna | Programación)
@@ -58,28 +63,6 @@ const ProgrammingExamView = () => {
   // Obtener windowId de la URL
   const searchParams = new URLSearchParams(location.search);
   const windowId = searchParams.get('windowId');
-
-  // Detectar si estamos en SEB y función de cierre
-  useEffect(() => {
-    const checkSEB = () => {
-      const userAgent = navigator.userAgent || '';
-      return userAgent.includes('SEB') || 
-             userAgent.includes('SafeExamBrowser') || 
-             window.SafeExamBrowser !== undefined;
-    };
-    
-    const inSEB = checkSEB();
-    setIsInSEB(inSEB);
-  }, []);
-
-  // 🚪 Función para redireccionar al terminar examen
-  const closeSEB = () => {
-    try {
-      window.location.href = 'https://ferrocarriloeste.com.ar/';
-    } catch (error) {
-      console.error('Error al redireccionar:', error);
-    }
-  };
 
   // Configuración del editor Monaco optimizada para reducir ResizeObserver errors
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
@@ -148,7 +131,6 @@ const ProgrammingExamView = () => {
   const fetchOrCreateAttempt = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
-      const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
       
       // Verificar si ya existe un intento
       const checkResponse = await fetch(`${API_BASE_URL}/exam-attempts/check/${examId}?windowId=${windowId}`, {
@@ -198,7 +180,6 @@ const ProgrammingExamView = () => {
     
     try {
       const token = localStorage.getItem('token');
-      const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
       
       const response = await fetch(`${API_BASE_URL}/exam-files/${examId}/files`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -275,7 +256,6 @@ const ProgrammingExamView = () => {
     try {
       setSaving(true);
       const token = localStorage.getItem('token');
-      const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
       
       await fetch(`${API_BASE_URL}/exam-attempts/${attempt.id}/save-code`, {
         method: 'PUT',
@@ -341,7 +321,6 @@ const ProgrammingExamView = () => {
       }
       
       const token = localStorage.getItem('token');
-      const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
       
       // Guardar archivos como versión de envío (submission)
       await fetch(`${API_BASE_URL}/exam-files/${examId}/files/submission`, {
@@ -437,7 +416,6 @@ const ProgrammingExamView = () => {
     try {
       setFileOperationLoading(true);
       const token = localStorage.getItem('token');
-      const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
       
       await fetch(`${API_BASE_URL}/exam-files/${examId}/files`, {
         method: 'POST',
@@ -483,6 +461,7 @@ const ProgrammingExamView = () => {
   // Función para forzar guardado manual - guarda SOLO el archivo actual
   const handleManualSave = useCallback(async () => {
     if (!currentFileName) return;
+    if (saving || isOnSaveCooldown) return;
     
     try {
       setSaving(true);
@@ -501,8 +480,10 @@ const ProgrammingExamView = () => {
       console.error('Error guardando archivo:', error);
     } finally {
       setSaving(false);
+      setIsOnSaveCooldown(true);
+      setTimeout(() => setIsOnSaveCooldown(false), 800);
     }
-  }, [currentFileName, fileCache, code, saveCurrentFile]);
+  }, [currentFileName, fileCache, code, saveCurrentFile, saving, isOnSaveCooldown]);
 
   const loadFile = useCallback((filename) => {
     // 💾 Guardar el contenido actual en el caché ANTES de cambiar
@@ -565,7 +546,6 @@ const ProgrammingExamView = () => {
     try {
       setFileOperationLoading(true);
       const token = localStorage.getItem('token');
-      const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
       
       await fetch(`${API_BASE_URL}/exam-files/${examId}/files/${fileToDelete}`, {
         method: 'DELETE',
@@ -639,11 +619,12 @@ const ProgrammingExamView = () => {
 
   // Función para compilar código
   const handleCompile = async () => {
+    if (isCompiling || isOnCompileCooldown) return;
+    
     try {
       setIsCompiling(true);
       setCompilationResult(null);
       const token = localStorage.getItem('token');
-      const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
       
       const response = await fetch(`${API_BASE_URL}/code-execution/run`, {
         method: 'POST',
@@ -684,6 +665,8 @@ const ProgrammingExamView = () => {
       });
     } finally {
       setIsCompiling(false);
+      setIsOnCompileCooldown(true);
+      setTimeout(() => setIsOnCompileCooldown(false), 1000);
     }
   };
 
@@ -1038,12 +1021,17 @@ const ProgrammingExamView = () => {
                     <button
                       className="btn btn-sm btn-outline-success"
                       onClick={handleCompile}
-                      disabled={isCompiling}
+                      disabled={isCompiling || isOnCompileCooldown}
                     >
                       {isCompiling ? (
                         <>
                           <i className="fas fa-spinner fa-spin me-1"></i>
                           <span>Compilando...</span>
+                        </>
+                      ) : isOnCompileCooldown ? (
+                        <>
+                          <i className="fas fa-clock me-1"></i>
+                          <span>Espera...</span>
                         </>
                       ) : (
                         <>
@@ -1055,12 +1043,17 @@ const ProgrammingExamView = () => {
                     <button
                       className="btn btn-sm btn-outline-primary"
                       onClick={handleManualSave}
-                      disabled={saving || fileOperationLoading}
+                      disabled={saving || fileOperationLoading || isOnSaveCooldown}
                     >
                       {saving ? (
                         <>
                           <i className="fas fa-spinner fa-spin me-1"></i>
                           <span>Guardando</span>
+                        </>
+                      ) : isOnSaveCooldown ? (
+                        <>
+                          <i className="fas fa-clock me-1"></i>
+                          <span>Espera...</span>
                         </>
                       ) : (
                         <>
