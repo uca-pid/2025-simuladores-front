@@ -47,6 +47,8 @@ const ProgrammingExamView = () => {
   
   // Estado para compilación
   const [isCompiling, setIsCompiling] = useState(false);
+  const [isOnCompileCooldown, setIsOnCompileCooldown] = useState(false);
+  const [isOnSaveCooldown, setIsOnSaveCooldown] = useState(false);
   const [compilationResult, setCompilationResult] = useState(null);
   const [userInput, setUserInput] = useState('');
   // Navegación lateral (Consigna | Programación)
@@ -459,6 +461,7 @@ const ProgrammingExamView = () => {
   // Función para forzar guardado manual - guarda SOLO el archivo actual
   const handleManualSave = useCallback(async () => {
     if (!currentFileName) return;
+    if (saving || isOnSaveCooldown) return;
     
     try {
       setSaving(true);
@@ -477,8 +480,10 @@ const ProgrammingExamView = () => {
       console.error('Error guardando archivo:', error);
     } finally {
       setSaving(false);
+      setIsOnSaveCooldown(true);
+      setTimeout(() => setIsOnSaveCooldown(false), 800);
     }
-  }, [currentFileName, fileCache, code, saveCurrentFile]);
+  }, [currentFileName, fileCache, code, saveCurrentFile, saving, isOnSaveCooldown]);
 
   const loadFile = useCallback((filename) => {
     // 💾 Guardar el contenido actual en el caché ANTES de cambiar
@@ -614,6 +619,8 @@ const ProgrammingExamView = () => {
 
   // Función para compilar código
   const handleCompile = async () => {
+    if (isCompiling || isOnCompileCooldown) return;
+    
     try {
       setIsCompiling(true);
       setCompilationResult(null);
@@ -658,6 +665,8 @@ const ProgrammingExamView = () => {
       });
     } finally {
       setIsCompiling(false);
+      setIsOnCompileCooldown(true);
+      setTimeout(() => setIsOnCompileCooldown(false), 1000);
     }
   };
 
@@ -1012,12 +1021,17 @@ const ProgrammingExamView = () => {
                     <button
                       className="btn btn-sm btn-outline-success"
                       onClick={handleCompile}
-                      disabled={isCompiling}
+                      disabled={isCompiling || isOnCompileCooldown}
                     >
                       {isCompiling ? (
                         <>
                           <i className="fas fa-spinner fa-spin me-1"></i>
                           <span>Compilando...</span>
+                        </>
+                      ) : isOnCompileCooldown ? (
+                        <>
+                          <i className="fas fa-clock me-1"></i>
+                          <span>Espera...</span>
                         </>
                       ) : (
                         <>
@@ -1029,12 +1043,17 @@ const ProgrammingExamView = () => {
                     <button
                       className="btn btn-sm btn-outline-primary"
                       onClick={handleManualSave}
-                      disabled={saving || fileOperationLoading}
+                      disabled={saving || fileOperationLoading || isOnSaveCooldown}
                     >
                       {saving ? (
                         <>
                           <i className="fas fa-spinner fa-spin me-1"></i>
                           <span>Guardando</span>
+                        </>
+                      ) : isOnSaveCooldown ? (
+                        <>
+                          <i className="fas fa-clock me-1"></i>
+                          <span>Espera...</span>
                         </>
                       ) : (
                         <>
