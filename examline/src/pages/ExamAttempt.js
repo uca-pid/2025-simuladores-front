@@ -133,31 +133,26 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
           });
 
           if (response.ok) {
-            const successMessage = isInSEB 
-              ? 'Has terminado el examen exitosamente. Intentando cerrar SEB...'
-              : 'Has terminado el examen exitosamente.';
-
-            showModal('success', '¡Intento Finalizado!', successMessage, async () => {
-              closeModal();
+            // Redirigir directamente sin modal de éxito
+            closeModal();
+            
+            if (isInSEB) {
+              // Intentar cerrar SEB automáticamente
+              const closed = await tryCloseSEB();
               
-              if (isInSEB) {
-                // Intentar cerrar SEB automáticamente
-                const closed = await tryCloseSEB();
-                
-                // Si el usuario canceló el cierre (puso "NO"), redirigir a login
-                if (!closed) {
-                  navigate('/login');
-                }
-                // Si puso "SÍ", SEB se cerrará y no llegará aquí
-              } else {
-                // Navegación normal si no está en SEB
-                if (onBack) {
-                  onBack();
-                } else {
-                  navigate('/student-exam');
-                }
+              // Si el usuario canceló el cierre (puso "NO"), redirigir a login
+              if (!closed) {
+                navigate('/login');
               }
-            });
+              // Si puso "SÍ", SEB se cerrará y no llegará aquí
+            } else {
+              // Navegación normal si no está en SEB
+              if (onBack) {
+                onBack();
+              } else {
+                navigate('/student-exam');
+              }
+            }
           } else {
             const errorData = await response.json();
             const errorMessage = errorData.error || 'Error al finalizar intento';
@@ -541,12 +536,6 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
                       </>
                     )}
                   </button>
-                  {!propExamId && (
-                    <button className="modern-btn modern-btn-outline-danger modern-btn-lg" onClick={handleLeaveExam}>
-                      <i className="fas fa-times me-2"></i>
-                      <span className="btn-text">Salir sin finalizar</span>
-                    </button>
-                  )}
                   {propExamId && (
                     <button className="modern-btn modern-btn-secondary modern-btn-lg" onClick={handleExamCompletion}>
                       <i className="fas fa-arrow-left me-2"></i>
