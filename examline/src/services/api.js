@@ -1,6 +1,7 @@
 import { hashPassword } from '../utils/password';
 
-const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
+// Exportar API_BASE_URL para uso en otros componentes
+export const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
 
 // Helper function to get auth headers
 const getAuthHeaders = () => {

@@ -2,12 +2,14 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { useModal } from "../hooks";
 import BackToMainButton from "../components/BackToMainButton";
 import Modal from "../components/Modal";
 import { createExam } from "../services/api";
 
 const ExamCreator = () => {
   const navigate = useNavigate();
+  const { modal, showModal, closeModal } = useModal();
   const [titulo, setTitulo] = useState("");
   const [tipoExamen, setTipoExamen] = useState("multiple_choice"); // "multiple_choice" | "programming"
   
@@ -28,24 +30,6 @@ const ExamCreator = () => {
   
   const [error, setError] = useState("");
   const [isPublishing, setIsPublishing] = useState(false);
-  const [modal, setModal] = useState({
-    show: false,
-    type: 'info',
-    title: '',
-    message: '',
-    onConfirm: null,
-    showCancel: false
-  });
-
-  // Función para mostrar modal
-  const showModal = (type, title, message, onConfirm = null, showCancel = false) => {
-    setModal({ show: true, type, title, message, onConfirm, showCancel });
-  };
-
-  // Función para cerrar modal
-  const closeModal = () => {
-    setModal(prev => ({ ...prev, show: false }));
-  };
 
   // Agregar opción nueva
   const handleAgregarOpcion = () => {

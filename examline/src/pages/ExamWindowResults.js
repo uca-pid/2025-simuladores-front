@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import BackToMainButton from '../components/BackToMainButton';
@@ -76,7 +76,7 @@ export default function ExamWindowResultsPage() {
     loadData();
   }, [user, navigate, windowId, token]);
 
-  const loadRankingData = async () => {
+  const loadRankingData = useCallback(async () => {
     try {
       setRankingLoading(true);
       const response = await fetch(`${API_BASE_URL}/ranking/exam-window/${windowId}`, {
@@ -100,14 +100,14 @@ export default function ExamWindowResultsPage() {
     } finally {
       setRankingLoading(false);
     }
-  };
+  }, [windowId, token]);
 
   // Cargar ranking automáticamente al montar el componente
   useEffect(() => {
     if (examWindow && !rankingData && !rankingLoading) {
       loadRankingData();
     }
-  }, [examWindow]);
+  }, [examWindow, rankingData, rankingLoading, loadRankingData]);
 
   const getMedalEmoji = (posicion) => {
     switch(posicion) {
