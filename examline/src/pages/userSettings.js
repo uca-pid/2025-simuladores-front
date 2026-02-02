@@ -16,13 +16,15 @@ export default function UserSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isOnCooldown, setIsOnCooldown] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [modal, setModal] = useState({
     show: false,
     type: 'info',
     title: '',
     message: '',
     onConfirm: null,
-    showCancel: false
+    showCancel: false,
+    isProcessing: false
   });
   const navigate = useNavigate();
 
@@ -34,12 +36,13 @@ export default function UserSettingsPage() {
       title,
       message,
       onConfirm,
-      showCancel
+      showCancel,
+      isProcessing: false
     });
   };
 
   const closeModal = () => {
-    setModal(prev => ({ ...prev, show: false }));
+    setModal(prev => ({ ...prev, show: false, isProcessing: false }));
   };
 
   // ---------------- Validaciones ----------------
@@ -144,8 +147,13 @@ export default function UserSettingsPage() {
       'Confirmar eliminación',
       '¿Seguro que deseas eliminar tu cuenta? Esta acción no se puede deshacer.',
       async () => {
-        closeModal();
+        // Prevenir múltiples ejecuciones
+        if (isDeleting) return;
+        
         try {
+          setIsDeleting(true);
+          setModal(prev => ({ ...prev, isProcessing: true }));
+          
           const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
           const res = await fetch(`${API_BASE_URL}/users/${user.userId}`, { 
             method: "DELETE",
@@ -157,14 +165,15 @@ export default function UserSettingsPage() {
           
           if (!res.ok) throw new Error("Error eliminando usuario");
 
-          showModal('success', '¡Cuenta eliminada!', 'Cuenta eliminada correctamente', () => {
-            logout();
-            navigate("/login");
-            closeModal();
-          });
+          closeModal();
+          logout();
+          navigate("/login");
         } catch (err) {
           console.error("Error eliminando usuario", err);
+          setModal(prev => ({ ...prev, isProcessing: false }));
           showModal('error', 'Error', err.message);
+        } finally {
+          setIsDeleting(false);
         }
       },
       true
@@ -330,6 +339,7 @@ export default function UserSettingsPage() {
         showCancel={modal.showCancel}
         confirmText={modal.type === 'error' ? 'Eliminar cuenta' : modal.type === 'confirm' ? 'Confirmar' : 'Aceptar'}
         cancelText="Cancelar"
+        isProcessing={modal.isProcessing}
       />
     </div>
   );
