@@ -22,7 +22,7 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
   
   // Usar hooks personalizados
   const { modal, showModal, closeModal } = useModal();
-  const { isInSEB, closeSEB } = useSEB();
+  const { isInSEB, closeSEB, tryCloseSEB } = useSEB();
 
   // 🔒 Validación inicial de seguridad para estudiantes
   useEffect(() => {
@@ -49,9 +49,15 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
   }, [windowId, propExamId]);
 
   // Handle back navigation for errors only
-  const handleErrorBack = () => {
+  const handleErrorBack = async () => {
     if (isInSEB) {
-      closeSEB();
+      // Intentar cerrar SEB automáticamente
+      const closed = await tryCloseSEB();
+      
+      // Si el usuario canceló (puso "NO"), redirigir a login
+      if (!closed) {
+        navigate('/login');
+      }
     } else {
       if (onBack) {
         onBack();
@@ -68,7 +74,7 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
       if (onBack) {
         onBack();
       } else {
-        navigate('/student-exam');
+        navigate(isInSEB ? '/login' : '/student-exam');
       }
       return;
     }
@@ -124,15 +130,21 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
 
           if (response.ok) {
             const successMessage = isInSEB 
-              ? 'Has terminado el examen exitosamente. SEB se cerrará automáticamente.'
+              ? 'Has terminado el examen exitosamente. Intentando cerrar SEB...'
               : 'Has terminado el examen exitosamente.';
 
-            showModal('success', '¡Intento Finalizado!', successMessage, () => {
+            showModal('success', '¡Intento Finalizado!', successMessage, async () => {
               closeModal();
               
               if (isInSEB) {
-                // Cerrar SEB directamente sin setTimeout adicionales
-                closeSEB();
+                // Intentar cerrar SEB automáticamente
+                const closed = await tryCloseSEB();
+                
+                // Si el usuario canceló el cierre (puso "NO"), redirigir a login
+                if (!closed) {
+                  navigate('/login');
+                }
+                // Si puso "SÍ", SEB se cerrará y no llegará aquí
               } else {
                 // Navegación normal si no está en SEB
                 if (onBack) {
@@ -146,11 +158,11 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
             const errorData = await response.json();
             const errorMessage = errorData.error || 'Error al finalizar intento';
             
-            // Si el error es que el intento ya fue finalizado y estamos en SEB, mostrar botón para salir
+            // Si el error es que el intento ya fue finalizado y estamos en SEB, redirigir a login
             if (errorMessage.includes('intento ya fue finalizado') && isInSEB) {
               showModal('error', 'Error', errorMessage, () => {
                 closeModal();
-                closeSEB();
+                navigate('/login');
               }, false, 'Salir del examen');
             } else {
               showModal('error', 'Error', errorMessage);
@@ -173,11 +185,17 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
       'warning',
       'Salir del Examen',
       '¿Estás seguro de que quieres salir del examen? Se perderá todo tu progreso y no podrás volver a intentarlo.',
-      () => {
+      async () => {
         closeModal();
         
         if (isInSEB) {
-          closeSEB();
+          // Intentar cerrar SEB automáticamente
+          const closed = await tryCloseSEB();
+          
+          // Si el usuario canceló (puso "NO"), redirigir a login
+          if (!closed) {
+            navigate('/login');
+          }
         } else {
           if (onBack) {
             onBack();
