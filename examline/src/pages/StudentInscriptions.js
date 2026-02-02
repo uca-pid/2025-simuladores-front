@@ -18,6 +18,9 @@ export default function StudentInscriptionsPage({
   const [availableWindows, setAvailableWindows] = useState([]);
   const [myInscriptions, setMyInscriptions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isFiltering, setIsFiltering] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
+  const [isOnFilterCooldown, setIsOnFilterCooldown] = useState(false);
   const [activeTab, setActiveTab] = useState(() => {
     // Recuperar la pestaña del localStorage o usar 'available' por defecto
     return localStorage.getItem('studentInscriptions_activeTab') || 'available';
@@ -211,13 +214,32 @@ const openExam = async (examId, windowId, token, window) => {
     setFilters(prev => ({ ...prev, [name]: value }));
   };
 
-  const applyFilters = () => {
-    loadAvailableWindows(filters);
+  const applyFilters = async () => {
+    if (isFiltering || isOnFilterCooldown) return;
+    
+    setIsFiltering(true);
+    try {
+      await loadAvailableWindows(filters);
+    } finally {
+      setIsFiltering(false);
+      setIsOnFilterCooldown(true);
+      setTimeout(() => setIsOnFilterCooldown(false), 800);
+    }
   };
 
-  const clearFilters = () => {
+  const clearFilters = async () => {
+    if (isClearing || isOnFilterCooldown) return;
+    
+    setIsClearing(true);
     setFilters({ materia: '', profesor: '', fecha: '' });
-    setTimeout(() => loadAvailableWindows({}), 100);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      await loadAvailableWindows({});
+    } finally {
+      setIsClearing(false);
+      setIsOnFilterCooldown(true);
+      setTimeout(() => setIsOnFilterCooldown(false), 800);
+    }
   };
 
   const handleInscription = (window) => {
@@ -449,16 +471,46 @@ const openExam = async (examId, windowId, token, window) => {
                   <button 
                     className="modern-btn modern-btn-primary flex-fill"
                     onClick={applyFilters}
+                    disabled={isFiltering || isClearing || isOnFilterCooldown}
                   >
-                    <i className="fas fa-search me-2"></i>
-                    <span className="btn-text">Filtrar</span>
+                    {isFiltering ? (
+                      <>
+                        <div className="modern-spinner" style={{ width: "12px", height: "12px", marginRight: "0.5rem" }}></div>
+                        <span className="btn-text">Filtrando...</span>
+                      </>
+                    ) : isOnFilterCooldown ? (
+                      <>
+                        <i className="fas fa-clock me-2"></i>
+                        <span className="btn-text">Espera...</span>
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-search me-2"></i>
+                        <span className="btn-text">Filtrar</span>
+                      </>
+                    )}
                   </button>
                   <button 
                     className="modern-btn modern-btn-secondary flex-fill"
                     onClick={clearFilters}
+                    disabled={isFiltering || isClearing || isOnFilterCooldown}
                   >
-                    <i className="fas fa-times me-2"></i>
-                    <span className="btn-text">Limpiar</span>
+                    {isClearing ? (
+                      <>
+                        <div className="modern-spinner" style={{ width: "12px", height: "12px", marginRight: "0.5rem" }}></div>
+                        <span className="btn-text">Limpiando...</span>
+                      </>
+                    ) : isOnFilterCooldown ? (
+                      <>
+                        <i className="fas fa-clock me-2"></i>
+                        <span className="btn-text">Espera...</span>
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-times me-2"></i>
+                        <span className="btn-text">Limpiar</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
