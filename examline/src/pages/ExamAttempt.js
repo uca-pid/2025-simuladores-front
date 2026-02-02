@@ -21,7 +21,7 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
   const [respuestas, setRespuestas] = useState({}); // { preguntaIndex: opcionIndex }
   
   // Usar hooks personalizados
-  const { modal, showModal, closeModal } = useModal();
+  const { modal, showModal, closeModal, setModalProcessing } = useModal();
   const { isInSEB, closeSEB, tryCloseSEB } = useSEB();
 
   // 🔒 Validación inicial de seguridad para estudiantes
@@ -110,8 +110,12 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
       'Terminar Intento',
       '¿Estás seguro de que quieres terminar el intento? Una vez finalizado no podrás volver a entrar al examen.',
       async () => {
+        // Prevenir múltiples ejecuciones
+        if (submitting) return;
+        
         try {
           setSubmitting(true);
+          setModalProcessing(true); // Deshabilitar botón del modal
           const token = localStorage.getItem('token');
 
           // Preparar el body según el tipo de examen
@@ -173,6 +177,7 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
           showModal('error', 'Error', 'Error de conexión al finalizar intento');
         } finally {
           setSubmitting(false);
+          setModalProcessing(false);
         }
       },
       true
