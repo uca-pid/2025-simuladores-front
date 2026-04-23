@@ -27,7 +27,35 @@ export default function ExamWindowsPage() {
     usaSEB: false,
     kioskMode: 0,
     sinTiempo: false,
-    requierePresente: false
+    requierePresente: false,
+    // SEB Configuración
+    sebKioskMode: 0,
+    sebShowTaskBar: false,
+    sebBrowserViewMode: 0,
+    sebAllowAddressBar: false,
+    sebEnableBrowserWindowToolbar: false,
+    sebAllowQuit: true,
+    sebAllowReload: true,
+    sebAllowBrowsingBackForward: false,
+    sebEnableEsc: false,
+    sebEnableAltTab: false,
+    sebEnableAltEsc: false,
+    sebEnableAltF4: false,
+    sebEnableStartMenu: false,
+    sebEnableRightMouse: true,
+    sebEnablePrintScreen: true,
+    sebEnableFunctionKeys: true,
+    sebEnableCtrlEsc: false,
+    sebClipboardPolicy: 2,
+    sebCreateNewDesktop: true,
+    sebLockOnMessageSocketClose: true,
+    sebAllowSwitchToApplications: false,
+    sebAllowDeveloperConsole: false,
+    sebAllowDownloads: true,
+    sebAllowUploads: false,
+    sebQuitUrl: 'https://ferocarcineto.com.ar/',
+    sebQuitPassword: '12345',
+    sebSettingsPassword: '12345'
   });
   const [validationErrors, setValidationErrors] = useState({});
   const [isSavingWindow, setIsSavingWindow] = useState(false);
@@ -337,7 +365,35 @@ export default function ExamWindowsPage() {
       usaSEB: false,
       kioskMode: 0,
       sinTiempo: false,
-      requierePresente: false
+      requierePresente: false,
+      // SEB Configuración
+      sebKioskMode: 0,
+      sebShowTaskBar: false,
+      sebBrowserViewMode: 0,
+      sebAllowAddressBar: false,
+      sebEnableBrowserWindowToolbar: false,
+      sebAllowQuit: true,
+      sebAllowReload: true,
+      sebAllowBrowsingBackForward: false,
+      sebEnableEsc: false,
+      sebEnableAltTab: false,
+      sebEnableAltEsc: false,
+      sebEnableAltF4: false,
+      sebEnableStartMenu: false,
+      sebEnableRightMouse: true,
+      sebEnablePrintScreen: true,
+      sebEnableFunctionKeys: true,
+      sebEnableCtrlEsc: false,
+      sebClipboardPolicy: 2,
+      sebCreateNewDesktop: true,
+      sebLockOnMessageSocketClose: true,
+      sebAllowSwitchToApplications: false,
+      sebAllowDeveloperConsole: false,
+      sebAllowDownloads: true,
+      sebAllowUploads: false,
+      sebQuitUrl: 'https://ferocarcineto.com.ar/',
+      sebQuitPassword: '12345',
+      sebSettingsPassword: '12345'
     });
     setEditingWindow(null);
     setValidationErrors({});
@@ -384,7 +440,35 @@ export default function ExamWindowsPage() {
       usaSEB: window.usaSEB || false,
       kioskMode: window.kioskMode || 0,
       sinTiempo: isInfinite,
-      requierePresente: isInfinite ? false : (window.requierePresente || false)
+      requierePresente: isInfinite ? false : (window.requierePresente || false),
+      // SEB Configuración
+      sebKioskMode: window.sebKioskMode ?? 0,
+      sebShowTaskBar: window.sebShowTaskBar ?? false,
+      sebBrowserViewMode: window.sebBrowserViewMode ?? 0,
+      sebAllowAddressBar: window.sebAllowAddressBar ?? false,
+      sebEnableBrowserWindowToolbar: window.sebEnableBrowserWindowToolbar ?? false,
+      sebAllowQuit: window.sebAllowQuit ?? true,
+      sebAllowReload: window.sebAllowReload ?? true,
+      sebAllowBrowsingBackForward: window.sebAllowBrowsingBackForward ?? false,
+      sebEnableEsc: window.sebEnableEsc ?? false,
+      sebEnableAltTab: window.sebEnableAltTab ?? false,
+      sebEnableAltEsc: window.sebEnableAltEsc ?? false,
+      sebEnableAltF4: window.sebEnableAltF4 ?? false,
+      sebEnableStartMenu: window.sebEnableStartMenu ?? false,
+      sebEnableRightMouse: window.sebEnableRightMouse ?? true,
+      sebEnablePrintScreen: window.sebEnablePrintScreen ?? true,
+      sebEnableFunctionKeys: window.sebEnableFunctionKeys ?? true,
+      sebEnableCtrlEsc: window.sebEnableCtrlEsc ?? false,
+      sebClipboardPolicy: window.sebClipboardPolicy ?? 2,
+      sebCreateNewDesktop: window.sebCreateNewDesktop ?? true,
+      sebLockOnMessageSocketClose: window.sebLockOnMessageSocketClose ?? true,
+      sebAllowSwitchToApplications: window.sebAllowSwitchToApplications ?? false,
+      sebAllowDeveloperConsole: window.sebAllowDeveloperConsole ?? false,
+      sebAllowDownloads: window.sebAllowDownloads ?? true,
+      sebAllowUploads: window.sebAllowUploads ?? false,
+      sebQuitUrl: window.sebQuitUrl ?? 'https://ferocarcineto.com.ar/',
+      sebQuitPassword: window.sebQuitPassword ?? '12345',
+      sebSettingsPassword: window.sebSettingsPassword ?? '12345'
     });
     setEditingWindow(window);
     setShowCreateModal(true);
@@ -1324,6 +1408,213 @@ export default function ExamWindowsPage() {
                               </div>
                               <div style={{ fontSize: '2rem', opacity: 0.3 }}>
                                 <i className={`fas ${formData.kioskMode ? 'fa-desktop' : 'fa-laptop'}`}></i>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Configuración avanzada de SEB */}
+                    {formData.usaSEB && (
+                      <div className="mb-4">
+                        <div className="card" style={{ 
+                          backgroundColor: '#f8f9fa', 
+                          borderColor: '#e9ecef',
+                          borderWidth: '2px'
+                        }}>
+                          <div className="card-body p-3">
+                            <div className="d-flex align-items-center justify-content-between mb-3">
+                              <div>
+                                <label className="form-check-label mb-0" style={{ fontWeight: '600', fontSize: '1rem' }}>
+                                  <i className="fas fa-cogs text-primary me-2"></i>
+                                  Configuración Avanzada de SEB
+                                </label>
+                                <div style={{ fontSize: '0.85rem', color: '#6c757d', marginTop: '0.25rem' }}>
+                                  Opciones adicionales de seguridad y comportamiento
+                                </div>
+                              </div>
+                              <div style={{ fontSize: '1.5rem', opacity: 0.3 }}>
+                                <i className="fas fa-sliders-h"></i>
+                              </div>
+                            </div>
+
+                            {/* Navegación */}
+                            <div className="mb-3">
+                              <h6 style={{ color: 'var(--text-color-2)', marginBottom: '0.75rem', fontWeight: '600', fontSize: '0.9rem' }}>
+                                <i className="fas fa-share-alt me-2"></i>Navegación
+                              </h6>
+                              <div className="row">
+                                <div className="col-md-6 mb-2">
+                                  <div className="form-check">
+                                    <input className="form-check-input" type="checkbox" id="sebAllowQuit" name="sebAllowQuit" checked={formData.sebAllowQuit} onChange={handleInputChange} />
+                                    <label className="form-check-label" htmlFor="sebAllowQuit">Permitir salir de SEB</label>
+                                  </div>
+                                </div>
+                                <div className="col-md-6 mb-2">
+                                  <div className="form-check">
+                                    <input className="form-check-input" type="checkbox" id="sebAllowReload" name="sebAllowReload" checked={formData.sebAllowReload} onChange={handleInputChange} />
+                                    <label className="form-check-label" htmlFor="sebAllowReload">Permitir recargar página</label>
+                                  </div>
+                                </div>
+                                <div className="col-md-6 mb-2">
+                                  <div className="form-check">
+                                    <input className="form-check-input" type="checkbox" id="sebAllowBrowsingBackForward" name="sebAllowBrowsingBackForward" checked={formData.sebAllowBrowsingBackForward} onChange={handleInputChange} />
+                                    <label className="form-check-label" htmlFor="sebAllowBrowsingBackForward">Permitir atrás/adelante</label>
+                                  </div>
+                                </div>
+                                <div className="col-md-6 mb-2">
+                                  <div className="form-check">
+                                    <input className="form-check-input" type="checkbox" id="sebAllowAddressBar" name="sebAllowAddressBar" checked={formData.sebAllowAddressBar} onChange={handleInputChange} />
+                                    <label className="form-check-label" htmlFor="sebAllowAddressBar">Mostrar barra de direcciones</label>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Teclado */}
+                            <div className="mb-3">
+                              <h6 style={{ color: 'var(--text-color-2)', marginBottom: '0.75rem', fontWeight: '600', fontSize: '0.9rem' }}>
+                                <i className="fas fa-keyboard me-2"></i>Teclado
+                              </h6>
+                              <div className="row">
+                                <div className="col-md-6 mb-2">
+                                  <div className="form-check">
+                                    <input className="form-check-input" type="checkbox" id="sebEnableEsc" name="sebEnableEsc" checked={formData.sebEnableEsc} onChange={handleInputChange} />
+                                    <label className="form-check-label" htmlFor="sebEnableEsc">Habilitar Esc</label>
+                                  </div>
+                                </div>
+                                <div className="col-md-6 mb-2">
+                                  <div className="form-check">
+                                    <input className="form-check-input" type="checkbox" id="sebEnableAltTab" name="sebEnableAltTab" checked={formData.sebEnableAltTab} onChange={handleInputChange} />
+                                    <label className="form-check-label" htmlFor="sebEnableAltTab">Habilitar Alt+Tab</label>
+                                  </div>
+                                </div>
+                                <div className="col-md-6 mb-2">
+                                  <div className="form-check">
+                                    <input className="form-check-input" type="checkbox" id="sebEnableAltEsc" name="sebEnableAltEsc" checked={formData.sebEnableAltEsc} onChange={handleInputChange} />
+                                    <label className="form-check-label" htmlFor="sebEnableAltEsc">Habilitar Alt+Esc</label>
+                                  </div>
+                                </div>
+                                <div className="col-md-6 mb-2">
+                                  <div className="form-check">
+                                    <input className="form-check-input" type="checkbox" id="sebEnableAltF4" name="sebEnableAltF4" checked={formData.sebEnableAltF4} onChange={handleInputChange} />
+                                    <label className="form-check-label" htmlFor="sebEnableAltF4">Habilitar Alt+F4</label>
+                                  </div>
+                                </div>
+                                <div className="col-md-6 mb-2">
+                                  <div className="form-check">
+                                    <input className="form-check-input" type="checkbox" id="sebEnableStartMenu" name="sebEnableStartMenu" checked={formData.sebEnableStartMenu} onChange={handleInputChange} />
+                                    <label className="form-check-label" htmlFor="sebEnableStartMenu">Habilitar menú inicio</label>
+                                  </div>
+                                </div>
+                                <div className="col-md-6 mb-2">
+                                  <div className="form-check">
+                                    <input className="form-check-input" type="checkbox" id="sebEnableCtrlEsc" name="sebEnableCtrlEsc" checked={formData.sebEnableCtrlEsc} onChange={handleInputChange} />
+                                    <label className="form-check-label" htmlFor="sebEnableCtrlEsc">Habilitar Ctrl+Esc</label>
+                                  </div>
+                                </div>
+                                <div className="col-md-6 mb-2">
+                                  <div className="form-check">
+                                    <input className="form-check-input" type="checkbox" id="sebEnableRightMouse" name="sebEnableRightMouse" checked={formData.sebEnableRightMouse} onChange={handleInputChange} />
+                                    <label className="form-check-label" htmlFor="sebEnableRightMouse">Habilitar clic derecho</label>
+                                  </div>
+                                </div>
+                                <div className="col-md-6 mb-2">
+                                  <div className="form-check">
+                                    <input className="form-check-input" type="checkbox" id="sebEnablePrintScreen" name="sebEnablePrintScreen" checked={formData.sebEnablePrintScreen} onChange={handleInputChange} />
+                                    <label className="form-check-label" htmlFor="sebEnablePrintScreen">Habilitar Print Screen</label>
+                                  </div>
+                                </div>
+                                <div className="col-md-6 mb-2">
+                                  <div className="form-check">
+                                    <input className="form-check-input" type="checkbox" id="sebEnableFunctionKeys" name="sebEnableFunctionKeys" checked={formData.sebEnableFunctionKeys} onChange={handleInputChange} />
+                                    <label className="form-check-label" htmlFor="sebEnableFunctionKeys">Habilitar teclas F1-F12</label>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Seguridad */}
+                            <div className="mb-3">
+                              <h6 style={{ color: 'var(--text-color-2)', marginBottom: '0.75rem', fontWeight: '600', fontSize: '0.9rem' }}>
+                                <i className="fas fa-shield-alt me-2"></i>Seguridad
+                              </h6>
+                              <div className="row">
+                                <div className="col-md-6 mb-2">
+                                  <label className="form-label" style={{ fontSize: '0.85rem' }}>Política de portapapeles</label>
+                                  <select className="form-select form-select-sm" name="sebClipboardPolicy" value={formData.sebClipboardPolicy} onChange={handleInputChange}>
+                                    <option value={0}>Permitir todo</option>
+                                    <option value={1}>Bloquear entrada</option>
+                                    <option value={2}>Bloquear todo</option>
+                                  </select>
+                                </div>
+                                <div className="col-md-6 mb-2">
+                                  <div className="form-check mt-4">
+                                    <input className="form-check-input" type="checkbox" id="sebCreateNewDesktop" name="sebCreateNewDesktop" checked={formData.sebCreateNewDesktop} onChange={handleInputChange} />
+                                    <label className="form-check-label" htmlFor="sebCreateNewDesktop">Crear nuevo escritorio</label>
+                                  </div>
+                                </div>
+                                <div className="col-md-6 mb-2">
+                                  <div className="form-check">
+                                    <input className="form-check-input" type="checkbox" id="sebLockOnMessageSocketClose" name="sebLockOnMessageSocketClose" checked={formData.sebLockOnMessageSocketClose} onChange={handleInputChange} />
+                                    <label className="form-check-label" htmlFor="sebLockOnMessageSocketClose">Bloquear al cerrar conexión</label>
+                                  </div>
+                                </div>
+                                <div className="col-md-6 mb-2">
+                                  <div className="form-check">
+                                    <input className="form-check-input" type="checkbox" id="sebAllowSwitchToApplications" name="sebAllowSwitchToApplications" checked={formData.sebAllowSwitchToApplications} onChange={handleInputChange} />
+                                    <label className="form-check-label" htmlFor="sebAllowSwitchToApplications">Permitir cambiar aplicaciones</label>
+                                  </div>
+                                </div>
+                                <div className="col-md-6 mb-2">
+                                  <div className="form-check">
+                                    <input className="form-check-input" type="checkbox" id="sebAllowDeveloperConsole" name="sebAllowDeveloperConsole" checked={formData.sebAllowDeveloperConsole} onChange={handleInputChange} />
+                                    <label className="form-check-label" htmlFor="sebAllowDeveloperConsole">Permitir consola de desarrollo</label>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Archivos */}
+                            <div className="mb-3">
+                              <h6 style={{ color: 'var(--text-color-2)', marginBottom: '0.75rem', fontWeight: '600', fontSize: '0.9rem' }}>
+                                <i className="fas fa-file-alt me-2"></i>Archivos
+                              </h6>
+                              <div className="row">
+                                <div className="col-md-6 mb-2">
+                                  <div className="form-check">
+                                    <input className="form-check-input" type="checkbox" id="sebAllowDownloads" name="sebAllowDownloads" checked={formData.sebAllowDownloads} onChange={handleInputChange} />
+                                    <label className="form-check-label" htmlFor="sebAllowDownloads">Permitir descargas</label>
+                                  </div>
+                                </div>
+                                <div className="col-md-6 mb-2">
+                                  <div className="form-check">
+                                    <input className="form-check-input" type="checkbox" id="sebAllowUploads" name="sebAllowUploads" checked={formData.sebAllowUploads} onChange={handleInputChange} />
+                                    <label className="form-check-label" htmlFor="sebAllowUploads">Permitir subir archivos</label>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* URLs y contraseñas */}
+                            <div className="mb-2">
+                              <h6 style={{ color: 'var(--text-color-2)', marginBottom: '0.75rem', fontWeight: '600', fontSize: '0.9rem' }}>
+                                <i className="fas fa-link me-2"></i>URLs y Contraseñas
+                              </h6>
+                              <div className="row">
+                                <div className="col-12 mb-2">
+                                  <label className="form-label" style={{ fontSize: '0.85rem' }}>URL de salida (al salir de SEB)</label>
+                                  <input type="text" className="form-control form-control-sm" name="sebQuitUrl" value={formData.sebQuitUrl} onChange={handleInputChange} placeholder="https://..." />
+                                </div>
+                                <div className="col-md-6 mb-2">
+                                  <label className="form-label" style={{ fontSize: '0.85rem' }}>Contraseña de salida</label>
+                                  <input type="text" className="form-control form-control-sm" name="sebQuitPassword" value={formData.sebQuitPassword} onChange={handleInputChange} />
+                                </div>
+                                <div className="col-md-6 mb-2">
+                                  <label className="form-label" style={{ fontSize: '0.85rem' }}>Contraseña de configuración</label>
+                                  <input type="text" className="form-control form-control-sm" name="sebSettingsPassword" value={formData.sebSettingsPassword} onChange={handleInputChange} />
+                                </div>
                               </div>
                             </div>
                           </div>
