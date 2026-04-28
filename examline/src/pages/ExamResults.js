@@ -1,17 +1,23 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import '../modern-examline.css';
 import BackToMainButton from "../components/BackToMainButton";
 import { useAuth } from "../contexts/AuthContext";
+import { useSEB } from "../hooks/useSEB";
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
 
 const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
   const { attemptId: routeAttemptId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const attemptId = propAttemptId || routeAttemptId;
   const { token } = useAuth();
+  const { isInSEB, tryCloseSEB } = useSEB();
+  
+  // Detectar si viene de SEB (por parámetro o por detección directa)
+  const fromSEB = searchParams.get('fromSEB') === 'true' || isInSEB;
 
   const [attempt, setAttempt] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -206,6 +212,20 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
             </div>
             <div className="header-actions-section">
               {!propAttemptId && <BackToMainButton />}
+              {fromSEB && (
+                <button 
+                  className="btn btn-danger btn-lg ms-3"
+                  onClick={async () => {
+                    const closed = await tryCloseSEB();
+                    if (!closed) {
+                      navigate('/login');
+                    }
+                  }}
+                >
+                  <i className="fas fa-sign-out-alt me-2"></i>
+                  Cerrar Examen (SEB)
+                </button>
+              )}
             </div>
           </div>
         </div>

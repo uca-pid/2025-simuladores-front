@@ -136,15 +136,20 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
             // Redirigir directamente sin modal de éxito
             closeModal();
             
+            console.log('Intento finalizado exitosamente, isInSEB:', isInSEB);
+            
             if (isInSEB) {
               // Intentar cerrar SEB automáticamente
+              console.log('Intentando cerrar SEB...');
               const closed = await tryCloseSEB();
+              console.log('Resultado de tryCloseSEB:', closed);
               
-              // Si el usuario canceló el cierre (puso "NO"), redirigir a login
+              // Si el usuario canceló el cierre (pusO "NO"), mostrar resultados
               if (!closed) {
-                navigate('/login');
+                console.log('Usuario canceló cierre de SEB, mostrando resultados...');
+                navigate(`/exam-results/${attempt.id}?fromSEB=true`);
               }
-              // Si puso "SÍ", SEB se cerrará y no llegará aquí
+              // Si aceptó el cierre, SEB se cerrará y no llegará aquí
             } else {
               // Navegación normal si no está en SEB
               if (onBack) {

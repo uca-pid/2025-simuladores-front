@@ -58,23 +58,24 @@ export const useSEB = () => {
    */
   const tryCloseSEB = useCallback(async () => {
     try {
-      // Crear una promesa que se resuelve después de un timeout
-      // Si la página sigue activa después del timeout, significa que el usuario canceló
-      const closePromise = new Promise((resolve) => {
-        // Intentar cerrar SEB
-        if (window.SafeExamBrowser?.security?.closeApplication) {
-          window.SafeExamBrowser.security.closeApplication();
-        } else {
-          window.location.href = 'https://ferrocarriloeste.com.ar/';
-        }
-        
-        // Si después de 1 segundo la página sigue activa, el usuario canceló
-        setTimeout(() => {
-          resolve(false); // El usuario canceló o el cierre falló
-        }, 1000);
-      });
+      console.log('Intentando cerrar SEB...');
       
-      return await closePromise;
+      // Verificar si hay API de SEB disponible
+      const sebApi = window.SafeExamBrowser?.security?.closeApplication;
+      
+      if (sebApi) {
+        console.log('API de SEB encontrada, intentando cerrar...');
+        sebApi();
+        // Esperar a ver si se cierra
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        console.log('SEB no se cerró (timeout), el usuario probablemente canceló');
+        return false;
+      } else {
+        console.log('No hay API de SEB, intentando cerrar por URL...');
+        // Si no hay API, intentar cerrar por URL de quit
+        window.location.href = 'https://ferocarcineto.com.ar/';
+        return true;
+      }
     } catch (error) {
       console.error('Error al cerrar SEB:', error);
       return false;
