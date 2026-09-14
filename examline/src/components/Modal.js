@@ -51,13 +51,10 @@ const Modal = ({
   };
 
   const handleBackdropClick = (e) => {
-    // No permitir cerrar el modal durante procesamiento
-    if (isProcessing) return;
-    
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
+  e.stopPropagation();
+  return;
   };
+
 
   return (
     <>
@@ -115,7 +112,7 @@ const Modal = ({
                       <i className={`fas me-2 ${
                         type === 'error' ? 'fa-trash' :
                         type === 'success' ? 'fa-check' :
-                        type === 'warning' ? 'fa-exclamation' :
+                        type === 'warning' ? 'fa-check' :
                         type === 'confirm' ? 'fa-check' :
                         'fa-info'
                       }`}></i>

@@ -60,9 +60,30 @@ const ProgrammingExamView = () => {
   // 🔄 Estado para alternar entre vista de entrada/salida en móviles
   const [mobileTerminalView, setMobileTerminalView] = useState('output'); // 'input' | 'output'
 
-  // Obtener windowId de la URL
+  // Obtener windowId de la URL o del sessionStorage
   const searchParams = new URLSearchParams(location.search);
-  const windowId = searchParams.get('windowId');
+  const windowIdFromUrl = searchParams.get('windowId');
+  const examKey = `exam_${examId}_windowId`;
+  
+  // Si hay windowId en la URL, guardarlo en sessionStorage
+  if (windowIdFromUrl) {
+    sessionStorage.setItem(examKey, windowIdFromUrl);
+  }
+  
+  // Usar windowId de la URL o recuperarlo de sessionStorage
+  const windowId = windowIdFromUrl || sessionStorage.getItem(examKey);
+
+  // 🔒 Función para obtener el nombre del archivo principal según el lenguaje
+  const getMainFileName = useCallback(() => {
+    if (!exam) return null;
+    return exam.lenguajeProgramacion === 'python' ? 'main.py' : 'main.js';
+  }, [exam]);
+
+  // 🔒 Verificar si un archivo es el archivo principal
+  const isMainFile = useCallback((filename) => {
+    const mainFileName = getMainFileName();
+    return mainFileName && filename === mainFileName;
+  }, [getMainFileName]);
 
   // Configuración del editor Monaco optimizada para reducir ResizeObserver errors
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
@@ -83,6 +104,34 @@ const ProgrammingExamView = () => {
     handleResize(); // Ejecutar al montar
     
     return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+    // 🔒 Bloquear retroceso del navegador y advertir sobre salir del examen
+  useEffect(() => {
+    // Función para mostrar modal antes de ir atrás
+    const handlePopState = (e) => {
+      e.preventDefault();
+
+      // Empujar la misma ruta para que no navegue
+      window.history.pushState(null, '', window.location.pathname);
+    };
+
+    // Bloquear retroceso con pushState
+    window.history.pushState(null, '', window.location.pathname);
+    window.addEventListener('popstate', handlePopState);
+
+    // Bloquear cierre de pestaña
+    const handleBeforeUnload = (e) => {
+      e.preventDefault();
+      e.returnValue = '⚠️ Si sales ahora, perderás todo tu progreso en el examen.';
+      return e.returnValue;
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
   }, []);
   
   const editorOptions = {
@@ -132,6 +181,22 @@ const ProgrammingExamView = () => {
     try {
       const token = localStorage.getItem('token');
       
+      // 🔒 Validación de seguridad - SIEMPRE bloquear profesores
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          
+          // SIEMPRE bloquear a profesores - no pueden tomar exámenes
+          if (payload.rol === 'professor' || payload.rol === 'system') {
+            setError('Acceso no autorizado: Los profesores no pueden tomar exámenes');
+            setLoading(false);
+            return;
+          }
+        } catch (err) {
+          console.error('Error validando token:', err);
+        }
+      }
+      
       // Verificar si ya existe un intento
       const checkResponse = await fetch(`${API_BASE_URL}/exam-attempts/check/${examId}?windowId=${windowId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -149,6 +214,10 @@ const ProgrammingExamView = () => {
         
         // Si el intento ya está finalizado, redirigir a resultados
         if (existingAttempt.estado === 'finalizado') {
+          // Limpiar windowId del sessionStorage
+          const examKey = `exam_${examId}_windowId`;
+          sessionStorage.removeItem(examKey);
+          
           navigate(`/exam-attempts/${existingAttempt.id}/results`);
           return;
         }
@@ -204,6 +273,8 @@ const ProgrammingExamView = () => {
         
         // Si no hay archivos, crear uno por defecto con el código inicial del examen
         if (sortedFiles.length === 0) {
+          // 🔒 IMPORTANTE: El archivo principal siempre es main.py (Python) o main.js (JavaScript)
+          // Este archivo no se puede eliminar y es el que se evalúa con los test cases
           const defaultFileName = `main.${exam?.lenguajeProgramacion === 'python' ? 'py' : 'js'}`;
           const defaultContent = exam?.codigoInicial || '';
           
@@ -284,12 +355,21 @@ const ProgrammingExamView = () => {
   const finishExam = async () => {
     if (!attempt) return;
     
+    // 🔒 Validación: Verificar que existe el archivo principal
+    const mainFileName = getMainFileName();
+    const mainFileExists = files.some(f => f.filename === mainFileName) || fileCache[mainFileName];
+    
+    if (!mainFileExists) {
+      setError(`Debes crear el archivo principal "${mainFileName}" antes de finalizar el examen`);
+      return;
+    }
+    
     setShowFinishModal(false);
     
     try {
       setLoading(true);
       
-      // � PASO 1: Crear versión de "submission" (snapshot del envío)
+      // 📁 PASO 1: Crear versión de "submission" (snapshot del envío)
       // Recolectar todos los archivos con su contenido actual
       const submissionFiles = [];
       
@@ -334,7 +414,12 @@ const ProgrammingExamView = () => {
         })
       });
       
-      // 🏁 PASO 2: Finalizar el examen
+      // 🏁 PASO 2: Finalizar el examen con el archivo principal
+      // Obtener el contenido del archivo principal
+      const mainFileContent = fileCache[mainFileName] || 
+                             files.find(f => f.filename === mainFileName)?.content || 
+                             '';
+      
       await fetch(`${API_BASE_URL}/exam-attempts/${attempt.id}/finish`, {
         method: 'PUT',
         headers: {
@@ -342,9 +427,13 @@ const ProgrammingExamView = () => {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          codigoProgramacion: code
+          codigoProgramacion: mainFileContent
         })
       });
+
+      // Limpiar windowId del sessionStorage al completar el examen
+      const examKey = `exam_${examId}_windowId`;
+      sessionStorage.removeItem(examKey);
 
       // Manejar cierre según si está en SEB o no
       if (isInSEB) {
@@ -361,6 +450,33 @@ const ProgrammingExamView = () => {
 
   // Efecto para cargar datos iniciales
   useEffect(() => {
+    // 🔒 Validación de seguridad - SIEMPRE bloquear profesores
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        
+        // SIEMPRE bloquear a profesores y system - no pueden tomar exámenes
+        if (payload.rol === 'professor' || payload.rol === 'system') {
+          setError('Acceso no autorizado: Los profesores no pueden tomar exámenes');
+          setLoading(false);
+          return;
+        }
+        
+        // Bloquear a estudiantes sin windowId válido
+        if (payload.rol === 'student' && !windowId) {
+          setError('Acceso no autorizado: Debes acceder desde tus inscripciones');
+          setLoading(false);
+          return;
+        }
+      } catch (err) {
+        console.error('Error validando token:', err);
+        setError('Token inválido');
+        setLoading(false);
+        return;
+      }
+    }
+    
     const loadData = async () => {
       setLoading(true);
       await fetchExam();
@@ -369,7 +485,7 @@ const ProgrammingExamView = () => {
     };
     
     loadData();
-  }, [fetchExam, fetchOrCreateAttempt]);
+  }, [fetchExam, fetchOrCreateAttempt, windowId]);
 
   // Efecto para cargar archivos cuando el examen esté listo
   useEffect(() => {
@@ -536,9 +652,15 @@ const ProgrammingExamView = () => {
   }, [loadFile]);
 
   const requestDeleteFile = useCallback((filename) => {
+    // 🔒 Proteger el archivo principal
+    if (isMainFile(filename)) {
+      setError('No puedes eliminar el archivo principal del examen');
+      return;
+    }
+    
     setFileToDelete(filename);
     setShowDeleteModal(true);
-  }, []);
+  }, [isMainFile]);
 
   const deleteFile = useCallback(async () => {
     if (!fileToDelete) return;
@@ -740,7 +862,12 @@ const ProgrammingExamView = () => {
           <p>{error}</p>
           <button 
             className="btn btn-outline-danger" 
-            onClick={() => navigate('/student-exam')}
+            onClick={() => {
+              // Limpiar windowId del sessionStorage
+              const examKey = `exam_${examId}_windowId`;
+              sessionStorage.removeItem(examKey);
+              navigate('/student-exam');
+            }}
           >
             Volver al inicio
           </button>
@@ -852,6 +979,29 @@ const ProgrammingExamView = () => {
                 <span className="sidebar-text">Programación</span>
               </button>
             </nav>
+            
+            {/* Aviso importante sobre la entrega */}
+            <div style={{
+              padding: '12px',
+              margin: '12px',
+              backgroundColor: '#e3f2fd',
+              border: '1px solid #2196f3',
+              borderLeft: '4px solid #2196f3',
+              borderRadius: '4px',
+              fontSize: '0.85rem'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'start', gap: '8px' }}>
+                <div style={{ flex: 1 }}>
+                  <strong style={{ color: '#1976d2', display: 'block', marginBottom: '6px', fontSize: '0.9rem' }}>
+                    📝 Importante:
+                  </strong>
+                  <div style={{ color: '#0d47a1', lineHeight: '1.4' }}>
+                    Entregar la versión final en el archivo main.py y guardar manualmente antes de finalizar.
+                  </div>
+                </div>
+              </div>
+            </div>
+            
             <div className="sidebar-footer">
               <button
                 className="btn-send-exam"
@@ -1077,6 +1227,7 @@ const ProgrammingExamView = () => {
                         onChange={handleEditorChange}
                         options={{
                           ...editorOptions,
+                          readOnly: saving || fileOperationLoading,
                           quickSuggestions: exam.intellisenseHabilitado,
                           suggestOnTriggerCharacters: exam.intellisenseHabilitado,
                           acceptSuggestionOnEnter: exam.intellisenseHabilitado ? 'on' : 'off',
@@ -1097,6 +1248,7 @@ const ProgrammingExamView = () => {
                         placeholder={`Ejemplo:\n2\n3`}
                         value={userInput}
                         onChange={(e) => setUserInput(e.target.value)}
+                        disabled={saving || isCompiling}
                         rows="3"
                       />
                       <small className="input-hint">
@@ -1197,6 +1349,7 @@ const ProgrammingExamView = () => {
                               placeholder={`Ingresa los datos aquí...\n\nEjemplo:\n2\n3`}
                               value={userInput}
                               onChange={(e) => setUserInput(e.target.value)}
+                              disabled={saving || isCompiling}
                             />
                             <div className="mobile-input-hint">
                               <i className="fas fa-info-circle me-1"></i>
@@ -2801,12 +2954,18 @@ const ProgrammingExamView = () => {
                   <div className="files-grid">
                     {files.map((file) => {
                       const isHidden = hiddenFiles.has(file.filename);
+                      const isProtected = isMainFile(file.filename);
                       return (
                         <div key={file.filename} className={`file-item ${isHidden ? 'file-hidden' : ''}`}>
                           <div className="file-info">
                             <div className="file-name">
                               <i className="fas fa-file-code me-2"></i>
                               {file.filename}
+                              {isProtected && (
+                                <span className="badge bg-primary ms-2" style={{fontSize: '0.7rem'}} title="Archivo principal - No se puede eliminar">
+                                  <i className="fas fa-lock"></i> Principal
+                                </span>
+                              )}
                               {isHidden && (
                                 <span className="badge bg-secondary ms-2" style={{fontSize: '0.7rem'}}>
                                   Oculto
@@ -2834,7 +2993,9 @@ const ProgrammingExamView = () => {
                             <button
                               className="btn btn-sm btn-outline-danger"
                               onClick={() => requestDeleteFile(file.filename)}
-                              title="Eliminar archivo permanentemente"
+                              disabled={isProtected}
+                              title={isProtected ? "No puedes eliminar el archivo principal" : "Eliminar archivo permanentemente"}
+                              style={isProtected ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
                             >
                               <i className="fas fa-trash"></i>
                             </button>
@@ -3173,8 +3334,10 @@ const ProgrammingExamView = () => {
       <Modal
         show={showDeleteModal}
         onClose={() => {
-          setShowDeleteModal(false);
-          setFileToDelete('');
+          if (!fileOperationLoading) {
+            setShowDeleteModal(false);
+            setFileToDelete('');
+          }
         }}
         onConfirm={deleteFile}
         title="Eliminar Archivo"
@@ -3183,6 +3346,7 @@ const ProgrammingExamView = () => {
         confirmText="Eliminar"
         cancelText="Cancelar"
         showCancel={true}
+        isProcessing={fileOperationLoading}
       />
     </div>
   );

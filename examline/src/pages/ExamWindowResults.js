@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import BackToMainButton from '../components/BackToMainButton';
 import Modal from '../components/Modal';
 import MoodleIntegration from '../components/MoodleIntegration';
+import ManualGradingModal from '../components/ManualGradingModal';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../modern-examline.css';
 
@@ -17,9 +18,13 @@ export default function ExamWindowResultsPage() {
   const [inscriptions, setInscriptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showMoodleModal, setShowMoodleModal] = useState(false);
-  const [rankingData, setRankingData] = useState(null);
-  const [rankingLoading, setRankingLoading] = useState(false);
-  const [tipoRanking, setTipoRanking] = useState('puntaje');
+  const [attempts, setAttempts] = useState([]);
+  const [attemptsLoading, setAttemptsLoading] = useState(false);
+  const [attemptsLoaded, setAttemptsLoaded] = useState(false);
+  const [selectedAttemptId, setSelectedAttemptId] = useState(null);
+  const [showGradingModal, setShowGradingModal] = useState(false);
+  const [showOnlyGrades, setShowOnlyGrades] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
   const [modal, setModal] = useState({
     show: false,
     type: 'info',
@@ -76,10 +81,11 @@ export default function ExamWindowResultsPage() {
     loadData();
   }, [user, navigate, windowId, token]);
 
-  const loadRankingData = useCallback(async () => {
+  // Cargar intentos de la ventana
+  const loadAttempts = useCallback(async () => {
     try {
-      setRankingLoading(true);
-      const response = await fetch(`${API_BASE_URL}/ranking/exam-window/${windowId}`, {
+      setAttemptsLoading(true);
+      const response = await fetch(`${API_BASE_URL}/exam-attempts/window/${windowId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -88,43 +94,40 @@ export default function ExamWindowResultsPage() {
 
       if (response.ok) {
         const data = await response.json();
-        setRankingData(data);
-        
-        // Auto-seleccionar el ranking que tenga datos
-        if (data.rankingPorPuntaje?.length === 0 && data.rankingPorTiempo?.length > 0) {
-          setTipoRanking('tiempo');
-        }
+        setAttempts(data);
+      } else {
+        console.error('Error response:', response.status);
+        setAttempts([]);
       }
     } catch (err) {
-      console.error('Error fetching ranking:', err);
+      console.error('Error fetching attempts:', err);
+      setAttempts([]);
     } finally {
-      setRankingLoading(false);
+      setAttemptsLoading(false);
+      setAttemptsLoaded(true);
     }
   }, [windowId, token]);
 
-  // Cargar ranking automáticamente al montar el componente
+  // Cargar intentos automáticamente
   useEffect(() => {
-    if (examWindow && !rankingData && !rankingLoading) {
-      loadRankingData();
+    if (examWindow && !attemptsLoading && !attemptsLoaded) {
+      loadAttempts();
     }
-  }, [examWindow, rankingData, rankingLoading, loadRankingData]);
+  }, [examWindow, attemptsLoading, attemptsLoaded, loadAttempts]);
 
-  const getMedalEmoji = (posicion) => {
-    switch(posicion) {
-      case 1: return '🥇';
-      case 2: return '🥈';
-      case 3: return '🥉';
-      default: return `${posicion}°`;
-    }
+  const handleOpenGrading = (attemptId) => {
+    setSelectedAttemptId(attemptId);
+    setShowGradingModal(true);
   };
 
-  const getPosicionClass = (posicion) => {
-    switch(posicion) {
-      case 1: return 'ranking-first';
-      case 2: return 'ranking-second';
-      case 3: return 'ranking-third';
-      default: return '';
-    }
+  const handleCloseGrading = () => {
+    setShowGradingModal(false);
+    setSelectedAttemptId(null);
+  };
+
+  const handleSaveGrade = async () => {
+    // Recargar datos después de guardar
+    await loadAttempts();
   };
 
   const showModal = (type, title, message, onConfirm = null, showCancel = false) => {
@@ -133,6 +136,48 @@ export default function ExamWindowResultsPage() {
 
   const closeModal = () => {
     setModal(prev => ({ ...prev, show: false }));
+  };
+
+  const handlePublicarNotas = async (publicar) => {
+    if (isPublishing) return; // Evitar spam
+    
+    try {
+      setIsPublishing(true);
+      // Si no hay pendientes o si está ocultando, proceder directamente
+      await confirmarPublicacion(publicar);
+    } catch (error) {
+      console.error('Error:', error);
+      showModal('error', 'Error', 'No se pudo actualizar la publicación de las notas');
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
+  const confirmarPublicacion = async (publicar) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/exam-windows/${windowId}/publicar-notas`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ notasPublicadas: publicar })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setExamWindow({ ...examWindow, notasPublicadas: data.notasPublicadas });
+        showModal(
+          'success',
+          'Éxito',
+          publicar ? 'Las notas han sido publicadas y son visibles para los estudiantes' : 'Las notas han sido ocultadas y no son visibles para los estudiantes'
+        );
+      } else {
+        throw new Error('Error al actualizar publicación de notas');
+      }
+    } catch (error) {
+      throw error;
+    }
   };
 
   if (loading) {
@@ -173,7 +218,7 @@ export default function ExamWindowResultsPage() {
                 <i className="fas fa-trophy me-2 me-lg-3"></i>
                 <span className="title-text">
                   <span className="d-none d-sm-inline">Resultados - </span>
-                  <span className="exam-title-text">{examWindow.exam.titulo}</span>
+                  <span className="exam-title-text">{examWindow.nombre}</span>
                 </span>
               </h1>
             </div>
@@ -257,403 +302,315 @@ export default function ExamWindowResultsPage() {
         </div>
       </div>
 
-      {/* Sección de Ranking */}
-      <div className="modern-card mb-4 ranking-section">
+      {/* Sección de Intentos y Calificaciones */}
+      <div className="modern-card mb-4">
         <div className="modern-card-header" style={{
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
         }}>
           <h3 className="modern-card-title mb-0" style={{ color: 'white' }}>
-            <i className="fas fa-trophy me-2"></i>
-            Ranking del Examen
+            <i className="fas fa-user-graduate me-2"></i>
+            Intentos de Estudiantes
           </h3>
         </div>
         <div className="modern-card-body">
-          {rankingLoading ? (
+          {attemptsLoading ? (
             <div className="loading-container">
               <div className="modern-spinner"></div>
-              <p>Cargando ranking...</p>
+              <p>Cargando intentos...</p>
             </div>
-          ) : rankingData ? (
-            <>
-              {/* Tabs para elegir tipo de ranking */}
-              <div className="mb-4">
-                <div className="d-flex" style={{ borderBottom: '2px solid #e5e7eb', borderRadius: '8px 8px 0 0', overflow: 'hidden' }}>
-                  <button
-                    className={`flex-fill py-3 px-4 ${tipoRanking === 'puntaje' ? 'bg-primary text-white' : 'bg-white text-dark'}`}
-                    style={{
-                      border: 'none',
-                      fontWeight: '600',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onClick={() => setTipoRanking('puntaje')}
-                  >
-                    <i className="fas fa-star me-2"></i>
-                    Ranking por Puntaje
-                    {rankingData?.rankingPorPuntaje?.length > 0 && (
-                      <span className={`ms-2 badge ${tipoRanking === 'puntaje' ? 'bg-white text-primary' : 'bg-primary text-white'}`}>
-                        {rankingData.rankingPorPuntaje.length}
-                      </span>
-                    )}
-                  </button>
-                  <button
-                    className={`flex-fill py-3 px-4 ${tipoRanking === 'tiempo' ? 'bg-primary text-white' : 'bg-white text-dark'}`}
-                    style={{
-                      border: 'none',
-                      fontWeight: '600',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onClick={() => setTipoRanking('tiempo')}
-                  >
-                    <i className="fas fa-stopwatch me-2"></i>
-                    Ranking por Tiempo
-                    {rankingData?.rankingPorTiempo?.length > 0 && (
-                      <span className={`ms-2 badge ${tipoRanking === 'tiempo' ? 'bg-white text-primary' : 'bg-primary text-white'}`}>
-                        {rankingData.rankingPorTiempo.length}
-                      </span>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {(() => {
-                const rankingActual = tipoRanking === 'puntaje' ? rankingData?.rankingPorPuntaje : rankingData?.rankingPorTiempo;
-                const estadisticasActual = tipoRanking === 'puntaje' ? rankingData?.estadisticasPuntaje : rankingData?.estadisticasTiempo;
-                const ranking = rankingActual || [];
-                
-                const sinDatos = !rankingData || 
-                  ((rankingData.rankingPorPuntaje?.length === 0 || !rankingData.rankingPorPuntaje) && 
-                   (rankingData.rankingPorTiempo?.length === 0 || !rankingData.rankingPorTiempo));
-
-                if (sinDatos) {
-                  return (
-                    <div className="empty-state">
-                      <div className="empty-icon">
-                        <i className="fas fa-trophy"></i>
-                      </div>
-                      <h4 className="empty-title">Sin datos de ranking</h4>
-                      <p className="empty-subtitle">
-                        Aún no hay estudiantes que hayan completado este examen.
-                      </p>
-                    </div>
-                  );
-                }
-
-                return (
-                  <>
-                    {/* Estadísticas generales */}
-                    <div className="row mb-4">
-                      <div className="col-md-3 col-sm-6 mb-3">
-                        <div className="modern-card" style={{ height: '100%' }}>
-                          <div className="modern-card-body text-center">
-                            <div className="stat-icon mb-2" style={{ 
-                              fontSize: '2rem', 
-                              color: 'var(--primary-color)' 
-                            }}>
-                              <i className="fas fa-users"></i>
-                            </div>
-                            <h3 className="mb-1" style={{ color: 'var(--primary-color)', fontSize: '2rem' }}>
-                              {ranking.length}
-                            </h3>
-                            <small className="text-muted">Participantes</small>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {tipoRanking === 'puntaje' ? (
-                        <>
-                          <div className="col-md-3 col-sm-6 mb-3">
-                            <div className="modern-card" style={{ height: '100%' }}>
-                              <div className="modern-card-body text-center">
-                                <div className="stat-icon mb-2" style={{ 
-                                  fontSize: '2rem', 
-                                  color: 'var(--success-color)' 
-                                }}>
-                                  <i className="fas fa-trophy"></i>
-                                </div>
-                                <h3 className="mb-1" style={{ color: 'var(--success-color)', fontSize: '2rem' }}>
-                                  {estadisticasActual?.mejorPuntaje !== null ? `${estadisticasActual?.mejorPuntaje?.toFixed(1)}%` : '0.0%'}
-                                </h3>
-                                <small className="text-muted">Mejor Puntaje</small>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="col-md-3 col-sm-6 mb-3">
-                            <div className="modern-card" style={{ height: '100%' }}>
-                              <div className="modern-card-body text-center">
-                                <div className="stat-icon mb-2" style={{ 
-                                  fontSize: '2rem', 
-                                  color: 'var(--warning-color)' 
-                                }}>
-                                  <i className="fas fa-arrow-down"></i>
-                                </div>
-                                <h3 className="mb-1" style={{ color: 'var(--warning-color)', fontSize: '2rem' }}>
-                                  {estadisticasActual?.peorPuntaje !== null ? `${estadisticasActual?.peorPuntaje?.toFixed(1)}%` : '0.0%'}
-                                </h3>
-                                <small className="text-muted">Puntaje Más Bajo</small>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="col-md-3 col-sm-6 mb-3">
-                            <div className="modern-card" style={{ height: '100%' }}>
-                              <div className="modern-card-body text-center">
-                                <div className="stat-icon mb-2" style={{ 
-                                  fontSize: '2rem', 
-                                  color: 'var(--info-color)' 
-                                }}>
-                                  <i className="fas fa-chart-bar"></i>
-                                </div>
-                                <h3 className="mb-1" style={{ color: 'var(--info-color)', fontSize: '2rem' }}>
-                                  {estadisticasActual?.promedioPuntaje !== null ? `${estadisticasActual?.promedioPuntaje?.toFixed(1)}%` : '0.0%'}
-                                </h3>
-                                <small className="text-muted">Puntaje Promedio</small>
-                              </div>
-                            </div>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div className="col-md-3 col-sm-6 mb-3">
-                            <div className="modern-card" style={{ height: '100%' }}>
-                              <div className="modern-card-body text-center">
-                                <div className="stat-icon mb-2" style={{ 
-                                  fontSize: '2rem', 
-                                  color: 'var(--success-color)' 
-                                }}>
-                                  <i className="fas fa-clock"></i>
-                                </div>
-                                <h3 className="mb-1" style={{ color: 'var(--success-color)', fontSize: '2rem' }}>
-                                  {estadisticasActual?.mejorTiempoFormateado || '0.0%'}
-                                </h3>
-                                <small className="text-muted">Mejor Tiempo</small>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="col-md-3 col-sm-6 mb-3">
-                            <div className="modern-card" style={{ height: '100%' }}>
-                              <div className="modern-card-body text-center">
-                                <div className="stat-icon mb-2" style={{ 
-                                  fontSize: '2rem', 
-                                  color: 'var(--warning-color)' 
-                                }}>
-                                  <i className="fas fa-hourglass-end"></i>
-                                </div>
-                                <h3 className="mb-1" style={{ color: 'var(--warning-color)', fontSize: '2rem' }}>
-                                  {estadisticasActual?.peorTiempoFormateado || '0.0%'}
-                                </h3>
-                                <small className="text-muted">Tiempo Más Lento</small>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="col-md-3 col-sm-6 mb-3">
-                            <div className="modern-card" style={{ height: '100%' }}>
-                              <div className="modern-card-body text-center">
-                                <div className="stat-icon mb-2" style={{ 
-                                  fontSize: '2rem', 
-                                  color: 'var(--info-color)' 
-                                }}>
-                                  <i className="fas fa-chart-line"></i>
-                                </div>
-                                <h3 className="mb-1" style={{ color: 'var(--info-color)', fontSize: '2rem' }}>
-                                  {estadisticasActual?.promedioTiempoFormateado || '0.0%'}
-                                </h3>
-                                <small className="text-muted">Tiempo Promedio</small>
-                              </div>
-                            </div>
-                          </div>
-                        </>
-                      )}
-                    </div>
-
-                    {/* Tabla de ranking */}
-                    <div className="table-responsive">
-                      <table className="table table-hover mb-0">
-                        <thead style={{ 
-                          background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)',
-                          borderBottom: '2px solid var(--primary-color)'
-                        }}>
-                          <tr>
-                            <th style={{ width: '100px', textAlign: 'center' }}>Posición</th>
-                            <th>Estudiante</th>
-                            <th>Email</th>
-                            {tipoRanking === 'puntaje' && (
-                              <th style={{ width: '150px', textAlign: 'center' }}>
-                                <i className="fas fa-star me-2"></i>
-                                Puntaje
-                              </th>
-                            )}
-                            <th style={{ width: '200px', textAlign: 'center' }}>
-                              <i className="fas fa-stopwatch me-2"></i>
-                              Tiempo
-                            </th>
-                            <th style={{ width: '200px', textAlign: 'center' }}>
-                              <i className="fas fa-calendar me-2"></i>
-                              Fecha Finalización
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {ranking.map((item) => (
-                            <tr 
-                              key={item.userId}
-                              className={getPosicionClass(tipoRanking === 'puntaje' ? item.posicionPuntaje : item.posicionTiempo)}
-                            >
-                              <td style={{ textAlign: 'center', fontSize: '1.2rem' }}>
-                                {getMedalEmoji(tipoRanking === 'puntaje' ? item.posicionPuntaje : item.posicionTiempo)}
-                              </td>
-                              <td>
-                                <div className="d-flex align-items-center">
-                                  <div className="user-avatar me-2" style={{
-                                    width: '32px',
-                                    height: '32px',
-                                    borderRadius: '50%',
-                                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    color: 'white',
-                                    fontWeight: 'bold',
-                                    fontSize: '0.9rem'
-                                  }}>
-                                    {item.nombreEstudiante.charAt(0).toUpperCase()}
-                                  </div>
-                                  <div>{item.nombreEstudiante}</div>
-                                </div>
-                              </td>
-                              <td style={{ fontSize: '0.9rem', color: '#6b7280' }}>
-                                {item.email}
-                              </td>
-                              {tipoRanking === 'puntaje' && (
-                                <td style={{ textAlign: 'center' }}>
-                                  <div style={{ 
-                                    display: 'inline-flex', 
-                                    alignItems: 'center', 
-                                    gap: '8px',
-                                    padding: '8px 16px',
-                                    background: item.puntaje >= 70
-                                      ? 'rgba(34, 197, 94, 0.1)'
-                                      : item.puntaje >= 40
-                                      ? 'rgba(251, 191, 36, 0.1)'
-                                      : 'rgba(239, 68, 68, 0.1)',
-                                    borderRadius: '8px',
-                                    fontSize: '1.2rem',
-                                    fontWeight: '700'
-                                  }}>
-                                    <i className="fas fa-star" style={{ 
-                                      color: item.puntaje >= 70 ? '#22c55e' : item.puntaje >= 40 ? '#fbbf24' : '#ef4444'
-                                    }}></i>
-                                    <span style={{ 
-                                      color: item.puntaje >= 70 ? '#22c55e' : item.puntaje >= 40 ? '#fbbf24' : '#ef4444'
-                                    }}>
-                                      {item.puntaje !== null ? `${item.puntaje.toFixed(1)}%` : '0.0%'}
-                                    </span>
-                                  </div>
-                                </td>
-                              )}
-                              <td style={{ textAlign: 'center' }}>
-                                <div style={{ 
-                                  display: 'inline-flex', 
-                                  alignItems: 'center', 
-                                  gap: '8px',
-                                  padding: '8px 16px',
-                                  background: tipoRanking === 'tiempo' && (item.posicionTiempo || item.posicion) <= 3
-                                    ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)'
-                                    : 'rgba(0,0,0,0.05)',
-                                  borderRadius: '8px',
-                                  fontFamily: 'monospace',
-                                  fontSize: '1.1rem',
-                                  fontWeight: '600'
-                                }}>
-                                  <i className="fas fa-stopwatch" style={{ 
-                                    color: (tipoRanking === 'tiempo' && (
-                                             (item.posicionTiempo || item.posicion) === 1 ? '#FFD700' : 
-                                             (item.posicionTiempo || item.posicion) === 2 ? '#C0C0C0' : 
-                                             (item.posicionTiempo || item.posicion) === 3 ? '#CD7F32' : 
-                                             'var(--primary-color)'
-                                           )) || '#6b7280'
-                                  }}></i>
-                                  <span style={{ 
-                                    color: tipoRanking === 'tiempo' && (item.posicionTiempo || item.posicion) <= 3 ? 'var(--primary-color)' : '#374151' 
-                                  }}>
-                                    {item.tiempoFormateado}
-                                  </span>
-                                </div>
-                              </td>
-                              <td style={{ textAlign: 'center', fontSize: '0.9rem', color: '#6b7280' }}>
-                                <i className="fas fa-calendar-check me-2"></i>
-                                {new Date(item.fechaFin).toLocaleString()}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    <style>{`
-                      .ranking-first td {
-                        background: linear-gradient(90deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 215, 0, 0.05) 100%) !important;
-                        border-left: 4px solid #FFD700;
-                      }
-
-                      .ranking-second td {
-                        background: linear-gradient(90deg, rgba(192, 192, 192, 0.2) 0%, rgba(192, 192, 192, 0.05) 100%) !important;
-                        border-left: 4px solid #C0C0C0;
-                      }
-
-                      .ranking-third td {
-                        background: linear-gradient(90deg, rgba(205, 127, 50, 0.2) 0%, rgba(205, 127, 50, 0.05) 100%) !important;
-                        border-left: 4px solid #CD7F32;
-                      }
-
-                      .table-hover tbody tr:hover {
-                        background-color: rgba(99, 102, 241, 0.05) !important;
-                      }
-
-                      @media (max-width: 768px) {
-                        .table {
-                          font-size: 0.85rem;
-                        }
-                        
-                        .user-avatar {
-                          width: 28px !important;
-                          height: 28px !important;
-                          font-size: 0.8rem !important;
-                        }
-                      }
-                    `}</style>
-                  </>
-                );
-              })()}
-            </>
-          ) : (
+          ) : attempts.length === 0 ? (
             <div className="empty-state">
               <div className="empty-icon">
-                <i className="fas fa-trophy"></i>
+                <i className="fas fa-clipboard-list"></i>
               </div>
-              <h4 className="empty-title">Error cargando ranking</h4>
+              <h4 className="empty-title">Sin intentos finalizados</h4>
+              <p className="empty-subtitle">
+                Aún no hay estudiantes que hayan completado este examen.
+              </p>
             </div>
+          ) : (
+            <>
+              {/* Leyenda de colores */}
+              <div className="mb-3 d-flex justify-content-between align-items-center">
+                <div className="d-flex gap-3 align-items-center" style={{ 
+                  padding: '12px 16px', 
+                  backgroundColor: '#f8f9fa', 
+                  borderRadius: '8px',
+                  border: '1px solid #e9ecef'
+                }}>
+                  <span style={{ fontWeight: '600', color: '#495057' }}>
+                    <i className="fas fa-info-circle me-2"></i>
+                    Leyenda:
+                  </span>
+                  <div className="d-flex align-items-center gap-2">
+                    <span style={{ fontSize: '0.9rem', color: '#495057' }}>
+                      <i className="fas fa-check-circle me-1" style={{ color: '#28a745' }}></i>
+                      Corregido manualmente
+                    </span>
+                  </div>
+                  <div className="d-flex align-items-center gap-2">
+                    <span style={{ fontSize: '0.9rem', color: '#495057' }}>
+                      <i className="fas fa-clock me-1" style={{ color: '#ffc107' }}></i>
+                      Pendiente de corrección
+                    </span>
+                  </div>
+                </div>
+
+                {/* Toggle vista simplificada */}
+                <div className="form-check form-switch d-flex align-items-center">
+                  <input
+                    className="form-check-input me-2"
+                    type="checkbox"
+                    id="toggle-simple-view"
+                    checked={showOnlyGrades}
+                    onChange={(e) => setShowOnlyGrades(e.target.checked)}
+                    style={{ cursor: 'pointer' }}
+                  />
+                  <label className="form-check-label" htmlFor="toggle-simple-view" style={{ 
+                    cursor: 'pointer',
+                    fontSize: '0.9rem',
+                    fontWeight: '500',
+                    color: '#495057',
+                    userSelect: 'none'
+                  }}>
+                    Ver solo estudiantes y sus notas de corrección manual
+                  </label>
+                </div>
+              </div>
+              
+              <div className="table-responsive">
+              <table className="table mb-0 attempts-table">
+                <thead style={{ 
+                  background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)',
+                  borderBottom: '2px solid var(--primary-color)'
+                }}>
+                  <tr>
+                    <th>Estudiante</th>
+                    {!showOnlyGrades && <th>Email</th>}
+                    {!showOnlyGrades && (
+                      <th style={{ textAlign: 'center' }}>
+                        <i className="fas fa-robot me-2"></i>
+                        Puntaje Automático
+                      </th>
+                    )}
+                    <th style={{ textAlign: 'center' }}>
+                      <i className="fas fa-user-check me-2"></i>
+                      Calificación Manual
+                    </th>
+                    {!showOnlyGrades && (
+                      <th style={{ textAlign: 'center' }}>
+                        <i className="fas fa-calendar me-2"></i>
+                        Finalizado
+                      </th>
+                    )}
+                    <th style={{ textAlign: 'center', width: '150px' }}>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {attempts.map((attempt) => {
+                    const isManuallyGraded = attempt.calificacionManual !== null && attempt.calificacionManual !== undefined;
+                    
+                    return (
+                      <tr key={attempt.id}>
+                        <td>
+                          <div className="d-flex align-items-center">
+                            <div className="user-avatar me-2" style={{
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '50%',
+                              background: isManuallyGraded 
+                                ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' // Verde para corregidos
+                                : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', // Naranja para pendientes
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: 'white',
+                              fontWeight: 'bold',
+                              fontSize: '0.9rem'
+                            }}>
+                              {attempt.user.nombre.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="d-flex align-items-center">
+                              {attempt.user.nombre}
+                              {isManuallyGraded && (
+                                <i className="fas fa-check-circle ms-2" style={{ color: '#28a745' }} title="Corregido manualmente"></i>
+                              )}
+                              {!isManuallyGraded && (
+                                <i className="fas fa-clock ms-2" style={{ color: '#ffc107' }} title="Pendiente de corrección"></i>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        {!showOnlyGrades && (
+                          <td style={{ fontSize: '0.9rem', color: '#6b7280' }}>
+                            {attempt.user.email}
+                          </td>
+                        )}
+                        {!showOnlyGrades && (
+                          <td style={{ textAlign: 'center' }}>
+                            {attempt.puntaje !== null ? (
+                              <span className={`badge ${
+                                attempt.puntaje >= 70 ? 'bg-success' :
+                                attempt.puntaje >= 40 ? 'bg-warning' :
+                                'bg-danger'
+                              }`}>
+                                {attempt.puntaje.toFixed(1)}%
+                              </span>
+                            ) : (
+                              <span className="text-muted">-</span>
+                            )}
+                          </td>
+                        )}
+                        <td style={{ textAlign: 'center' }}>
+                          {isManuallyGraded ? (
+                            <span className="badge bg-success" style={{ fontSize: '1rem' }}>
+                              {attempt.calificacionManual}
+                            </span>
+                          ) : (
+                            <span className="badge bg-warning text-dark">
+                              <i className="fas fa-exclamation-triangle me-1"></i>
+                              Pendiente
+                            </span>
+                          )}
+                        </td>
+                        {!showOnlyGrades && (
+                          <td style={{ textAlign: 'center', fontSize: '0.9rem', color: '#6b7280' }}>
+                            {new Date(attempt.finishedAt).toLocaleString()}
+                          </td>
+                        )}
+                        <td style={{ textAlign: 'center' }}>
+                          <button
+                            className={`modern-btn modern-btn-sm ${isManuallyGraded ? 'modern-btn-secondary' : 'modern-btn-primary'}`}
+                            onClick={() => handleOpenGrading(attempt.id)}
+                            title={isManuallyGraded ? "Editar calificación" : "Corregir manualmente"}
+                          >
+                            <i className={`fas ${isManuallyGraded ? 'fa-pencil-alt' : 'fa-edit'} me-1`}></i>
+                            {isManuallyGraded ? 'Editar' : 'Corregir'}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            </>
           )}
         </div>
       </div>
 
-      {/* Botón de sincronización con Moodle */}
-      <div className="modern-card">
-        <div className="modern-card-body text-center">
-          <button 
-            className="modern-btn modern-btn-primary modern-btn-lg" 
-            onClick={() => setShowMoodleModal(true)}
-            title="Sincronizar calificaciones con Moodle"
-          >
-            <i className="fas fa-graduation-cap me-2"></i>
-            Sincronizar Notas con Moodle
-          </button>
-          <p className="text-muted mt-3 mb-0">
-            <i className="fas fa-info-circle me-2"></i>
-            Exporta las calificaciones de los estudiantes a tu curso de Moodle
-          </p>
+      {/* Acciones de Gestión de Notas */}
+      <div className="row mb-4">
+        {/* Publicación de Notas */}
+        <div className="col-lg-6 mb-3 mb-lg-0">
+          {(() => {
+            const intentosFinalizados = attempts.filter(a => a.estado === 'finalizado' || a.finishedAt);
+            const sinCorregir = intentosFinalizados.filter(a => a.calificacionManual === null || a.calificacionManual === undefined);
+            const tienePendientes = sinCorregir.length > 0;
+            const noHayIntentos = intentosFinalizados.length === 0;
+            const puedePublicar = examWindow?.notasPublicadas || (!tienePendientes && !noHayIntentos);
+            
+            return (
+              <div className="modern-card h-100" style={{
+                border: examWindow?.notasPublicadas ? '2px solid #ffc107' : ((tienePendientes || noHayIntentos) ? '2px solid #dc3545' : '2px solid #198754'),
+                background: examWindow?.notasPublicadas 
+                  ? 'linear-gradient(135deg, rgba(255, 193, 7, 0.05) 0%, rgba(255, 193, 7, 0.02) 100%)'
+                  : ((tienePendientes || noHayIntentos)
+                    ? 'linear-gradient(135deg, rgba(220, 53, 69, 0.05) 0%, rgba(220, 53, 69, 0.02) 100%)'
+                    : 'linear-gradient(135deg, rgba(25, 135, 84, 0.05) 0%, rgba(25, 135, 84, 0.02) 100%)')
+              }}>
+                <div className="modern-card-body d-flex flex-column justify-content-between">
+                  <div className="mb-3">
+                    <h5 className="mb-2" style={{ 
+                      color: examWindow?.notasPublicadas ? '#f57c00' : ((tienePendientes || noHayIntentos) ? '#dc3545' : '#198754'),
+                      fontWeight: '600'
+                    }}>
+                      <i className={`fas ${examWindow?.notasPublicadas ? 'fa-eye' : 'fa-eye-slash'} me-2`}></i>
+                      Publicación de Notas
+                    </h5>
+                    <p className="text-muted mb-0" style={{ fontSize: '0.9rem' }}>
+                      {examWindow?.notasPublicadas 
+                        ? '✓ Las notas están visibles para los estudiantes'
+                        : (noHayIntentos 
+                          ? '⚠️ No hay exámenes finalizados'
+                          : (tienePendientes 
+                            ? `⚠️ ${sinCorregir.length} examen(es) sin corregir`
+                            : '✗ Las notas están ocultas para los estudiantes'))
+                      }
+                    </p>
+                  </div>
+                  <button 
+                    className={`modern-btn ${
+                      examWindow?.notasPublicadas ? 'modern-btn-warning' : 'modern-btn-success'
+                    } modern-btn-lg w-100`}
+                    onClick={() => handlePublicarNotas(!examWindow?.notasPublicadas)}
+                    title={examWindow?.notasPublicadas ? 'Ocultar notas' : (noHayIntentos ? 'No hay exámenes finalizados para publicar' : (tienePendientes ? 'Debes corregir todos los exámenes antes de publicar' : 'Publicar notas'))}
+                    style={{ padding: '12px 24px' }}
+                    disabled={!puedePublicar || isPublishing}
+                  >
+                    {isPublishing ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                        {examWindow?.notasPublicadas ? 'Ocultando...' : 'Publicando...'}
+                      </>
+                    ) : (
+                      <>
+                        <i className={`fas ${examWindow?.notasPublicadas ? 'fa-eye-slash' : 'fa-eye'} me-2`}></i>
+                        {examWindow?.notasPublicadas ? 'Ocultar Notas' : 'Publicar Notas'}
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+
+        {/* Sincronización con Moodle */}
+        <div className="col-lg-6">
+          {(() => {
+            const intentosFinalizados = attempts.filter(a => a.estado === 'finalizado' || a.finishedAt);
+            const sinCorregir = intentosFinalizados.filter(a => a.calificacionManual === null || a.calificacionManual === undefined);
+            const tienePendientes = sinCorregir.length > 0;
+            const noHayIntentos = intentosFinalizados.length === 0;
+            const puedesincronizar = !tienePendientes && !noHayIntentos;
+            
+            return (
+              <div className="modern-card h-100" style={{
+                border: (tienePendientes || noHayIntentos) ? '2px solid #dc3545' : '2px solid #0d6efd',
+                background: (tienePendientes || noHayIntentos)
+                  ? 'linear-gradient(135deg, rgba(220, 53, 69, 0.05) 0%, rgba(220, 53, 69, 0.02) 100%)'
+                  : 'linear-gradient(135deg, rgba(13, 110, 253, 0.05) 0%, rgba(13, 110, 253, 0.02) 100%)'
+              }}>
+                <div className="modern-card-body d-flex flex-column justify-content-between">
+                  <div className="mb-3">
+                    <h5 className="mb-2" style={{ color: (tienePendientes || noHayIntentos) ? '#dc3545' : '#0d6efd', fontWeight: '600' }}>
+                      <i className="fas fa-graduation-cap me-2"></i>
+                      Sincronización con Moodle
+                    </h5>
+                    <p className="text-muted mb-0" style={{ fontSize: '0.9rem' }}>
+                      {noHayIntentos 
+                        ? '⚠️ No hay exámenes finalizados'
+                        : (tienePendientes 
+                          ? `⚠️ ${sinCorregir.length} examen(es) sin corregir`
+                          : 'Exporta las calificaciones de los estudiantes a tu curso de Moodle')
+                      }
+                    </p>
+                  </div>
+                  <button 
+                    className="modern-btn modern-btn-primary modern-btn-lg w-100" 
+                    onClick={() => setShowMoodleModal(true)}
+                    title={noHayIntentos ? 'No hay exámenes finalizados para sincronizar' : (tienePendientes ? 'Debes corregir todos los exámenes antes de sincronizar' : 'Sincronizar calificaciones con Moodle')}
+                    style={{ padding: '12px 24px' }}
+                    disabled={!puedesincronizar || isPublishing}
+                  >
+                    <i className="fas fa-sync-alt me-2"></i>
+                    Sincronizar con Moodle
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </div>
 
@@ -673,9 +630,7 @@ export default function ExamWindowResultsPage() {
       {/* Moodle Integration Modal */}
       {showMoodleModal && (
         <>
-          <div 
-            onClick={() => setShowMoodleModal(false)}
-            style={{
+          <div style={{
               position: 'fixed',
               top: 0,
               left: 0,
@@ -691,6 +646,15 @@ export default function ExamWindowResultsPage() {
             onClose={() => setShowMoodleModal(false)}
           />
         </>
+      )}
+
+      {/* Manual Grading Modal */}
+      {showGradingModal && selectedAttemptId && (
+        <ManualGradingModal
+          attemptId={selectedAttemptId}
+          onClose={handleCloseGrading}
+          onSave={handleSaveGrade}
+        />
       )}
     </div>
   );

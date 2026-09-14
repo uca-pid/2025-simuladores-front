@@ -1,0 +1,124 @@
+/* Action Cards con números de paso para guiar al usuario */
+
+.action-card {
+  position: relative;
+  padding: 1.75rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 2px solid #e2e8f0;
+  transition: all 0.3s ease;
+  overflow: hidden;
+  height: 100%;
+}
+
+.action-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s ease;
+}
+
+.action-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  border-color: #6366f1;
+}
+
+.action-card:hover::before {
+  transform: scaleX(1);
+}
+
+.action-step-badge {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  animation: pulse-badge 2s ease-in-out infinite;
+}
+
+.action-step-badge.secondary {
+  background: linear-gradient(135deg, #10b981, #059669);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.action-step-badge.warning {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+@keyframes pulse-badge {
+  0%, 100% {
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  }
+  50% {
+    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.5);
+  }
+}
+
+.step-number {
+  color: white;
+  font-weight: 700;
+  font-size: 1.125rem;
+}
+
+.action-content {
+  padding-right: 3rem;
+}
+
+.action-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+}
+
+.action-description {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #64748b;
+}
+
+@media (max-width: 768px) {
+  .action-card {
+    padding: 1.5rem;
+  }
+
+  .action-content {
+    padding-right: 2.5rem;
+  }
+
+  .action-step-badge {
+    width: 32px;
+    height: 32px;
+    top: 0.75rem;
+    right: 0.75rem;
+  }
+
+  .step-number {
+    font-size: 1rem;
+  }
+
+  .action-title {
+    font-size: 1.125rem;
+  }
+
+  .action-description {
+    font-size: 0.875rem;
+  }
+}

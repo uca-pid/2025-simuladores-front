@@ -470,6 +470,35 @@ body {
   margin: 0;
 }
 
+.step-list {
+  list-style: none;
+  padding-left: 0;
+  margin: 0.5rem 0 0 0;
+  font-size: 0.875rem;
+  color: var(--text-color-1);
+}
+
+.step-list li {
+  padding: 0.4rem 0;
+  padding-left: 1.5rem;
+  position: relative;
+  line-height: 1.5;
+}
+
+.step-list li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: var(--success-color);
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+.step-list li strong {
+  color: var(--text-color-2);
+  font-weight: 600;
+}
+
 /* Exam cards */
 .exam-card {
   background: white;
@@ -632,6 +661,27 @@ body {
 .modern-btn-lg {
   padding: 1rem 2rem;
   font-size: 1rem;
+}
+
+/* Disabled button states */
+.modern-btn:disabled,
+.modern-btn[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+  transform: none !important;
+}
+
+.modern-btn-primary:disabled,
+.modern-btn-primary[disabled] {
+  background: #94a3b8;
+  box-shadow: none;
+}
+
+.modern-btn-success:disabled,
+.modern-btn-success[disabled] {
+  background: #94a3b8;
+  box-shadow: none;
 }
 
 /* Loading states */
