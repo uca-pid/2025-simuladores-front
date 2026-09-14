@@ -17,6 +17,9 @@ export default function UserSettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isOnCooldown, setIsOnCooldown] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+
   const [modal, setModal] = useState({
     show: false,
     type: 'info',
@@ -165,9 +168,18 @@ export default function UserSettingsPage() {
           
           if (!res.ok) throw new Error("Error eliminando usuario");
 
-          closeModal();
-          logout();
-          navigate("/login");
+          // MOSTRAR CARTEL DE ÉXITO
+          showModal(
+            'success',
+            'Cuenta eliminada',
+            'Tu cuenta fue eliminada correctamente.',
+            () => {
+              closeModal();
+              logout();
+              navigate('/login');
+            }
+          );
+          
         } catch (err) {
           console.error("Error eliminando usuario", err);
           setModal(prev => ({ ...prev, isProcessing: false }));
@@ -204,11 +216,28 @@ export default function UserSettingsPage() {
             </div>
             <div className="header-actions-section">
               <div className="d-flex gap-2 flex-wrap justify-content-end">
-                <BackToMainButton className="modern-btn modern-btn-secondary modern-btn-sm" />
-                <button className="modern-btn modern-btn-danger modern-btn-sm" onClick={handleDelete}>
+                <BackToMainButton
+                  className="modern-btn modern-btn-secondary modern-btn-sm"
+                  disabled={isSaving || isOnCooldown || isDeleting}
+                  style={{
+                    pointerEvents: isSaving || isOnCooldown || isDeleting ? 'none' : 'auto',
+                    opacity: isSaving || isOnCooldown || isDeleting ? 0.6 : 1
+                  }}
+                />
+
+                <button
+                  className="modern-btn modern-btn-danger modern-btn-sm"
+                  onClick={handleDelete}
+                  disabled={isSaving || isOnCooldown || isDeleting}
+                  style={{
+                    pointerEvents: isSaving || isOnCooldown || isDeleting ? 'none' : 'auto',
+                    opacity: isSaving || isOnCooldown || isDeleting ? 0.6 : 1
+                  }}
+                >
                   <i className="fas fa-trash me-2"></i>
                   Eliminar cuenta
                 </button>
+
               </div>
             </div>
           </div>
@@ -238,6 +267,7 @@ export default function UserSettingsPage() {
                   onChange={handleChange}
                   className={`form-control modern-input ${nombreError ? "is-invalid" : ""}`}
                   placeholder="Ingrese su nombre completo"
+                  disabled={isSaving || isOnCooldown}
                 />
                 {nombreError && <div className="invalid-feedback">{nombreError}</div>}
               </div>
@@ -260,34 +290,68 @@ export default function UserSettingsPage() {
 
               {/* Contraseña actual */}
               <div className="col-lg-6 col-md-12">
-                <label className="form-label fw-semibold">
-                  <i className="fas fa-key me-2"></i>
-                  Contraseña actual
-                </label>
+                <div className="d-flex justify-content-between align-items-center">
+                  <label className="form-label fw-semibold">
+                    <i className="fas fa-key me-2"></i>
+                    Contraseña actual
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                    className="btn btn-link p-0"
+                    disabled={isSaving || isOnCooldown || isDeleting}
+                    style={{
+                      fontSize: '0.85rem',
+                      pointerEvents: isSaving || isOnCooldown || isDeleting ? 'none' : 'auto',
+                      opacity: isSaving || isOnCooldown || isDeleting ? 0.6 : 1
+                    }}
+                  >
+                    <i className={`fas ${showCurrentPassword ? "fa-eye-slash" : "fa-eye"} me-1`}></i>
+                    {showCurrentPassword ? "Ocultar" : "Mostrar"}
+                  </button>
+
+                </div>
                 <input
-                  type="password"
+                  type={showCurrentPassword ? "text" : "password"}
                   name="currentPassword"
                   value={formData.currentPassword}
                   onChange={handleChange}
                   className="form-control modern-input"
-                  placeholder="Contraseña actual"
-                />
+                  placeholder="Contraseña actual"                  disabled={isSaving || isOnCooldown}                />
                 <small className="text-muted">Requerida solo si desea cambiar la contraseña</small>
               </div>
 
               {/* Nueva contraseña */}
               <div className="col-lg-6 col-md-12">
-                <label className="form-label fw-semibold">
-                  <i className="fas fa-lock me-2"></i>
-                  Nueva contraseña
-                </label>
+                <div className="d-flex justify-content-between align-items-center">
+                  <label className="form-label fw-semibold">
+                    <i className="fas fa-lock me-2"></i>
+                    Nueva contraseña
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="btn btn-link p-0"
+                    disabled={isSaving || isOnCooldown || isDeleting}
+                    style={{
+                      fontSize: '0.85rem',
+                      pointerEvents: isSaving || isOnCooldown || isDeleting ? 'none' : 'auto',
+                      opacity: isSaving || isOnCooldown || isDeleting ? 0.6 : 1
+                    }}
+                  >
+                    <i className={`fas ${showNewPassword ? "fa-eye-slash" : "fa-eye"} me-1`}></i>
+                    {showNewPassword ? "Ocultar" : "Mostrar"}
+                  </button>
+
+                </div>
                 <input
-                  type="password"
+                  type={showNewPassword ? "text" : "password"}
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
                   placeholder="Nueva contraseña"
                   className={`form-control modern-input ${passwordError ? "is-invalid" : ""}`}
+                  disabled={isSaving || isOnCooldown}
                 />
                 {passwordError && <div className="invalid-feedback">{passwordError}</div>}
                 <small className="text-muted">Dejar en blanco para mantener la actual</small>

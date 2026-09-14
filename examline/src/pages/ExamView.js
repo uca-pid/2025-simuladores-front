@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
+import Editor from '@monaco-editor/react';
 import BackToMainButton from "../components/BackToMainButton";
 import { useAuth } from "../contexts/AuthContext";
-import { getExamById } from "../services/api";
+import { getExamById, getReferenceFiles } from "../services/api";
 
 const ExamView = ({ examId: propExamId, onBack }) => {
   const { examId: routeExamId } = useParams();
@@ -13,6 +14,9 @@ const ExamView = ({ examId: propExamId, onBack }) => {
   const [exam, setExam] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [referenceFiles, setReferenceFiles] = useState([]);
+  const [currentReferenceFile, setCurrentReferenceFile] = useState(null);
+  const [loadingReferenceFiles, setLoadingReferenceFiles] = useState(false);
 
   useEffect(() => {
     if (!examId) return;
@@ -23,6 +27,22 @@ const ExamView = ({ examId: propExamId, onBack }) => {
         const data = await getExamById(examId);
         setExam(data);
         setError(null);
+        
+        // Si el usuario es el profesor del examen y es de programación, cargar archivos de referencia
+        if (data && data.tipo === 'programming' && user && data.profesorId === user.userId) {
+          try {
+            setLoadingReferenceFiles(true);
+            const files = await getReferenceFiles(examId);
+            if (files && files.length > 0) {
+              setReferenceFiles(files);
+              setCurrentReferenceFile(files[0].filename);
+            }
+          } catch (refError) {
+            console.error('Error cargando archivos de referencia:', refError);
+          } finally {
+            setLoadingReferenceFiles(false);
+          }
+        }
       } catch (err) {
         console.error(err);
         setExam(null);
@@ -87,7 +107,10 @@ const ExamView = ({ examId: propExamId, onBack }) => {
                   <span className="btn-text">Volver</span>
                 </button>
               ) : (
-                <BackToMainButton className="modern-btn modern-btn-secondary modern-btn-sm" />
+               <BackToMainButton 
+                customPath="/mis-examenes"
+                customLabel={<><i className="fas fa-arrow-left me-2"></i>Volver a Mis Exámenes</>}
+              />
               )}
             </div>
           </div>
@@ -416,6 +439,115 @@ const ExamView = ({ examId: propExamId, onBack }) => {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Solución de Referencia - Solo visible para el profesor */}
+      {exam.tipo === 'programming' && user && exam.profesorId === user.userId && (
+        <div className="modern-card mt-4">
+          <div className="modern-card-header">
+            <h3 className="modern-card-title">
+              <i className="fas fa-star me-2" style={{ color: '#ffd700' }}></i>
+              Solución de Referencia
+            </h3>
+          </div>
+          <div className="modern-card-body">
+            {loadingReferenceFiles ? (
+              <div className="text-center py-4">
+                <div className="spinner-border text-primary" role="status">
+                  <span className="visually-hidden">Cargando...</span>
+                </div>
+                <p className="mt-2 text-muted">Cargando archivos de referencia...</p>
+              </div>
+            ) : referenceFiles.length === 0 ? (
+              <div className="alert alert-info mb-0">
+                <i className="fas fa-info-circle me-2"></i>
+                No hay archivos de solución de referencia guardados para este examen.
+                Puedes agregarlos editando el examen.
+              </div>
+            ) : (
+              <div>
+                <div className="alert alert-success mb-3">
+                  <i className="fas fa-check-circle me-2"></i>
+                  <strong>{referenceFiles.length} archivo(s) de referencia</strong>
+                  <br />
+                  <small>Esta solución es solo visible para ti y te permite validar tus test cases.</small>
+                </div>
+                
+                <div style={{ 
+                  border: '1px solid #dee2e6', 
+                  borderRadius: '8px', 
+                  overflow: 'hidden',
+                  backgroundColor: '#1e1e1e'
+                }}>
+                  {/* Tabs de archivos */}
+                  <div style={{
+                    display: 'flex',
+                    gap: '4px',
+                    padding: '8px 16px',
+                    backgroundColor: '#2d2d30',
+                    borderBottom: '1px solid #3e3e42',
+                    color: '#cccccc',
+                    flexWrap: 'wrap'
+                  }}>
+                    {referenceFiles.map((file) => (
+                      <div
+                        key={file.filename}
+                        onClick={() => setCurrentReferenceFile(file.filename)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '6px 12px',
+                          backgroundColor: currentReferenceFile === file.filename ? '#1e1e1e' : 'transparent',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '13px',
+                          border: currentReferenceFile === file.filename ? '1px solid #3e3e42' : '1px solid transparent',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (currentReferenceFile !== file.filename) {
+                            e.currentTarget.style.backgroundColor = '#3e3e42';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (currentReferenceFile !== file.filename) {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                          }
+                        }}
+                      >
+                        <i className="fas fa-file-code" style={{ 
+                          color: currentReferenceFile === file.filename ? '#4ec9b0' : '#858585' 
+                        }}></i>
+                        <span>{file.filename}</span>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Editor Monaco (read-only) */}
+                  <Editor
+                    height="400px"
+                    language={exam.lenguajeProgramacion}
+                    value={referenceFiles.find(f => f.filename === currentReferenceFile)?.content || ''}
+                    theme="vs-dark"
+                    options={{
+                      readOnly: true,
+                      selectOnLineNumbers: true,
+                      roundedSelection: false,
+                      cursorStyle: 'line',
+                      automaticLayout: true,
+                      scrollBeyondLastLine: false,
+                      minimap: { enabled: true },
+                      fontSize: 14,
+                      lineNumbers: 'on',
+                      wordWrap: 'on'
+                    }}
+                  />
+                </div>
               </div>
             )}
           </div>

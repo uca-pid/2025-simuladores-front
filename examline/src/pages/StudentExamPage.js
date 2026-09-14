@@ -86,7 +86,7 @@ const StudentExamPage = () => {
                     <div className="step-content">
                       <h5 className="step-title">2. Inscribirse</h5>
                       <p className="step-description">
-                        Regístrate en las ventanas de examen disponibles. Si la ventana requiere asistencia, el profesor debe habilitarte antes del examen. Es posible que el exámen sea en modo seguro, lo que significa que tendrás que tener instalado SEB al momento de rendir.
+                        Regístrate en las ventanas de examen disponibles. Es posible que el exámen sea en modo seguro, lo que significa que tendrás que tener instalado SEB al momento de rendir.
                       </p>
                     </div>
                   </div>

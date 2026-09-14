@@ -18,8 +18,17 @@ const MoodleIntegration = ({ windowId, onClose }) => {
   const [connectionVerified, setConnectionVerified] = useState(false);
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  
+  // Mensajes separados por paso
+  const [connectionError, setConnectionError] = useState('');
+  const [connectionSuccess, setConnectionSuccess] = useState('');
+  const [assignmentsError, setAssignmentsError] = useState('');
+  const [assignmentsSuccess, setAssignmentsSuccess] = useState('');
+  const [configError, setConfigError] = useState('');
+  const [configSuccess, setConfigSuccess] = useState('');
+  const [syncError, setSyncError] = useState('');
+  const [syncSuccess, setSyncSuccess] = useState('');
+  
   const [syncStatus, setSyncStatus] = useState(null);
 
   // Cargar configuración existente
@@ -44,27 +53,29 @@ const MoodleIntegration = ({ windowId, onClose }) => {
   }, [loadSyncStatus]);
 
   const handleVerifyConnection = async () => {
+    if (loading) return; // Evitar spam
+    
     if (!moodleUrl || !moodleToken) {
-      setError('Por favor ingrese URL y token de Moodle');
+      setConnectionError('Por favor ingrese URL y token de Moodle');
       return;
     }
 
     setLoading(true);
-    setError('');
-    setSuccess('');
+    setConnectionError('');
+    setConnectionSuccess('');
 
     try {
       const result = await verifyMoodleConnection({ moodleUrl, moodleToken });
       
       if (result.success) {
         setConnectionVerified(true);
-        setSuccess(`✓ Conexión exitosa con ${result.details.sitename}`);
+        setConnectionSuccess(`✓ Conexión exitosa con ${result.details.sitename}`);
       } else {
-        setError(result.error || 'Error verificando conexión');
+        setConnectionError(result.error || 'Error verificando conexión');
         setConnectionVerified(false);
       }
     } catch (err) {
-      setError(err.message || 'Error verificando conexión con Moodle');
+      setConnectionError(err.message || 'Error verificando conexión con Moodle');
       setConnectionVerified(false);
     } finally {
       setLoading(false);
@@ -72,13 +83,16 @@ const MoodleIntegration = ({ windowId, onClose }) => {
   };
 
   const handleLoadAssignments = async () => {
+    if (loading) return; // Evitar spam
+    
     if (!moodleCourseId) {
-      setError('Por favor ingrese el ID del curso');
+      setAssignmentsError('Por favor ingrese el ID del curso');
       return;
     }
 
     setLoading(true);
-    setError('');
+    setAssignmentsError('');
+    setAssignmentsSuccess('');
 
     try {
       const result = await getMoodleCourseAssignments(
@@ -88,9 +102,9 @@ const MoodleIntegration = ({ windowId, onClose }) => {
       );
       
       setAssignments(result);
-      setSuccess(`✓ Se encontraron ${result.length} tareas en el curso`);
+      setAssignmentsSuccess(`✓ Se encontraron ${result.length} tareas en el curso`);
     } catch (err) {
-      setError(err.message || 'Error cargando tareas del curso');
+      setAssignmentsError(err.message || 'Error cargando tareas del curso');
       setAssignments([]);
     } finally {
       setLoading(false);
@@ -98,9 +112,11 @@ const MoodleIntegration = ({ windowId, onClose }) => {
   };
 
   const handleSaveConfiguration = async () => {
+    if (loading) return; // Evitar spam
+    
     setLoading(true);
-    setError('');
-    setSuccess('');
+    setConfigError('');
+    setConfigSuccess('');
 
     try {
       const config = {
@@ -112,27 +128,33 @@ const MoodleIntegration = ({ windowId, onClose }) => {
       };
 
       await updateWindowMoodleConfig(windowId, config);
-      setSuccess('✓ Configuración guardada exitosamente');
+      setConfigSuccess('✓ Configuración guardada exitosamente');
       await loadSyncStatus();
     } catch (err) {
-      setError(err.message || 'Error guardando configuración');
+      setConfigError(err.message || 'Error guardando configuración');
     } finally {
       setLoading(false);
     }
   };
 
   const handleSyncGrades = async () => {
+    if (syncing) return; // Evitar spam
 
     setSyncing(true);
-    setError('');
-    setSuccess('');
+    setSyncError('');
+    setSyncSuccess('');
 
     try {
       const result = await syncGradesToMoodle(windowId);
-      setSuccess(`✓ ${result.message}`);
+      setSyncSuccess(`✓ ${result.message}`);
       await loadSyncStatus();
+      
+      // Cerrar el modal después de 1.5 segundos
+      setTimeout(() => {
+        onClose();
+      }, 1500);
     } catch (err) {
-      setError(err.message || 'Error sincronizando calificaciones');
+      setSyncError(err.message || 'Error sincronizando calificaciones');
     } finally {
       setSyncing(false);
     }
@@ -144,9 +166,6 @@ const MoodleIntegration = ({ windowId, onClose }) => {
         <h2>🎓 Integración con Moodle</h2>
         <button onClick={onClose} className="close-btn">×</button>
       </div>
-
-      {error && <div className="alert alert-error">{error}</div>}
-      {success && <div className="alert alert-success">{success}</div>}
 
       {syncStatus && syncStatus.lastMoodleSync && (
         <div className="sync-info">
@@ -191,6 +210,9 @@ const MoodleIntegration = ({ windowId, onClose }) => {
           </button>
 
           {connectionVerified && <span className="verified-badge">✓ Verificado</span>}
+          
+          {connectionError && <div className="alert alert-error">{connectionError}</div>}
+          {connectionSuccess && <div className="alert alert-success">{connectionSuccess}</div>}
         </div>
 
         {connectionVerified && (
@@ -217,6 +239,9 @@ const MoodleIntegration = ({ windowId, onClose }) => {
               >
                 {loading ? '⏳ Cargando...' : '📚 Cargar Tareas del Curso'}
               </button>
+              
+              {assignmentsError && <div className="alert alert-error">{assignmentsError}</div>}
+              {assignmentsSuccess && <div className="alert alert-success">{assignmentsSuccess}</div>}
             </div>
 
             {assignments.length > 0 && (
@@ -252,6 +277,9 @@ const MoodleIntegration = ({ windowId, onClose }) => {
               >
                 {loading ? '⏳ Guardando...' : '💾 Guardar Configuración'}
               </button>
+              
+              {configError && <div className="alert alert-error">{configError}</div>}
+              {configSuccess && <div className="alert alert-success">{configSuccess}</div>}
             </div>
           </>
         )}
@@ -271,14 +299,11 @@ const MoodleIntegration = ({ windowId, onClose }) => {
             >
               {syncing ? '⏳ Sincronizando...' : '🔄 Sincronizar Ahora'}
             </button>
+            
+            {syncError && <div className="alert alert-error">{syncError}</div>}
+            {syncSuccess && <div className="alert alert-success">{syncSuccess}</div>}
           </div>
         )}
-      </div>
-
-      <div className="moodle-integration-footer">
-        <button onClick={onClose} className="btn-secondary" disabled={loading || syncing}>
-          Cerrar
-        </button>
       </div>
     </div>
   );

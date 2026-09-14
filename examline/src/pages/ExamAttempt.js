@@ -11,7 +11,18 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const examId = propExamId || routeExamId;
-  const windowId = searchParams.get('windowId');
+  
+  // Obtener windowId de la URL o del sessionStorage
+  const windowIdFromUrl = searchParams.get('windowId');
+  const examKey = `exam_${examId}_windowId`;
+  
+  // Si hay windowId en la URL, guardarlo en sessionStorage
+  if (windowIdFromUrl) {
+    sessionStorage.setItem(examKey, windowIdFromUrl);
+  }
+  
+  // Usar windowId de la URL o recuperarlo de sessionStorage
+  const windowId = windowIdFromUrl || sessionStorage.getItem(examKey);
 
   const [exam, setExam] = useState(null);
   const [attempt, setAttempt] = useState(null);
@@ -22,7 +33,15 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
   const [randomizedOptions, setRandomizedOptions] = useState({}); // { preguntaIndex: [{ texto, originalIndex }] }
   const [randomizedMatchingAnswers, setRandomizedMatchingAnswers] = useState({}); // Para matching: { preguntaIndex: [{ texto, originalIndex }] }
   const [selectedMatchingConcepts, setSelectedMatchingConcepts] = useState({}); // Para tracking de concepto seleccionado: { preguntaIndex: conceptoIndex | null }
-  
+
+  // 🔹 Cargar respuestas guardadas al montar el componente
+  useEffect(() => {
+    const saved = sessionStorage.getItem(`exam_${examId}_respuestas`);
+    if (saved) {
+      setRespuestas(JSON.parse(saved));
+    }
+  }, [examId]);
+
   // Usar hooks personalizados
   const { modal, showModal, closeModal, setModalProcessing } = useModal();
   const { isInSEB, tryCloseSEB } = useSEB();
@@ -37,10 +56,19 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
     }
 
     const token = localStorage.getItem('token');
-    if (token && !propExamId) {
+    if (token) {
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
-        if (payload.rol === 'student' && !windowId && !tokenFromUrl) {
+        
+        // SIEMPRE bloquear a profesores - no pueden tomar exámenes
+        if (payload.rol === 'professor' || payload.rol === 'system') {
+          setError('Acceso no autorizado: Los profesores no pueden tomar exámenes');
+          setLoading(false);
+          return;
+        }
+        
+        // Bloquear a estudiantes sin windowId válido (solo si no es propExamId)
+        if (payload.rol === 'student' && !windowId && !tokenFromUrl && !propExamId) {
           setError('Acceso no autorizado: Debes acceder desde tus inscripciones');
           setLoading(false);
           return;
@@ -53,6 +81,10 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
 
   // Handle back navigation for errors only
   const handleErrorBack = async () => {
+    // Limpiar windowId del sessionStorage
+    const examKey = `exam_${examId}_windowId`;
+    sessionStorage.removeItem(examKey);
+    
     if (isInSEB) {
       // Intentar cerrar SEB automáticamente
       const closed = await tryCloseSEB();
@@ -73,6 +105,10 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
   // Handle exam completion - finish attempt and return
   const handleExamCompletion = () => {
     if (!attempt) {
+      // Limpiar windowId del sessionStorage
+      const examKey = `exam_${examId}_windowId`;
+      sessionStorage.removeItem(examKey);
+      
       // Si no hay intento, navegar directamente
       if (onBack) {
         onBack();
@@ -175,6 +211,13 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
           });
 
           if (response.ok) {
+            // Limpiar windowId del sessionStorage al completar el examen
+            const examKey = `exam_${examId}_windowId`;
+            sessionStorage.removeItem(examKey);
+            
+            // 🔹 Limpiar también las respuestas guardadas
+            sessionStorage.removeItem(`exam_${examId}_respuestas`);
+            
             // Redirigir directamente sin modal de éxito
             closeModal();
             
@@ -221,6 +264,39 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
     );
   };
 
+  // Handle navigation away from exam with confirmation
+  const handleLeaveExam = () => {
+    showModal(
+      'warning',
+      'Salir del Examen',
+      '¿Estás seguro de que quieres salir del examen? Se perderá todo tu progreso y no podrás volver a intentarlo.',
+      async () => {
+        // Limpiar windowId del sessionStorage
+        const examKey = `exam_${examId}_windowId`;
+        sessionStorage.removeItem(examKey);
+        
+        closeModal();
+        
+        if (isInSEB) {
+          // Intentar cerrar SEB automáticamente
+          const closed = await tryCloseSEB();
+          
+          // Si el usuario canceló (puso "NO"), redirigir a login
+          if (!closed) {
+            navigate('/login');
+          }
+        } else {
+          if (onBack) {
+            onBack();
+          } else {
+            navigate('/student-exam');
+          }
+        }
+      },
+      true
+    );
+  };
+
   useEffect(() => {
     if (!examId) return;
 
@@ -228,6 +304,22 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
       try {
         setLoading(true);
         const token = localStorage.getItem('token');
+
+        // 🔒 Validación de seguridad - SIEMPRE bloquear profesores
+        if (token) {
+          try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            
+            // SIEMPRE bloquear a profesores - no pueden tomar exámenes
+            if (payload.rol === 'professor' || payload.rol === 'system') {
+              setError('Acceso no autorizado: Los profesores no pueden tomar exámenes');
+              setLoading(false);
+              return;
+            }
+          } catch (err) {
+            console.error('Error validando token:', err);
+          }
+        }
 
         // Primero verificar si ya existe un intento
         const checkResponse = await fetch(`${API_BASE_URL}/exam-attempts/check/${examId}?windowId=${windowId || ''}`, {
@@ -351,8 +443,6 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
           navigate(`/programming-exam/${examId}?${params.toString()}`);
           return;
         }
-
-        setError(null);
       } catch (err) {
         console.error('Error cargando examen:', err);
         setExam(null);
@@ -770,37 +860,35 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
                             key={j} 
                             className={`exam-option-item ${isSelected ? 'selected' : ''}`}
                             onClick={() => {
+                              if (submitting) return;
                               if (isFillInBlank) {
                                 setRespuestas(prev => {
                                   const current = Array.isArray(prev[p.id]) ? prev[p.id] : [];
-                                  if (current.includes(j)) {
-                                    // Deseleccionar
-                                    return {
-                                      ...prev,
-                                      [p.id]: current.filter(idx => idx !== j)
-                                    };
-                                  } else {
-                                    // Seleccionar (agregar al final)
-                                    return {
-                                      ...prev,
-                                      [p.id]: [...current, j]
-                                    };
-                                  }
+                                  const updated = current.includes(j)
+                                    ? { ...prev, [p.id]: current.filter(idx => idx !== j) } // Deseleccionar
+                                    : { ...prev, [p.id]: [...current, j] }; // Seleccionar (agregar al final)
+                                  sessionStorage.setItem(`exam_${examId}_respuestas`, JSON.stringify(updated));
+                                  return updated;
                                 });
                               } else {
-                                setRespuestas(prev => ({
-                                  ...prev,
-                                  [p.id]: j
-                                }));
+                                setRespuestas(prev => {
+                                  const updated = { ...prev, [p.id]: j };
+                                  sessionStorage.setItem(`exam_${examId}_respuestas`, JSON.stringify(updated));
+                                  return updated;
+                                });
                               }
                             }}
+
+
+
                             style={{
                               padding: '0.75rem 1rem',
                               marginBottom: '0.5rem',
                               border: isSelected ? '2px solid #0d6efd' : '1px solid #dee2e6',
                               borderRadius: '8px',
-                              cursor: 'pointer',
+                              cursor: submitting ? 'not-allowed' : 'pointer',
                               backgroundColor: isSelected ? '#e7f1ff' : 'white',
+                              opacity: submitting ? 0.6 : 1,
                               transition: 'all 0.2s ease',
                               display: 'flex',
                               alignItems: 'center',
