@@ -314,7 +314,132 @@ export async function getExamAttemptResults(attemptId) {
   }
 }
 
+// Exam attempt endpoints (continued)
+export async function checkExamAttempt(examId, windowId) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/exam-attempts/check/${examId}?windowId=${windowId}`, {
+      method: "GET",
+      headers: getAuthHeaders(),
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
+export async function startExamAttempt({ examId, examWindowId }) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/exam-attempts/start`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ examId, examWindowId }),
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
+export async function saveAttemptCode(attemptId, codigoProgramacion) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/exam-attempts/${attemptId}/save-code`, {
+      method: "PUT",
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ codigoProgramacion }),
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
+export async function finishExamAttempt(attemptId, codigoProgramacion) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/exam-attempts/${attemptId}/finish`, {
+      method: "PUT",
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ codigoProgramacion }),
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
 // Exam files endpoints
+export async function getExamAttemptFiles(examId) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/exam-files/${examId}/files`, {
+      method: "GET",
+      headers: getAuthHeaders(),
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
+export async function saveExamAttemptFile(examId, filename, content) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/exam-files/${examId}/files`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ filename, content }),
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
+export async function deleteExamAttemptFile(examId, filename) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/exam-files/${examId}/files/${filename}`, {
+      method: "DELETE",
+      headers: getAuthHeaders(),
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
+export async function saveSubmissionFiles(examId, files) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/exam-files/${examId}/files/submission`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ files }),
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
+// Code execution endpoint
+export async function runCode({ code, language, examId, input }) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/code-execution/run`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ code, language, examId, input }),
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
 export async function getExamFiles(examId, version) {
   try {
     const res = await fetch(`${API_BASE_URL}/exam-files/${examId}/files?version=${version}`, {

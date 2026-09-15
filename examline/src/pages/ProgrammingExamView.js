@@ -1,56 +1,106 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
-import { getExamById, API_BASE_URL } from '../services/api';
-import { useSEB } from '../hooks';
+import { useSEB, useExamAttempt, useExamFiles, useCodeCompiler, useExamFinish } from '../hooks';
 import Modal from '../components/Modal';
 
 const ProgrammingExamView = () => {
   const { examId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  
-  const [exam, setExam] = useState(null);
-  const [attempt, setAttempt] = useState(null);
-  const [code, setCode] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState(null);
-  const [lastSaved, setLastSaved] = useState(null);
-  
+
   // Usar hook de SEB
   const { isInSEB, closeSEB } = useSEB();
-  
-  // Estados para manejo de archivos
-  const [files, setFiles] = useState([]);
-  const [currentFileName, setCurrentFileName] = useState('main.py');
-  const [showFileManager, setShowFileManager] = useState(false);
-  const [newFileName, setNewFileName] = useState('');
-  const [fileOperationLoading, setFileOperationLoading] = useState(false);
-  
-  // 💾 Caché en memoria para mantener cambios no guardados
-  const [fileCache, setFileCache] = useState({});
-  
-  // 📝 Registro de archivos con cambios sin guardar
-  const [unsavedFiles, setUnsavedFiles] = useState(new Set());
-  
-  // 🔀 Estado para drag & drop de tabs
-  const [draggedTab, setDraggedTab] = useState(null);
-  
-  // 👁️ Estado para archivos ocultos de la vista
-  const [hiddenFiles, setHiddenFiles] = useState(new Set());
-  
-  // Estados para modales
+
+  // Obtener windowId de la URL o del sessionStorage
+  const searchParams = new URLSearchParams(location.search);
+  const windowIdFromUrl = searchParams.get('windowId');
+  const examKey = `exam_${examId}_windowId`;
+
+  // Si hay windowId en la URL, guardarlo en sessionStorage
+  if (windowIdFromUrl) {
+    sessionStorage.setItem(examKey, windowIdFromUrl);
+  }
+
+  // Usar windowId de la URL o recuperarlo de sessionStorage
+  const windowId = windowIdFromUrl || sessionStorage.getItem(examKey);
+
+  // Examen e intento
+  const {
+    exam,
+    attempt,
+    loading,
+    setLoading,
+    error,
+    setError
+  } = useExamAttempt(examId, windowId, navigate);
+
+  // Archivos del examen (código, tabs, caché, guardado)
+  const {
+    code,
+    files,
+    currentFileName,
+    showFileManager,
+    setShowFileManager,
+    newFileName,
+    setNewFileName,
+    fileOperationLoading,
+    saving,
+    lastSaved,
+    fileCache,
+    unsavedFiles,
+    draggedTab,
+    hiddenFiles,
+    showDeleteModal,
+    setShowDeleteModal,
+    fileToDelete,
+    setFileToDelete,
+    isOnSaveCooldown,
+    getMainFileName,
+    isMainFile,
+    handleEditorChange,
+    handleManualSave,
+    loadFile,
+    hideFile,
+    showFile,
+    requestDeleteFile,
+    deleteFile,
+    createNewFile,
+    handleDragStart,
+    handleDragEnd,
+    handleDragOver,
+    handleDrop
+  } = useExamFiles(examId, exam, attempt, setError);
+
+  // Compilación / ejecución de código
+  const {
+    isCompiling,
+    isOnCompileCooldown,
+    compilationResult,
+    userInput,
+    setUserInput,
+    handleCompile
+  } = useCodeCompiler(examId, exam, code);
+
+  // Finalización del examen
+  const { finishExam } = useExamFinish({
+    examId,
+    attempt,
+    files,
+    fileCache,
+    code,
+    currentFileName,
+    getMainFileName,
+    isInSEB,
+    closeSEB,
+    navigate,
+    setError,
+    setLoading
+  });
+
+  // Estados para modal de confirmación de finalizar examen
   const [showFinishModal, setShowFinishModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [fileToDelete, setFileToDelete] = useState('');
-  
-  // Estado para compilación
-  const [isCompiling, setIsCompiling] = useState(false);
-  const [isOnCompileCooldown, setIsOnCompileCooldown] = useState(false);
-  const [isOnSaveCooldown, setIsOnSaveCooldown] = useState(false);
-  const [compilationResult, setCompilationResult] = useState(null);
-  const [userInput, setUserInput] = useState('');
+
   // Navegación lateral (Consigna | Programación)
   const [activeSection, setActiveSection] = useState('programacion'); // 'consigna' | 'programacion'
   
@@ -59,31 +109,6 @@ const ProgrammingExamView = () => {
   
   // 🔄 Estado para alternar entre vista de entrada/salida en móviles
   const [mobileTerminalView, setMobileTerminalView] = useState('output'); // 'input' | 'output'
-
-  // Obtener windowId de la URL o del sessionStorage
-  const searchParams = new URLSearchParams(location.search);
-  const windowIdFromUrl = searchParams.get('windowId');
-  const examKey = `exam_${examId}_windowId`;
-  
-  // Si hay windowId en la URL, guardarlo en sessionStorage
-  if (windowIdFromUrl) {
-    sessionStorage.setItem(examKey, windowIdFromUrl);
-  }
-  
-  // Usar windowId de la URL o recuperarlo de sessionStorage
-  const windowId = windowIdFromUrl || sessionStorage.getItem(examKey);
-
-  // 🔒 Función para obtener el nombre del archivo principal según el lenguaje
-  const getMainFileName = useCallback(() => {
-    if (!exam) return null;
-    return exam.lenguajeProgramacion === 'python' ? 'main.py' : 'main.js';
-  }, [exam]);
-
-  // 🔒 Verificar si un archivo es el archivo principal
-  const isMainFile = useCallback((filename) => {
-    const mainFileName = getMainFileName();
-    return mainFileName && filename === mainFileName;
-  }, [getMainFileName]);
 
   // Configuración del editor Monaco optimizada para reducir ResizeObserver errors
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
@@ -160,669 +185,9 @@ const ProgrammingExamView = () => {
     renderLineHighlight: 'none'
   };
 
-  // Función para obtener el examen
-  const fetchExam = useCallback(async () => {
-    try {
-      const examData = await getExamById(examId, windowId);
-      if (examData.tipo !== 'programming') {
-        setError('Este no es un examen de programación');
-        return;
-      }
-      setExam(examData);
-      setCode(examData.codigoInicial || '');
-    } catch (err) {
-      console.error('Error fetching exam:', err);
-      setError(err.message || 'Error cargando examen');
-    }
-  }, [examId, windowId]);
-
-  // Función para obtener o crear intento
-  const fetchOrCreateAttempt = useCallback(async () => {
-    try {
-      const token = localStorage.getItem('token');
-      
-      // 🔒 Validación de seguridad - SIEMPRE bloquear profesores
-      if (token) {
-        try {
-          const payload = JSON.parse(atob(token.split('.')[1]));
-          
-          // SIEMPRE bloquear a profesores - no pueden tomar exámenes
-          if (payload.rol === 'professor' || payload.rol === 'system') {
-            setError('Acceso no autorizado: Los profesores no pueden tomar exámenes');
-            setLoading(false);
-            return;
-          }
-        } catch (err) {
-          console.error('Error validando token:', err);
-        }
-      }
-      
-      // Verificar si ya existe un intento
-      const checkResponse = await fetch(`${API_BASE_URL}/exam-attempts/check/${examId}?windowId=${windowId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const checkData = await checkResponse.json();
-      
-      if (checkData.hasAttempt) {
-        const existingAttempt = checkData.attempt;
-        setAttempt(existingAttempt);
-        
-        // Si ya hay código guardado, cargarlo
-        if (existingAttempt.codigoProgramacion) {
-          setCode(existingAttempt.codigoProgramacion);
-        }
-        
-        // Si el intento ya está finalizado, redirigir a resultados
-        if (existingAttempt.estado === 'finalizado') {
-          // Limpiar windowId del sessionStorage
-          const examKey = `exam_${examId}_windowId`;
-          sessionStorage.removeItem(examKey);
-          
-          navigate(`/exam-attempts/${existingAttempt.id}/results`);
-          return;
-        }
-      } else {
-        // Crear nuevo intento
-        const createResponse = await fetch(`${API_BASE_URL}/exam-attempts/start`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            examId: parseInt(examId),
-            examWindowId: windowId ? parseInt(windowId) : null
-          })
-        });
-        const createData = await createResponse.json();
-        setAttempt(createData);
-      }
-    } catch (err) {
-      console.error('Error with exam attempt:', err);
-      setError(err.response?.data?.error || 'Error iniciando examen');
-    }
-  }, [examId, windowId, navigate]);
-
-  // Funciones para manejo de archivos
-  const fetchFiles = useCallback(async () => {
-    if (!exam) return;
-    
-    try {
-      const token = localStorage.getItem('token');
-      
-      const response = await fetch(`${API_BASE_URL}/exam-files/${examId}/files`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (response.ok) {
-        const filesData = await response.json();
-        
-        // ✅ Ordenar archivos alfabéticamente para mantener orden consistente
-        const sortedFiles = filesData.sort((a, b) => 
-          a.filename.localeCompare(b.filename)
-        );
-        
-        setFiles(sortedFiles);
-        
-        // 💾 Inicializar el caché con todos los archivos del servidor
-        const initialCache = {};
-        sortedFiles.forEach(file => {
-          initialCache[file.filename] = file.content || '';
-        });
-        setFileCache(initialCache);
-        
-        // Si no hay archivos, crear uno por defecto con el código inicial del examen
-        if (sortedFiles.length === 0) {
-          // 🔒 IMPORTANTE: El archivo principal siempre es main.py (Python) o main.js (JavaScript)
-          // Este archivo no se puede eliminar y es el que se evalúa con los test cases
-          const defaultFileName = `main.${exam?.lenguajeProgramacion === 'python' ? 'py' : 'js'}`;
-          const defaultContent = exam?.codigoInicial || '';
-          
-          setCurrentFileName(defaultFileName);
-          setCode(defaultContent);
-          
-          // 💾 Crear el archivo por defecto en el servidor
-          try {
-            await fetch(`${API_BASE_URL}/exam-files/${examId}/files`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-              },
-              body: JSON.stringify({
-                filename: defaultFileName,
-                content: defaultContent
-              })
-            });
-            
-            // ✅ Actualizar la lista de archivos y caché inmediatamente
-            setFiles([{
-              filename: defaultFileName,
-              content: defaultContent,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString()
-            }]);
-            
-            setFileCache({ [defaultFileName]: defaultContent });
-          } catch (error) {
-            console.error('Error creando archivo por defecto:', error);
-          }
-        } else {
-          // Cargar el primer archivo
-          const firstFile = sortedFiles[0];
-          setCurrentFileName(firstFile.filename);
-          setCode(firstFile.content || '');
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching files:', error);
-    }
-  }, [examId, exam]);
-
-  // Función para guardar código automáticamente (no se usa actualmente pero se deja por si se necesita)
-  // eslint-disable-next-line no-unused-vars
-  const saveCode = useCallback(async (currentCode) => {
-    if (!attempt || attempt.estado !== 'en_progreso') return;
-    
-    try {
-      setSaving(true);
-      const token = localStorage.getItem('token');
-      
-      await fetch(`${API_BASE_URL}/exam-attempts/${attempt.id}/save-code`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          codigoProgramacion: currentCode
-        })
-      });
-      setLastSaved(new Date());
-    } catch (err) {
-      console.error('Error saving code:', err);
-    } finally {
-      setSaving(false);
-    }
-  }, [attempt]);
-
   // Función para mostrar el modal de confirmación
   const handleFinishExamClick = () => {
     setShowFinishModal(true);
-  };
-
-  // Función para finalizar examen
-  const finishExam = async () => {
-    if (!attempt) return;
-    
-    // 🔒 Validación: Verificar que existe el archivo principal
-    const mainFileName = getMainFileName();
-    const mainFileExists = files.some(f => f.filename === mainFileName) || fileCache[mainFileName];
-    
-    if (!mainFileExists) {
-      setError(`Debes crear el archivo principal "${mainFileName}" antes de finalizar el examen`);
-      return;
-    }
-    
-    setShowFinishModal(false);
-    
-    try {
-      setLoading(true);
-      
-      // 📁 PASO 1: Crear versión de "submission" (snapshot del envío)
-      // Recolectar todos los archivos con su contenido actual
-      const submissionFiles = [];
-      
-      // Agregar archivos del caché (archivos con cambios no guardados)
-      for (const filename of Object.keys(fileCache)) {
-        submissionFiles.push({
-          filename: filename,
-          content: fileCache[filename]
-        });
-      }
-      
-      // Agregar el archivo actual si no está en el caché
-      if (code && currentFileName && fileCache[currentFileName] === undefined) {
-        submissionFiles.push({
-          filename: currentFileName,
-          content: code
-        });
-      }
-      
-      // Agregar archivos que no están en el caché pero existen en la lista
-      for (const file of files) {
-        const isInCache = submissionFiles.some(f => f.filename === file.filename);
-        if (!isInCache) {
-          submissionFiles.push({
-            filename: file.filename,
-            content: file.content
-          });
-        }
-      }
-      
-      const token = localStorage.getItem('token');
-      
-      // Guardar archivos como versión de envío (submission)
-      await fetch(`${API_BASE_URL}/exam-files/${examId}/files/submission`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          files: submissionFiles
-        })
-      });
-      
-      // 🏁 PASO 2: Finalizar el examen con el archivo principal
-      // Obtener el contenido del archivo principal
-      const mainFileContent = fileCache[mainFileName] || 
-                             files.find(f => f.filename === mainFileName)?.content || 
-                             '';
-      
-      await fetch(`${API_BASE_URL}/exam-attempts/${attempt.id}/finish`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          codigoProgramacion: mainFileContent
-        })
-      });
-
-      // Limpiar windowId del sessionStorage al completar el examen
-      const examKey = `exam_${examId}_windowId`;
-      sessionStorage.removeItem(examKey);
-
-      // Manejar cierre según si está en SEB o no
-      if (isInSEB) {
-        closeSEB();
-      } else {
-        navigate('/student-exam');
-      }
-    } catch (err) {
-      console.error('Error finishing exam:', err);
-      setError(err.message || 'Error finalizando examen');
-      setLoading(false);
-    }
-  };
-
-  // Efecto para cargar datos iniciales
-  useEffect(() => {
-    // 🔒 Validación de seguridad - SIEMPRE bloquear profesores
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        
-        // SIEMPRE bloquear a profesores y system - no pueden tomar exámenes
-        if (payload.rol === 'professor' || payload.rol === 'system') {
-          setError('Acceso no autorizado: Los profesores no pueden tomar exámenes');
-          setLoading(false);
-          return;
-        }
-        
-        // Bloquear a estudiantes sin windowId válido
-        if (payload.rol === 'student' && !windowId) {
-          setError('Acceso no autorizado: Debes acceder desde tus inscripciones');
-          setLoading(false);
-          return;
-        }
-      } catch (err) {
-        console.error('Error validando token:', err);
-        setError('Token inválido');
-        setLoading(false);
-        return;
-      }
-    }
-    
-    const loadData = async () => {
-      setLoading(true);
-      await fetchExam();
-      await fetchOrCreateAttempt();
-      setLoading(false);
-    };
-    
-    loadData();
-  }, [fetchExam, fetchOrCreateAttempt, windowId]);
-
-  // Efecto para cargar archivos cuando el examen esté listo
-  useEffect(() => {
-    if (exam && attempt) {
-      fetchFiles();
-    }
-  }, [exam, attempt, fetchFiles]);
-
-  // Efecto para guardado automático cada 30 segundos
-/*  useEffect(() => {
-    if (!attempt || attempt.estado !== 'en_progreso') return;
-    
-    const interval = setInterval(() => {
-      saveCode(code);
-    }, 30000); // Guardar cada 30 segundos
-    
-    return () => clearInterval(interval);
-  }, [code, attempt, saveCode]);
-*/
-
-  // Manejar cambios en el editor con debounce para reducir actualizaciones
-  const handleEditorChange = useCallback((value) => {
-    const newValue = value || '';
-    setCode(newValue);
-    
-    // 💾 Actualizar el caché en tiempo real
-    if (currentFileName) {
-      setFileCache(prev => ({
-        ...prev,
-        [currentFileName]: newValue
-      }));
-      
-      // 📝 Marcar archivo como no guardado
-      setUnsavedFiles(prev => new Set(prev).add(currentFileName));
-    }
-  }, [currentFileName]);
-
-  // (Se mueve más abajo, después de saveCurrentFile)
-
-
-  const saveCurrentFile = useCallback(async (filename = currentFileName, content = code) => {
-    if (!filename || !attempt) return;
-    
-    try {
-      setFileOperationLoading(true);
-      const token = localStorage.getItem('token');
-      
-      await fetch(`${API_BASE_URL}/exam-files/${examId}/files`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          filename: filename,
-          content: content
-        })
-      });
-      
-      setLastSaved(new Date());
-      
-      // 💾 Actualizar el caché con el contenido guardado
-      setFileCache(prev => ({
-        ...prev,
-        [filename]: content
-      }));
-      
-      // 📂 Solo actualizar la lista de archivos sin cambiar el archivo actual
-      // No llamamos a fetchFiles() para evitar que cambie al primer archivo
-      const response = await fetch(`${API_BASE_URL}/exam-files/${examId}/files`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (response.ok) {
-        const filesData = await response.json();
-        const sortedFiles = filesData.sort((a, b) => 
-          a.filename.localeCompare(b.filename)
-        );
-        setFiles(sortedFiles);
-      }
-    } catch (error) {
-      console.error('Error saving file:', error);
-      setError('Error guardando archivo');
-    } finally {
-      setFileOperationLoading(false);
-    }
-  }, [examId, currentFileName, code, attempt]);
-
-  // Función para forzar guardado manual - guarda SOLO el archivo actual
-  const handleManualSave = useCallback(async () => {
-    if (!currentFileName) return;
-    if (saving || isOnSaveCooldown) return;
-    
-    try {
-      setSaving(true);
-
-      // 💾 Guardar SOLO el archivo actual
-      const content = fileCache[currentFileName] || code;
-      await saveCurrentFile(currentFileName, content);
-
-      // ✅ Limpiar marca de archivo sin guardar (solo el actual)
-      setUnsavedFiles(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(currentFileName);
-        return newSet;
-      });
-    } catch (error) {
-      console.error('Error guardando archivo:', error);
-    } finally {
-      setSaving(false);
-      setIsOnSaveCooldown(true);
-      setTimeout(() => setIsOnSaveCooldown(false), 800);
-    }
-  }, [currentFileName, fileCache, code, saveCurrentFile, saving, isOnSaveCooldown]);
-
-  const loadFile = useCallback((filename) => {
-    // 💾 Guardar el contenido actual en el caché ANTES de cambiar
-    if (currentFileName && code !== undefined) {
-      setFileCache(prev => ({
-        ...prev,
-        [currentFileName]: code
-      }));
-    }
-    
-    // � Cargar desde el caché (ya inicializado en fetchFiles)
-    setFileCache(prev => {
-      const content = prev[filename] || '';
-      setCode(content);
-      setCurrentFileName(filename);
-      return prev;
-    });
-  }, [currentFileName, code]);
-
-  // Función para ocultar archivo de la vista (no lo elimina)
-  const hideFile = useCallback((filename) => {
-    setHiddenFiles(prev => new Set(prev).add(filename));
-    
-    // Si el archivo oculto es el actual, cambiar a otro visible
-    if (filename === currentFileName) {
-      const visibleFiles = files.filter(f => 
-        f.filename !== filename && !hiddenFiles.has(f.filename)
-      );
-      
-      if (visibleFiles.length > 0) {
-        loadFile(visibleFiles[0].filename);
-      } else {
-        // Si no hay archivos visibles, crear uno nuevo por defecto
-        const defaultFileName = `main.${exam?.lenguajeProgramacion === 'python' ? 'py' : 'js'}`;
-        setCurrentFileName(defaultFileName);
-        setCode('');
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentFileName, files, exam?.lenguajeProgramacion]);
-
-  // Función para mostrar archivo en la vista
-  const showFile = useCallback((filename) => {
-    setHiddenFiles(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(filename);
-      return newSet;
-    });
-    loadFile(filename);
-  }, [loadFile]);
-
-  const requestDeleteFile = useCallback((filename) => {
-    // 🔒 Proteger el archivo principal
-    if (isMainFile(filename)) {
-      setError('No puedes eliminar el archivo principal del examen');
-      return;
-    }
-    
-    setFileToDelete(filename);
-    setShowDeleteModal(true);
-  }, [isMainFile]);
-
-  const deleteFile = useCallback(async () => {
-    if (!fileToDelete) return;
-    
-    try {
-      setFileOperationLoading(true);
-      const token = localStorage.getItem('token');
-      
-      await fetch(`${API_BASE_URL}/exam-files/${examId}/files/${fileToDelete}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      // Eliminar del cache
-      setFileCache(prevCache => {
-        const newCache = { ...prevCache };
-        delete newCache[fileToDelete];
-        return newCache;
-      });
-      
-      // Eliminar de unsavedFiles
-      setUnsavedFiles(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(fileToDelete);
-        return newSet;
-      });
-      
-      // Actualizar lista de archivos sin llamar a fetchFiles() para no perder cambios
-      const remainingFiles = files.filter(f => f.filename !== fileToDelete);
-      setFiles(remainingFiles);
-      
-      // Si eliminamos el archivo actual, cambiar a otro
-      if (fileToDelete === currentFileName) {
-        if (remainingFiles.length > 0) {
-          await loadFile(remainingFiles[0].filename);
-        } else {
-          const defaultFileName = `main.${exam?.lenguajeProgramacion === 'python' ? 'py' : 'js'}`;
-          setCurrentFileName(defaultFileName);
-          setCode('');
-        }
-      }
-      
-      // Limpiar estado del modal
-      setShowDeleteModal(false);
-      setFileToDelete('');
-    } catch (error) {
-      console.error('Error deleting file:', error);
-      setError('Error eliminando archivo');
-    } finally {
-      setFileOperationLoading(false);
-    }
-  }, [examId, currentFileName, files, exam?.lenguajeProgramacion, loadFile, fileToDelete]);
-
-  const createNewFile = useCallback(async () => {
-    // La validación visual ya previene estos casos, pero por seguridad mantenemos las validaciones
-    if (!newFileName.trim()) return;
-    
-    const invalidChars = /[<>:"/\\|?*]/;
-    if (invalidChars.test(newFileName)) return;
-    
-    const extension = exam?.lenguajeProgramacion === 'python' ? '.py' : '.js';
-    const fileName = newFileName.endsWith(extension) ? newFileName : `${newFileName}${extension}`;
-    
-    if (files.find(f => f.filename.toLowerCase() === fileName.toLowerCase())) return;
-    
-    // Si llegamos aquí, el archivo es válido para crear
-    try {
-      await saveCurrentFile(fileName, '# Nuevo archivo\n');
-      setCurrentFileName(fileName);
-      setCode('# Nuevo archivo\n');
-      setNewFileName('');
-      setShowFileManager(false);
-    } catch (error) {
-      console.error('Error al crear archivo:', error);
-      // El error será manejado por la UI visual, no necesitamos modal
-    }
-  }, [newFileName, exam?.lenguajeProgramacion, files, saveCurrentFile, setCode, setCurrentFileName]);
-
-  // Función para compilar código
-  const handleCompile = async () => {
-    if (isCompiling || isOnCompileCooldown) return;
-    
-    try {
-      setIsCompiling(true);
-      setCompilationResult(null);
-      const token = localStorage.getItem('token');
-      
-      const response = await fetch(`${API_BASE_URL}/code-execution/run`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          code: code,
-          language: exam?.lenguajeProgramacion || 'python',
-          examId: examId,
-          input: userInput || '' // Enviar el input del usuario
-        })
-      });
-      
-      const result = await response.json();
-      
-      if (response.ok) {
-        setCompilationResult({
-          success: true,
-          output: result.output,
-          error: result.error,
-          executionTime: result.executionTime
-        });
-      } else {
-        console.error('Error en respuesta:', result);
-        setCompilationResult({
-          success: false,
-          error: result.error || 'Error desconocido'
-        });
-      }
-      
-    } catch (error) {
-      console.error('Error compilando:', error);
-      setCompilationResult({
-        success: false,
-        error: error.message
-      });
-    } finally {
-      setIsCompiling(false);
-      setIsOnCompileCooldown(true);
-      setTimeout(() => setIsOnCompileCooldown(false), 1000);
-    }
-  };
-
-  // 🔀 Funciones para drag & drop de tabs
-  const handleDragStart = (e, index) => {
-    setDraggedTab(index);
-    e.dataTransfer.effectAllowed = 'move';
-    e.currentTarget.style.opacity = '0.5';
-  };
-
-  const handleDragEnd = (e) => {
-    e.currentTarget.style.opacity = '1';
-    setDraggedTab(null);
-  };
-
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
-
-  const handleDrop = (e, dropIndex) => {
-    e.preventDefault();
-    
-    if (draggedTab === null || draggedTab === dropIndex) return;
-    
-    const newFiles = [...files];
-    const draggedFile = newFiles[draggedTab];
-    
-    // Remover el archivo de su posición original
-    newFiles.splice(draggedTab, 1);
-    // Insertar en la nueva posición
-    newFiles.splice(dropIndex, 0, draggedFile);
-    
-    setFiles(newFiles);
   };
 
   // ⌨️ Atajo de teclado Ctrl+S para guardar
@@ -3321,7 +2686,10 @@ const ProgrammingExamView = () => {
       <Modal
         show={showFinishModal}
         onClose={() => setShowFinishModal(false)}
-        onConfirm={finishExam}
+        onConfirm={() => {
+          setShowFinishModal(false);
+          finishExam();
+        }}
         title="Finalizar Examen"
         message="¿Estás seguro de que quieres finalizar el examen?"
         type="confirm"

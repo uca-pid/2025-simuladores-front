@@ -8,7 +8,15 @@
 
 export { useModal } from './useModal';
 export { useSEB } from './useSEB';
+export { useExamAttempt } from './useExamAttempt';
+export { useExamFiles } from './useExamFiles';
+export { useCodeCompiler } from './useCodeCompiler';
+export { useExamFinish } from './useExamFinish';
 
 // Exportar también como default para compatibilidad
 export { default as useModalDefault } from './useModal';
 export { default as useSEBDefault } from './useSEB';
+export { default as useExamAttemptDefault } from './useExamAttempt';
+export { default as useExamFilesDefault } from './useExamFiles';
+export { default as useCodeCompilerDefault } from './useCodeCompiler';
+export { default as useExamFinishDefault } from './useExamFinish';
