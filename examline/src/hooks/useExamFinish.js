@@ -89,7 +89,7 @@ export const useExamFinish = ({
                              files.find(f => f.filename === mainFileName)?.content ||
                              '';
 
-      await finishExamAttempt(attempt.id, mainFileContent);
+      await finishExamAttempt(attempt.id, { codigoProgramacion: mainFileContent });
 
       // Limpiar windowId del sessionStorage al completar el examen
       const examKey = `exam_${examId}_windowId`;

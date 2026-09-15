@@ -356,12 +356,12 @@ export async function saveAttemptCode(attemptId, codigoProgramacion) {
   }
 }
 
-export async function finishExamAttempt(attemptId, codigoProgramacion) {
+export async function finishExamAttempt(attemptId, body = {}) {
   try {
     const res = await fetch(`${API_BASE_URL}/exam-attempts/${attemptId}/finish`, {
       method: "PUT",
       headers: getAuthHeaders(),
-      body: JSON.stringify({ codigoProgramacion }),
+      body: JSON.stringify(body),
     });
 
     return await handleResponse(res);

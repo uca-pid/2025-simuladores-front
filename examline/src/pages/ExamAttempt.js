@@ -1,9 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import './ExamAttempt.css';
-import { getExamById, API_BASE_URL } from "../services/api";
-import { useModal, useSEB } from "../hooks";
+import { useModal, useSEB, useMultipleChoiceAttempt } from "../hooks";
 import Modal from "../components/Modal";
 
 const ExamAttempt = ({ examId: propExamId, onBack }) => {
@@ -11,40 +10,40 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const examId = propExamId || routeExamId;
-  
+
   // Obtener windowId de la URL o del sessionStorage
   const windowIdFromUrl = searchParams.get('windowId');
   const examKey = `exam_${examId}_windowId`;
-  
+
   // Si hay windowId en la URL, guardarlo en sessionStorage
   if (windowIdFromUrl) {
     sessionStorage.setItem(examKey, windowIdFromUrl);
   }
-  
+
   // Usar windowId de la URL o recuperarlo de sessionStorage
   const windowId = windowIdFromUrl || sessionStorage.getItem(examKey);
-
-  const [exam, setExam] = useState(null);
-  const [attempt, setAttempt] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [respuestas, setRespuestas] = useState({}); // { preguntaId: opcionIndex | opcionIndex[] } - Usar ID no índice por randomización
-  const [randomizedOptions, setRandomizedOptions] = useState({}); // { preguntaIndex: [{ texto, originalIndex }] }
-  const [randomizedMatchingAnswers, setRandomizedMatchingAnswers] = useState({}); // Para matching: { preguntaIndex: [{ texto, originalIndex }] }
-  const [selectedMatchingConcepts, setSelectedMatchingConcepts] = useState({}); // Para tracking de concepto seleccionado: { preguntaIndex: conceptoIndex | null }
-
-  // 🔹 Cargar respuestas guardadas al montar el componente
-  useEffect(() => {
-    const saved = sessionStorage.getItem(`exam_${examId}_respuestas`);
-    if (saved) {
-      setRespuestas(JSON.parse(saved));
-    }
-  }, [examId]);
 
   // Usar hooks personalizados
   const { modal, showModal, closeModal, setModalProcessing } = useModal();
   const { isInSEB, tryCloseSEB } = useSEB();
+  const {
+    exam,
+    attempt,
+    loading,
+    setLoading,
+    error,
+    setError,
+    submitting,
+    setSubmitting,
+    respuestas,
+    setRespuestas,
+    updateRespuesta,
+    randomizedOptions,
+    randomizedMatchingAnswers,
+    selectedMatchingConcepts,
+    setSelectedMatchingConcepts,
+    finishAttempt
+  } = useMultipleChoiceAttempt(examId, windowId, navigate, { propExamId });
 
   // 🔒 Validación inicial de seguridad para estudiantes
   useEffect(() => {
@@ -77,7 +76,7 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
         console.error('Error validando token:', err);
       }
     }
-  }, [windowId, propExamId]);
+  }, [windowId, propExamId, setError, setLoading]);
 
   // Handle back navigation for errors only
   const handleErrorBack = async () => {
@@ -163,103 +162,47 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
         try {
           setSubmitting(true);
           setModalProcessing(true); // Deshabilitar botón del modal
-          const token = localStorage.getItem('token');
 
-          // Preparar el body según el tipo de examen
-          let body = {};
-          if (exam.tipo === 'multiple_choice') {
-            // Convertir respuestas: ya vienen con preguntaId como key
-            // Solo necesitamos convertir los valores de índices randomizados a originales
-            const respuestasFinales = {};
-            Object.keys(respuestas).forEach(preguntaId => {
-              // Encontrar la pregunta por su ID
-              const preguntaIndex = exam.preguntas.findIndex(p => p.id === parseInt(preguntaId));
-              if (preguntaIndex === -1) return; // Pregunta no encontrada
-              
-              const pregunta = exam.preguntas[preguntaIndex];
-              const respuesta = respuestas[preguntaId];
-              
-              if (pregunta.tipo === 'fill_in_blank' && Array.isArray(respuesta)) {
-                // Convertir índices randomizados a índices originales
-                respuestasFinales[preguntaId] = respuesta.map(randomIndex => 
-                  randomizedOptions[preguntaIndex][randomIndex].originalIndex
-                );
-              } else if (pregunta.tipo === 'matching' && Array.isArray(respuesta)) {
-                // Para matching, convertir índices de respuestas randomizadas a originales
-                respuestasFinales[preguntaId] = respuesta.map(randomizedAnswerIndex => 
-                  randomizedMatchingAnswers[preguntaIndex][randomizedAnswerIndex].originalIndex
-                );
-              } else {
-                // Para otros tipos, mantener el índice (pero también convertir por si acaso)
-                if (randomizedOptions[preguntaIndex]) {
-                  respuestasFinales[preguntaId] = randomizedOptions[preguntaIndex][respuesta].originalIndex;
-                } else {
-                  respuestasFinales[preguntaId] = respuesta;
-                }
-              }
-            });
-            body = { respuestas: respuestasFinales };
-          }
+          await finishAttempt();
 
-          const response = await fetch(`${API_BASE_URL}/exam-attempts/${attempt.id}/finish`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(body)
-          });
+          // Redirigir directamente sin modal de éxito
+          closeModal();
 
-          if (response.ok) {
-            // Limpiar windowId del sessionStorage al completar el examen
-            const examKey = `exam_${examId}_windowId`;
-            sessionStorage.removeItem(examKey);
-            
-            // 🔹 Limpiar también las respuestas guardadas
-            sessionStorage.removeItem(`exam_${examId}_respuestas`);
-            
-            // Redirigir directamente sin modal de éxito
-            closeModal();
-            
-            console.log('Intento finalizado exitosamente, isInSEB:', isInSEB);
-            
-            if (isInSEB) {
-              // Intentar cerrar SEB automáticamente
-              console.log('Intentando cerrar SEB...');
-              const closed = await tryCloseSEB();
-              console.log('Resultado de tryCloseSEB:', closed);
-              
-              // Si el usuario canceló el cierre (pusO "NO"), mostrar resultados
-              if (!closed) {
-                console.log('Usuario canceló cierre de SEB, mostrando resultados...');
-                navigate(`/exam-results/${attempt.id}?fromSEB=true`);
-              }
-              // Si aceptó el cierre, SEB se cerrará y no llegará aquí
-            } else {
-              // Navegación normal si no está en SEB
-              if (onBack) {
-                onBack();
-              } else {
-                navigate('/student-exam');
-              }
+          console.log('Intento finalizado exitosamente, isInSEB:', isInSEB);
+
+          if (isInSEB) {
+            // Intentar cerrar SEB automáticamente
+            console.log('Intentando cerrar SEB...');
+            const closed = await tryCloseSEB();
+            console.log('Resultado de tryCloseSEB:', closed);
+
+            // Si el usuario canceló el cierre (pusO "NO"), mostrar resultados
+            if (!closed) {
+              console.log('Usuario canceló cierre de SEB, mostrando resultados...');
+              navigate(`/exam-results/${attempt.id}?fromSEB=true`);
             }
+            // Si aceptó el cierre, SEB se cerrará y no llegará aquí
           } else {
-            const errorData = await response.json();
-            const errorMessage = errorData.error || 'Error al finalizar intento';
-            
-            // Si el error es que el intento ya fue finalizado y estamos en SEB, redirigir a login
-            if (errorMessage.includes('intento ya fue finalizado') && isInSEB) {
-              showModal('error', 'Error', errorMessage, () => {
-                closeModal();
-                navigate('/login');
-              }, false, 'Salir del examen');
+            // Navegación normal si no está en SEB
+            if (onBack) {
+              onBack();
             } else {
-              showModal('error', 'Error', errorMessage);
+              navigate('/student-exam');
             }
           }
         } catch (error) {
           console.error('Error finishing attempt:', error);
-          showModal('error', 'Error', 'Error de conexión al finalizar intento');
+          const errorMessage = error.message || 'Error de conexión al finalizar intento';
+
+          // Si el error es que el intento ya fue finalizado y estamos en SEB, redirigir a login
+          if (errorMessage.includes('intento ya fue finalizado') && isInSEB) {
+            showModal('error', 'Error', errorMessage, () => {
+              closeModal();
+              navigate('/login');
+            }, false, 'Salir del examen');
+          } else {
+            showModal('error', 'Error', errorMessage);
+          }
         } finally {
           setSubmitting(false);
           setModalProcessing(false);
@@ -301,179 +244,6 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
       true
     );
   };
-
-  useEffect(() => {
-    if (!examId) return;
-
-    const loadExamAndAttempt = async () => {
-      try {
-        setLoading(true);
-        const token = localStorage.getItem('token');
-
-        // 🔒 Validación de seguridad - SIEMPRE bloquear profesores
-        if (token) {
-          try {
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            
-            // SIEMPRE bloquear a profesores - no pueden tomar exámenes
-            if (payload.rol === 'professor' || payload.rol === 'system') {
-              setError('Acceso no autorizado: Los profesores no pueden tomar exámenes');
-              setLoading(false);
-              return;
-            }
-          } catch (err) {
-            console.error('Error validando token:', err);
-          }
-        }
-
-        // Primero verificar si ya existe un intento
-        const checkResponse = await fetch(`${API_BASE_URL}/exam-attempts/check/${examId}?windowId=${windowId || ''}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        if (checkResponse.ok) {
-          const checkData = await checkResponse.json();
-          
-          if (checkData.hasAttempt && checkData.attempt.estado === 'finalizado') {
-            setError('Ya has completado este examen');
-            setLoading(false);
-            return;
-          }
-        }
-
-        // PRIMERO: Crear o obtener intento existente (para tener el orden randomizado)
-        const attemptResponse = await fetch(`${API_BASE_URL}/exam-attempts/start`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ 
-            examId: parseInt(examId), 
-            examWindowId: windowId ? parseInt(windowId) : null 
-          })
-        });
-
-        if (!attemptResponse.ok) {
-          const errorData = await attemptResponse.json();
-          setError(errorData.error || 'Error creando intento de examen');
-          setLoading(false);
-          return;
-        }
-
-        const attemptData = await attemptResponse.json();
-        
-        if (attemptData.estado === 'finalizado') {
-          setError('Ya has completado este examen');
-          setLoading(false);
-          return;
-        }
-
-        // SEGUNDO: Cargar examen con las preguntas
-        const examData = await getExamById(examId, windowId);
-
-        // TERCERO: Aplicar orden de preguntas ANTES de setear el estado (evita flash)
-        let preguntasAMostrar = examData.preguntas;
-        
-        // Si el intento tiene un orden guardado (randomizado en el backend), usarlo
-        if (attemptData.ordenPreguntas && Array.isArray(attemptData.ordenPreguntas)) {
-          // Ordenar preguntas según el orden guardado en el intento
-          const ordenMap = new Map(examData.preguntas.map(p => [p.id, p]));
-          preguntasAMostrar = attemptData.ordenPreguntas
-            .map(id => ordenMap.get(id))
-            .filter(p => p !== undefined); // Filtrar cualquier ID inválido
-        }
-        // Si no hay orden guardado, mantener el orden original de la BD
-        
-        // Actualizar el examen con el orden correcto
-        examData.preguntas = preguntasAMostrar;
-
-        // CUARTO: Setear estados (ya con el orden correcto)
-        setAttempt(attemptData);
-        setExam(examData);
-
-        // Randomizar opciones para cada pregunta
-        if (preguntasAMostrar) {
-          const randomized = {};
-          const randomizedMatching = {};
-          preguntasAMostrar.forEach((pregunta, index) => {
-            if (pregunta.tipo === 'matching' && pregunta.opciones && Array.isArray(pregunta.opciones)) {
-              // Para matching, solo randomizar las respuestas (segunda mitad del array)
-              const numConceptos = pregunta.correcta || 0;
-              const respuestas = pregunta.opciones.slice(numConceptos);
-              const respuestasConIndice = respuestas.map((texto, i) => ({
-                texto,
-                originalIndex: numConceptos + i // Índice original en el array completo
-              }));
-              // Randomizar usando Fisher-Yates shuffle
-              for (let i = respuestasConIndice.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [respuestasConIndice[i], respuestasConIndice[j]] = [respuestasConIndice[j], respuestasConIndice[i]];
-              }
-              randomizedMatching[index] = respuestasConIndice;
-            } else if (pregunta.tipo === 'fill_in_blank' && pregunta.opciones && Array.isArray(pregunta.opciones)) {
-              // Para fill_in_blank, randomizar todas las opciones (correctas + distractores juntas)
-              const opcionesConIndice = pregunta.opciones.map((texto, i) => ({
-                texto,
-                originalIndex: i
-              }));
-              // Randomizar usando Fisher-Yates shuffle
-              for (let i = opcionesConIndice.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [opcionesConIndice[i], opcionesConIndice[j]] = [opcionesConIndice[j], opcionesConIndice[i]];
-              }
-              randomized[index] = opcionesConIndice;
-            } else if (pregunta.opciones && Array.isArray(pregunta.opciones)) {
-              // Para otros tipos (multiple_choice, true_false), randomizar todas las opciones
-              const opcionesConIndice = pregunta.opciones.map((texto, i) => ({
-                texto,
-                originalIndex: i
-              }));
-              // Randomizar usando Fisher-Yates shuffle
-              for (let i = opcionesConIndice.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [opcionesConIndice[i], opcionesConIndice[j]] = [opcionesConIndice[j], opcionesConIndice[i]];
-              }
-              randomized[index] = opcionesConIndice;
-            }
-          });
-          setRandomizedOptions(randomized);
-          setRandomizedMatchingAnswers(randomizedMatching);
-        }
-
-        // Redireccionar si es un examen de programación
-        if (examData.tipo === 'programming') {
-          const params = new URLSearchParams();
-          if (windowId) params.append('windowId', windowId);
-          navigate(`/programming-exam/${examId}?${params.toString()}`);
-          return;
-        }
-      } catch (err) {
-        console.error('Error cargando examen:', err);
-        setExam(null);
-        
-        // Manejar errores específicos de seguridad
-        if (err.code === 'WINDOW_ID_REQUIRED') {
-          setError('Acceso no autorizado: Se requiere inscripción válida');
-        } else if (err.code === 'NOT_ENROLLED') {
-          setError('No estás inscrito en esta ventana de examen');
-        } else if (err.code === 'NOT_ENABLED') {
-          setError('No estás habilitado para rendir este examen');
-        } else if (err.code === 'EXAM_NOT_AVAILABLE') {
-          setError('El examen no está disponible en este momento');
-        } else if (err.code === 'EXAM_MISMATCH') {
-          setError('La ventana no corresponde a este examen');
-        } else {
-          setError(err.message || 'Error de acceso al examen');
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadExamAndAttempt();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [examId, windowId]);
 
   // Add page leave confirmation for exam security
   useEffect(() => {
@@ -867,20 +637,14 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
                             onClick={() => {
                               if (submitting) return;
                               if (isFillInBlank) {
-                                setRespuestas(prev => {
-                                  const current = Array.isArray(prev[p.id]) ? prev[p.id] : [];
-                                  const updated = current.includes(j)
-                                    ? { ...prev, [p.id]: current.filter(idx => idx !== j) } // Deseleccionar
-                                    : { ...prev, [p.id]: [...current, j] }; // Seleccionar (agregar al final)
-                                  sessionStorage.setItem(`exam_${examId}_respuestas`, JSON.stringify(updated));
-                                  return updated;
+                                updateRespuesta(p.id, (current) => {
+                                  const currentArr = Array.isArray(current) ? current : [];
+                                  return currentArr.includes(j)
+                                    ? currentArr.filter(idx => idx !== j) // Deseleccionar
+                                    : [...currentArr, j]; // Seleccionar (agregar al final)
                                 });
                               } else {
-                                setRespuestas(prev => {
-                                  const updated = { ...prev, [p.id]: j };
-                                  sessionStorage.setItem(`exam_${examId}_respuestas`, JSON.stringify(updated));
-                                  return updated;
-                                });
+                                updateRespuesta(p.id, j);
                               }
                             }}
 
