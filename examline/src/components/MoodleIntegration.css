@@ -41,11 +41,10 @@
   width: 32px;
   height: 32px;
   line-height: 1;
-  transition: transform 0.2s;
 }
 
 .close-btn:hover {
-  transform: rotate(90deg);
+  opacity: 0.8;
 }
 
 .moodle-form {

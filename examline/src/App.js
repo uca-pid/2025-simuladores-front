@@ -1,9 +1,11 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "./contexts/AuthContext";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider , useAuth } from "./contexts/AuthContext";
 import { ProfessorRoute, StudentRoute, AuthenticatedRoute } from "./components/ProtectedRoute";
+import ScrollToTop from "./components/ScrollToTop";
 import Login from "./pages/Login";
 import Registro from "./pages/Registro";
 import Principal from "./pages/Principal";
+import MisExamenes from "./pages/MisExamenes";
 import ExamCreator from "./pages/ExamCreator";
 import ExamView from "./pages/ExamView";
 import UserSettingsPage from "./pages/userSettings";
@@ -14,22 +16,50 @@ import ExamResults from "./pages/ExamResults";
 import ProgrammingExamView from "./pages/ProgrammingExamView";
 import ExamWindows from "./pages/ExamWindows";
 import StudentInscriptions from "./pages/StudentInscriptions";
-import WindowInscriptions from "./pages/WindowInscriptions";
 import ExamWindowResults from "./pages/ExamWindowResults";
 import SEBExamLauncher from "./pages/SEBExamLauncher";
-import ExamRanking from "./pages/ExamRanking";
+import QuestionBank from "./pages/QuestionBank";
+import WindowInscriptions from "./pages/WindowInscriptions";
 import "./modern-examline.css";
+
+
+// Wrapper para login/registro: redirige si ya está logueado
+function AuthRedirect({ children }) {
+  const { user } = useAuth();
+
+  if (user) {
+    return user.rol === "professor" ? <Navigate to="/principal" /> : <Navigate to="/student-exam" />;
+  }
+
+  return children;
+}
 
 function App() {
   return (
     <AuthProvider>
       <Router>
+        <ScrollToTop />
         <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/registro" element={<Registro />} />
+          {/* Login y registro */}
+          <Route path="/login" element={
+            <AuthRedirect>
+              <Login />
+            </AuthRedirect>
+          } />
+          <Route path="/registro" element={
+            <AuthRedirect>
+              <Registro />
+            </AuthRedirect>
+          } />
+
           <Route path="/principal" element={
             <ProfessorRoute>
               <Principal />
+            </ProfessorRoute>
+          } />
+          <Route path="/mis-examenes" element={
+            <ProfessorRoute>
+              <MisExamenes />
             </ProfessorRoute>
           } />
           <Route path="/exam-creator" element={
@@ -67,14 +97,14 @@ function App() {
               <ProgrammingExamView />
            
           } />
-          <Route path="/exam-results/:attemptId" element={
-            <StudentRoute>
-              <ExamResults />
-            </StudentRoute>
-          } />
           <Route path="/exam-windows" element={
             <ProfessorRoute>
               <ExamWindows />
+            </ProfessorRoute>
+          } />
+          <Route path="/question-bank" element={
+            <ProfessorRoute>
+              <QuestionBank />
             </ProfessorRoute>
           } />
           <Route path="/exam-windows/:windowId/inscriptions" element={
@@ -92,17 +122,12 @@ function App() {
               <StudentInscriptions />
             </StudentRoute>
           } />
-          <Route path="/ranking/window/:windowId" element={
-            <AuthenticatedRoute>
-              <ExamRanking />
-            </AuthenticatedRoute>
-          } />
           <Route path="/user-settings" element={
             <AuthenticatedRoute>
               <UserSettingsPage />
             </AuthenticatedRoute>
           } />
-          <Route path="*" element={<Login />} /> {/* default */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </Router>
     </AuthProvider>

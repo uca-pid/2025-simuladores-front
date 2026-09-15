@@ -10,6 +10,7 @@ const Registro = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isProfessor, setIsProfessor] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
 
   const [nombreError, setNombreError] = useState("");
@@ -159,11 +160,15 @@ const Registro = () => {
                     setNombre(e.target.value);
                     setNombreError(validateName(e.target.value));
                   }}
+                  disabled={isLoading || isOnCooldown}
                   style={{
                     padding: '0.6rem 0.8rem',
                     border: '1px solid var(--border-color)',
                     borderRadius: '6px',
-                    fontSize: '0.9rem'
+                    fontSize: '0.9rem',
+                    backgroundColor: isLoading ? '#e9ecef' : 'white',
+                    cursor: isLoading ? 'not-allowed' : 'text',
+                    opacity: isLoading ? 0.7 : 1,
                   }}
                 />
                 <div className="form-text" style={{ color: 'var(--text-color-3)', fontSize: '0.75rem', marginTop: '0.25rem' }}>
@@ -188,11 +193,15 @@ const Registro = () => {
                     setEmail(e.target.value);
                     setEmailError(validateEmail(e.target.value));
                   }}
+                  disabled={isLoading || isOnCooldown}
                   style={{
                     padding: '0.6rem 0.8rem',
                     border: '1px solid var(--border-color)',
                     borderRadius: '6px',
-                    fontSize: '0.9rem'
+                    fontSize: '0.9rem',
+                    backgroundColor: isLoading ? '#e9ecef' : 'white',
+                    cursor: isLoading ? 'not-allowed' : 'text',
+                    opacity: isLoading ? 0.7 : 1,
                   }}
                 />
                 <div className="form-text" style={{ color: 'var(--text-color-3)', fontSize: '0.75rem', marginTop: '0.25rem' }}>
@@ -202,13 +211,29 @@ const Registro = () => {
               </div>
 
               {/* Contraseña */}
-              <div className="mb-3 text-start">
-                <label htmlFor="password" className="form-label d-flex align-items-center gap-2" style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-                  <i className="fas fa-lock text-muted"></i>
-                  Contraseña
-                </label>
+              <div className="mb-3 text-start d-flex flex-column">
+                <div className="d-flex justify-content-between align-items-center mb-1">
+                  <label
+                    htmlFor="password"
+                    className="form-label d-flex align-items-center gap-2 mb-0"
+                    style={{ fontSize: '0.9rem' }}
+                  >
+                    <i className="fas fa-lock text-muted"></i>
+                    Contraseña
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="btn btn-link p-0"
+                    disabled={isLoading || isOnCooldown}
+                    style={{ fontSize: '0.85rem', pointerEvents: isLoading || isOnCooldown ? 'none' : 'auto', opacity: isLoading || isOnCooldown ? 0.6 : 1 }}
+                  >
+                    <i className={`fas ${showPassword ? "fa-eye-slash" : "fa-eye"} me-1`}></i>
+                    {showPassword ? "Ocultar" : "Mostrar"}
+                  </button>
+                </div>
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   className={`form-control ${passwordError ? "is-invalid" : ""}`}
                   id="password"
                   placeholder="Crea una contraseña segura"
@@ -217,18 +242,26 @@ const Registro = () => {
                     setPassword(e.target.value);
                     setPasswordError(validatePassword(e.target.value));
                   }}
+                  disabled={isLoading || isOnCooldown}
                   style={{
                     padding: '0.6rem 0.8rem',
                     border: '1px solid var(--border-color)',
                     borderRadius: '6px',
-                    fontSize: '0.9rem'
+                    fontSize: '0.9rem',
+                    backgroundColor: isLoading ? '#e9ecef' : 'white',
+                    cursor: isLoading ? 'not-allowed' : 'text',
+                    opacity: isLoading ? 0.7 : 1,
                   }}
                 />
-                <div className="form-text" style={{ color: 'var(--text-color-3)', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                <div
+                  className="form-text"
+                  style={{ color: 'var(--text-color-3)', fontSize: '0.75rem', marginTop: '0.25rem' }}
+                >
                   8+ caracteres, mayúscula, minúscula, número y carácter especial.
                 </div>
                 {passwordError && <div className="invalid-feedback">{passwordError}</div>}
               </div>
+
 
               {/* Switch de rol */}
               <div className="mb-3">
@@ -249,6 +282,7 @@ const Registro = () => {
                         id="isProfessor"
                         checked={isProfessor}
                         onChange={() => setIsProfessor(!isProfessor)}
+                        disabled={isLoading || isOnCooldown}
                         style={{ transform: 'scale(1.1)' }}
                       />
                       <label className="form-check-label" htmlFor="isProfessor" style={{ fontSize: '0.9rem', fontWeight: '500' }}>
@@ -293,8 +327,21 @@ const Registro = () => {
               </div>
 
               <p className="mb-0 text-center" style={{ color: 'var(--text-color-1)', fontSize: '0.85rem' }}>
-                ¿Ya tenés cuenta? <Link to="/login" style={{ color: 'var(--primary-color)', textDecoration: 'none', fontWeight: '500' }}>Inicia sesión aquí</Link>
+                ¿Ya tenés cuenta?{" "}
+                {isLoading || isOnCooldown ? (
+                  <span style={{ color: 'gray', cursor: 'not-allowed', fontWeight: '500' }}>
+                    Inicia sesión aquí
+                  </span>
+                ) : (
+                  <Link 
+                    to="/login" 
+                    style={{ color: 'var(--primary-color)', textDecoration: 'none', fontWeight: '500' }}
+                  >
+                    Inicia sesión aquí
+                  </Link>
+                )}
               </p>
+
             </form>
           </div>
         </div>

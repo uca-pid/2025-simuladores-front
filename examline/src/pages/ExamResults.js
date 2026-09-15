@@ -1061,8 +1061,23 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
                   <div key={index} className="exam-results-question-card">
                     <div className="exam-card fade-in-up" style={{animationDelay: `${index * 0.1}s`}}>
                       <div className="exam-card-header">
-                        <h5 className="exam-title">
-                          <span className="badge badge-primary me-3">{index + 1}</span>
+                        <div className="d-flex align-items-center gap-2 mb-3">
+                          <span 
+                            className="badge"
+                            style={{
+                              backgroundColor: question.tipo === 'true_false' ? '#28a745' : question.tipo === 'fill_in_blank' ? '#ffc107' : question.tipo === 'matching' ? '#9c27b0' : '#007bff',
+                              color: 'white',
+                              padding: '0.35rem 0.65rem',
+                              fontSize: '0.75rem',
+                              borderRadius: '6px'
+                            }}
+                          >
+                            <i className={`fas ${question.tipo === 'true_false' ? 'fa-check-double' : question.tipo === 'fill_in_blank' ? 'fa-fill-drip' : question.tipo === 'matching' ? 'fa-arrows-alt-h' : 'fa-list-ul'} me-1`}></i>
+                            {question.tipo === 'true_false' ? 'V/F' : question.tipo === 'fill_in_blank' ? 'Completar' : question.tipo === 'matching' ? 'Unir' : 'Múltiple'}
+                          </span>
+                          <span className="badge badge-primary">{index + 1}</span>
+                        </div>
+                        <h5 className="exam-title" style={{ marginTop: 0 }}>
                           <span className="question-text">{question.texto || "Sin texto"}</span>
                         </h5>
                       </div>
@@ -1074,73 +1089,271 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
                           </h6>
                           <div className="exam-results-options-list">
                             {(() => {
-                              const studentAnswer = attempt.respuestas?.[index];
+                              const studentAnswer = attempt.respuestas?.[question.id]; // Usar ID de pregunta, no índice
+                              const isFillInBlank = question.tipo === 'fill_in_blank';
+                              const isMatching = question.tipo === 'matching';
                               
-                              return question.opciones?.map((option, optionIndex) => {
-                                const isCorrect = optionIndex === question.correcta;
-                                const isStudentAnswer = studentAnswer === optionIndex;
-                                const isWrongAnswer = isStudentAnswer && !isCorrect;
-                              
-                              return (
-                                <div 
-                                  key={optionIndex} 
-                                  className={`exam-info-item ${
-                                    isCorrect ? 'bg-success bg-opacity-10 border-success' : 
-                                    isWrongAnswer ? 'bg-danger bg-opacity-10 border-danger' : 
-                                    ''
-                                  } rounded p-2 mb-2`}
-                                  style={{
-                                    border: isCorrect || isWrongAnswer ? '2px solid' : '1px solid #dee2e6'
-                                  }}
-                                >
-                                  <div className="d-flex align-items-center justify-content-between">
-                                    <div className="d-flex align-items-center">
-                                      <i className={
-                                        isCorrect ? "fas fa-check-circle me-2 text-success" : 
-                                        isWrongAnswer ? "fas fa-times-circle me-2 text-danger" :
-                                        "fas fa-circle me-2 text-muted"
-                                      } 
-                                         style={{fontSize: (isCorrect || isWrongAnswer) ? '14px' : '8px'}}></i>
-                                      <span className={
-                                        isCorrect ? "fw-bold text-success" : 
-                                        isWrongAnswer ? "fw-bold text-danger" : ""
-                                      }>
-                                        {option || "Opción vacía"}
-                                      </span>
+                              if (isMatching) {
+                                // Para matching, mostrar pares correctos vs respuestas del estudiante
+                                const numConceptos = question.correcta || 0;
+                                const conceptos = question.opciones?.slice(0, numConceptos) || [];
+                                const respuestasCorrectas = question.opciones?.slice(numConceptos) || [];
+                                const studentAnswers = Array.isArray(studentAnswer) ? studentAnswer : [];
+                                
+                                // Verificar si todas las conexiones son correctas
+                                let isFullyCorrect = false;
+                                if (Array.isArray(studentAnswer) && studentAnswer.length === numConceptos) {
+                                  isFullyCorrect = studentAnswer.every((answerIdx, conceptIdx) => {
+                                    return answerIdx === (numConceptos + conceptIdx);
+                                  });
+                                }
+                                
+                                return (
+                                  <>
+                                    {/* Resultado general */}
+                                    <div className={`alert ${isFullyCorrect ? 'alert-success' : studentAnswers.length > 0 ? 'alert-danger' : 'alert-warning'} mb-3`}>
+                                      <div>
+                                        <i className={`fas ${isFullyCorrect ? 'fa-check-circle' : studentAnswers.length > 0 ? 'fa-times-circle' : 'fa-exclamation-triangle'} me-2`}></i>
+                                        <strong>
+                                          {isFullyCorrect ? '¡Respuesta correcta!' : studentAnswers.length > 0 ? 'Respuesta incorrecta' : 'No respondiste esta pregunta'}
+                                        </strong>
+                                      </div>
                                     </div>
-                                    <div>
-                                      {isCorrect && (
-                                        <span className="badge bg-success text-white ms-2">
-                                          <i className="fas fa-check me-1"></i>
-                                          Correcta
-                                        </span>
-                                      )}
-                                      {isStudentAnswer && !isCorrect && (
-                                        <span className="badge bg-danger text-white ms-2">
-                                          <i className="fas fa-user me-1"></i>
-                                          Tu respuesta
-                                        </span>
-                                      )}
-                                      {isStudentAnswer && isCorrect && (
-                                        <span className="badge bg-primary text-white ms-2">
-                                          <i className="fas fa-user-check me-1"></i>
-                                          Tu respuesta
-                                        </span>
-                                      )}
+                                    
+                                    {/* Pares correctos */}
+                                    <div className="mb-3">
+                                      <h6 className="text-success mb-2">
+                                        <i className="fas fa-check-circle me-2"></i>
+                                        Pares correctos:
+                                      </h6>
+                                      {conceptos.map((concepto, i) => {
+                                        const respuestaCorrecta = respuestasCorrectas[i];
+                                        return (
+                                          <div key={i} className="d-flex align-items-center gap-2 mb-2 p-2 bg-success bg-opacity-10 border border-success rounded">
+                                            <span className="badge bg-primary" style={{ fontSize: '0.8rem', minWidth: '30px' }}>{i + 1}</span>
+                                            <span className="fw-bold">{concepto}</span>
+                                            <i className="fas fa-arrow-right text-success mx-1"></i>
+                                            <span className="badge bg-success" style={{ fontSize: '0.8rem', minWidth: '30px' }}>{String.fromCharCode(65 + i)}</span>
+                                            <span className="fw-bold text-success">{respuestaCorrecta}</span>
+                                          </div>
+                                        );
+                                      })}
                                     </div>
-                                  </div>
-                                </div>
-                              );
-                              });
-                            })()}
-                            {(() => {
-                              const studentAnswer = attempt.respuestas?.[index];
-                              return studentAnswer === undefined && (
-                                <div className="alert alert-warning mt-3 mb-0" role="alert">
-                                  <i className="fas fa-exclamation-triangle me-2"></i>
-                                  No respondiste esta pregunta
-                                </div>
-                              );
+                                    
+                                    {/* Tus respuestas */}
+                                    {studentAnswers.length > 0 && (
+                                      <div className="mb-3">
+                                        <h6 className={isFullyCorrect ? 'text-primary' : 'text-danger'} style={{ marginBottom: '0.5rem' }}>
+                                          <i className={`fas ${isFullyCorrect ? 'fa-user-check' : 'fa-user'} me-2`}></i>
+                                          Tus respuestas:
+                                        </h6>
+                                        {conceptos.map((concepto, i) => {
+                                          const studentAnswerIdx = studentAnswers[i];
+                                          const correctAnswerIdx = numConceptos + i;
+                                          const isCorrect = studentAnswerIdx === correctAnswerIdx;
+                                          const studentAnswerText = studentAnswerIdx !== null && studentAnswerIdx !== undefined 
+                                            ? question.opciones?.[studentAnswerIdx]
+                                            : '(sin respuesta)';
+                                          
+                                          // Calcular la letra para mostrar (A, B, C...)
+                                          let letterToShow = '?';
+                                          if (studentAnswerIdx !== null && studentAnswerIdx !== undefined && studentAnswerIdx >= numConceptos) {
+                                            letterToShow = String.fromCharCode(65 + (studentAnswerIdx - numConceptos));
+                                          }
+                                          
+                                          return (
+                                            <div 
+                                              key={i} 
+                                              className={`d-flex align-items-center gap-2 mb-2 p-2 rounded border ${
+                                                isCorrect 
+                                                  ? 'bg-success bg-opacity-10 border-success' 
+                                                  : 'bg-danger bg-opacity-10 border-danger'
+                                              }`}
+                                            >
+                                              <span className="badge bg-primary" style={{ fontSize: '0.8rem', minWidth: '30px' }}>{i + 1}</span>
+                                              <span className="fw-bold">{concepto}</span>
+                                              <i className="fas fa-arrow-right text-muted mx-1"></i>
+                                              <span className={`badge ${isCorrect ? 'bg-success' : 'bg-danger'}`} style={{ fontSize: '0.8rem', minWidth: '30px' }}>
+                                                {letterToShow}
+                                              </span>
+                                              <span className={`fw-bold ${isCorrect ? 'text-success' : 'text-danger'}`}>
+                                                {studentAnswerText}
+                                              </span>
+                                              <i className={`fas ${isCorrect ? 'fa-check' : 'fa-times'} ms-auto ${isCorrect ? 'text-success' : 'text-danger'}`}></i>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    )}
+                                  </>
+                                );
+                              } else if (isFillInBlank) {
+                                // Para fill_in_blank, mostrar respuestas correctas en orden y compararlas
+                                const numCorrect = question.correcta || 0;
+                                const correctAnswers = question.opciones?.slice(0, numCorrect) || [];
+                                const studentAnswers = Array.isArray(studentAnswer) 
+                                  ? studentAnswer.map(idx => question.opciones?.[idx])
+                                  : [];
+                                
+                                // Verificar si la respuesta del estudiante es correcta
+                                let isFullyCorrect = false;
+                                if (Array.isArray(studentAnswer) && studentAnswer.length === numCorrect) {
+                                  isFullyCorrect = studentAnswer.every((idx, i) => question.opciones?.[idx] === correctAnswers[i]);
+                                }
+                                
+                                return (
+                                  <>
+                                    {/* Resultado general */}
+                                    <div className={`alert ${isFullyCorrect ? 'alert-success' : studentAnswers.length > 0 ? 'alert-danger' : 'alert-warning'} mb-3`}>
+                                      <div>
+                                        <i className={`fas ${isFullyCorrect ? 'fa-check-circle' : studentAnswers.length > 0 ? 'fa-times-circle' : 'fa-exclamation-triangle'} me-2`}></i>
+                                        <strong>
+                                          {isFullyCorrect ? '¡Respuesta correcta!' : studentAnswers.length > 0 ? 'Respuesta incorrecta' : 'No respondiste esta pregunta'}
+                                        </strong>
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Respuestas correctas */}
+                                    <div className="mb-3">
+                                      <h6 className="text-success mb-2">
+                                        <i className="fas fa-check-circle me-2"></i>
+                                        Respuestas correctas (en orden):
+                                      </h6>
+                                      {correctAnswers.map((answer, i) => (
+                                        <div key={i} className="d-flex align-items-center gap-2 mb-2 p-2 bg-success bg-opacity-10 border border-success rounded">
+                                          <span className="badge bg-success" style={{ fontSize: '0.8rem' }}>{i + 1}</span>
+                                          <span className="fw-bold text-success">{answer}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                    
+                                    {/* Tus respuestas */}
+                                    {studentAnswers.length > 0 && (
+                                      <div className="mb-3">
+                                        <h6 className={isFullyCorrect ? 'text-primary' : 'text-danger'} style={{ marginBottom: '0.5rem' }}>
+                                          <i className={`fas ${isFullyCorrect ? 'fa-user-check' : 'fa-user'} me-2`}></i>
+                                          Tus respuestas:
+                                        </h6>
+                                        {studentAnswers.map((answer, i) => {
+                                          const isCorrectPosition = answer === correctAnswers[i];
+                                          return (
+                                            <div 
+                                              key={i} 
+                                              className={`d-flex align-items-center gap-2 mb-2 p-2 rounded border ${
+                                                isCorrectPosition 
+                                                  ? 'bg-success bg-opacity-10 border-success' 
+                                                  : 'bg-danger bg-opacity-10 border-danger'
+                                              }`}
+                                            >
+                                              <span className={`badge ${isCorrectPosition ? 'bg-success' : 'bg-danger'}`} style={{ fontSize: '0.8rem' }}>
+                                                {i + 1}
+                                              </span>
+                                              <span className={`fw-bold ${isCorrectPosition ? 'text-success' : 'text-danger'}`}>
+                                                {answer || '(vacío)'}
+                                              </span>
+                                              <i className={`fas ${isCorrectPosition ? 'fa-check' : 'fa-times'} ms-auto ${isCorrectPosition ? 'text-success' : 'text-danger'}`}></i>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    )}
+                                    
+                                    {/* Todas las opciones disponibles */}
+                                    <div className="mt-3">
+                                      <h6 className="text-muted mb-2">
+                                        <i className="fas fa-list me-2"></i>
+                                        Todas las opciones disponibles:
+                                      </h6>
+                                      <div className="row row-cols-2 g-2">
+                                        {question.opciones?.map((option, optIdx) => {
+                                          const isCorrectOption = optIdx < numCorrect;
+                                          const wasSelected = Array.isArray(studentAnswer) && studentAnswer.includes(optIdx);
+                                          
+                                          return (
+                                            <div key={optIdx} className="col">
+                                              <div className={`p-2 rounded border ${isCorrectOption ? 'border-success-subtle' : 'border-secondary-subtle'}`} style={{ fontSize: '0.85rem' }}>
+                                                <i className={`fas ${isCorrectOption ? 'fa-check-circle text-success' : 'fa-circle text-muted'} me-2`} style={{ fontSize: '10px' }}></i>
+                                                <span className={wasSelected ? 'fw-bold' : ''}>{option}</span>
+                                                {wasSelected && (
+                                                  <i className="fas fa-user ms-2 text-primary" style={{ fontSize: '10px' }} title="Tu selección"></i>
+                                                )}
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  </>
+                                );
+                              } else {
+                                // Para multiple_choice y true_false, lógica original
+                                return (
+                                  <>
+                                    {question.opciones?.map((option, optionIndex) => {
+                                      const isCorrect = optionIndex === question.correcta;
+                                      const isStudentAnswer = studentAnswer === optionIndex;
+                                      const isWrongAnswer = isStudentAnswer && !isCorrect;
+                                    
+                                      return (
+                                        <div 
+                                          key={optionIndex} 
+                                          className={`exam-info-item ${
+                                            isCorrect ? 'bg-success bg-opacity-10 border-success' : 
+                                            isWrongAnswer ? 'bg-danger bg-opacity-10 border-danger' : 
+                                            ''
+                                          } rounded p-2 mb-2`}
+                                          style={{
+                                            border: isCorrect || isWrongAnswer ? '2px solid' : '1px solid #dee2e6'
+                                          }}
+                                        >
+                                          <div className="d-flex align-items-center justify-content-between">
+                                            <div className="d-flex align-items-center">
+                                              <i className={
+                                                isCorrect ? "fas fa-check-circle me-2 text-success" : 
+                                                isWrongAnswer ? "fas fa-times-circle me-2 text-danger" :
+                                                "fas fa-circle me-2 text-muted"
+                                              } 
+                                                 style={{fontSize: (isCorrect || isWrongAnswer) ? '14px' : '8px'}}></i>
+                                              <span className={
+                                                isCorrect ? "fw-bold text-success" : 
+                                                isWrongAnswer ? "fw-bold text-danger" : ""
+                                              }>
+                                                {option || "Opción vacía"}
+                                              </span>
+                                            </div>
+                                            <div>
+                                              {isCorrect && (
+                                                <span className="badge bg-success text-white ms-2">
+                                                  <i className="fas fa-check me-1"></i>
+                                                  Correcta
+                                                </span>
+                                              )}
+                                              {isStudentAnswer && !isCorrect && (
+                                                <span className="badge bg-danger text-white ms-2">
+                                                  <i className="fas fa-user me-1"></i>
+                                                  Tu respuesta
+                                                </span>
+                                              )}
+                                              {isStudentAnswer && isCorrect && (
+                                                <span className="badge bg-primary text-white ms-2">
+                                                  <i className="fas fa-user-check me-1"></i>
+                                                  Tu respuesta
+                                                </span>
+                                              )}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                    {studentAnswer === undefined && (
+                                      <div className="alert alert-warning mt-3 mb-0" role="alert">
+                                        <i className="fas fa-exclamation-triangle me-2"></i>
+                                        No respondiste esta pregunta
+                                      </div>
+                                    )}
+                                  </>
+                                );
+                              }
                             })()}
                           </div>
                         </div>

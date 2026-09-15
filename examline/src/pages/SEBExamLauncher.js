@@ -14,7 +14,6 @@ export default function SEBExamLauncher() {
   
   const examId = searchParams.get('examId');
   const windowId = searchParams.get('windowId');
-  const examType = searchParams.get('examType');
 
   useEffect(() => {
     // Lanzar SEB automáticamente al cargar la página

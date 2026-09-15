@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 const AuthContext = createContext(undefined);
 
@@ -24,23 +24,22 @@ export const AuthProvider = ({ children }) => {
       if (savedToken && savedUser) {
         try {
           const userData = JSON.parse(savedUser);
-          setToken(savedToken);
-          setUser(userData);
           
           // Validate token by checking if it's expired
           const tokenPayload = JSON.parse(atob(savedToken.split('.')[1]));
           const now = Date.now() / 1000;
           
           if (tokenPayload.exp && tokenPayload.exp < now) {
-            // Token expired, try to refresh
-            const refreshSuccess = await doRefreshToken(savedToken);
-            if (!refreshSuccess) {
-              // Failed to refresh, logout
-              setToken(null);
-              setUser(null);
-              localStorage.removeItem('token');
-              localStorage.removeItem('user');
-            }
+            // Token expired, clear everything
+            console.log('Token expirado detectado al cargar, limpiando...');
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            setToken(null);
+            setUser(null);
+          } else {
+            // Token still valid
+            setToken(savedToken);
+            setUser(userData);
           }
         } catch (error) {
           console.error('Error parsing saved user data:', error);
@@ -57,7 +56,7 @@ export const AuthProvider = ({ children }) => {
     loadStoredAuth();
   }, []); // Remove dependency to avoid circular calls
 
-  const login = (newToken, userData) => {
+  const login = useCallback((newToken, userData) => {
     setToken(newToken);
     setUser(userData);
     localStorage.setItem('token', newToken);
@@ -67,9 +66,9 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('name');
     localStorage.removeItem('userId');
     localStorage.removeItem('rol');
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setToken(null);
     setUser(null);
     localStorage.removeItem('token');
@@ -78,9 +77,9 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('name');
     localStorage.removeItem('userId');
     localStorage.removeItem('rol');
-  };
+  }, []);
 
-  const doRefreshToken = async (currentToken) => {
+  const doRefreshToken = useCallback(async (currentToken) => {
     if (!currentToken) return false;
 
     try {
@@ -106,11 +105,11 @@ export const AuthProvider = ({ children }) => {
       logout();
       return false;
     }
-  };
+  }, [login, logout]);
 
-  const refreshToken = async () => {
+  const refreshToken = useCallback(async () => {
     return doRefreshToken(token);
-  };
+  }, [token, doRefreshToken]);
 
   // Set up automatic token refresh
   useEffect(() => {
@@ -133,7 +132,7 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('Error setting up token refresh:', error);
     }
-  }, [token]);
+  }, [token, refreshToken]); // Agregar refreshToken a las dependencias
 
   const value = {
     user,

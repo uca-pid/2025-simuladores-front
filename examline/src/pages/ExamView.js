@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
+import Editor from '@monaco-editor/react';
 import BackToMainButton from "../components/BackToMainButton";
 import { useAuth } from "../contexts/AuthContext";
-import { getExamById } from "../services/api";
+import { getExamById, getReferenceFiles } from "../services/api";
 
 const ExamView = ({ examId: propExamId, onBack }) => {
   const { examId: routeExamId } = useParams();
@@ -13,6 +14,9 @@ const ExamView = ({ examId: propExamId, onBack }) => {
   const [exam, setExam] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [referenceFiles, setReferenceFiles] = useState([]);
+  const [currentReferenceFile, setCurrentReferenceFile] = useState(null);
+  const [loadingReferenceFiles, setLoadingReferenceFiles] = useState(false);
 
   useEffect(() => {
     if (!examId) return;
@@ -23,6 +27,22 @@ const ExamView = ({ examId: propExamId, onBack }) => {
         const data = await getExamById(examId);
         setExam(data);
         setError(null);
+        
+        // Si el usuario es el profesor del examen y es de programación, cargar archivos de referencia
+        if (data && data.tipo === 'programming' && user && data.profesorId === user.userId) {
+          try {
+            setLoadingReferenceFiles(true);
+            const files = await getReferenceFiles(examId);
+            if (files && files.length > 0) {
+              setReferenceFiles(files);
+              setCurrentReferenceFile(files[0].filename);
+            }
+          } catch (refError) {
+            console.error('Error cargando archivos de referencia:', refError);
+          } finally {
+            setLoadingReferenceFiles(false);
+          }
+        }
       } catch (err) {
         console.error(err);
         setExam(null);
@@ -87,7 +107,10 @@ const ExamView = ({ examId: propExamId, onBack }) => {
                   <span className="btn-text">Volver</span>
                 </button>
               ) : (
-                <BackToMainButton className="modern-btn modern-btn-secondary modern-btn-sm" />
+               <BackToMainButton 
+                customPath="/mis-examenes"
+                customLabel={<><i className="fas fa-arrow-left me-2"></i>Volver a Mis Exámenes</>}
+              />
               )}
             </div>
           </div>
@@ -113,6 +136,17 @@ const ExamView = ({ examId: propExamId, onBack }) => {
                 </span>
               </div>
             </div>
+            {exam.tipo !== 'programming' && (
+              <div className="col-md-6 mb-3">
+                <div className="exam-info-item">
+                  <i className="fas fa-random text-info me-2"></i>
+                  <strong>Orden de preguntas:</strong> 
+                  <span className={`ms-2 badge ${exam.ordenAleatorio ? 'bg-info' : 'bg-secondary'}`}>
+                    {exam.ordenAleatorio ? 'Aleatorio' : 'Fijo'}
+                  </span>
+                </div>
+              </div>
+            )}
             {exam.tipo === 'programming' && (
               <>
                 <div className="col-md-6 mb-3">
@@ -307,9 +341,24 @@ const ExamView = ({ examId: propExamId, onBack }) => {
                   <div key={i} className="exam-question-card-wrapper">
                     <div className="exam-card fade-in-up" style={{animationDelay: `${i * 0.1}s`}}>
                       <div className="exam-card-header">
-                        <h5 className="exam-title">
-                          Pregunta {i + 1}
-                        </h5>
+                        <div className="d-flex align-items-center gap-2">
+                          <h5 className="exam-title mb-0">
+                            Pregunta {i + 1}
+                          </h5>
+                          <span 
+                            className="badge"
+                            style={{
+                              backgroundColor: p.tipo === 'true_false' ? '#28a745' : p.tipo === 'fill_in_blank' ? '#ffc107' : p.tipo === 'matching' ? '#9c27b0' : '#007bff',
+                              color: 'white',
+                              padding: '0.35rem 0.65rem',
+                              fontSize: '0.75rem',
+                              borderRadius: '6px'
+                            }}
+                          >
+                            <i className={`fas ${p.tipo === 'true_false' ? 'fa-check-double' : p.tipo === 'fill_in_blank' ? 'fa-fill-drip' : p.tipo === 'matching' ? 'fa-arrows-alt-h' : 'fa-list-ul'} me-1`}></i>
+                            {p.tipo === 'true_false' ? 'V/F' : p.tipo === 'fill_in_blank' ? 'Completar' : p.tipo === 'matching' ? 'Unir con Flechas' : 'Múltiple'}
+                          </span>
+                        </div>
                         <span className="exam-badge">
                           <i className="fas fa-check-circle"></i>
                           <span className="badge-text">{p.opciones?.length || 0} opciones</span>
@@ -320,28 +369,185 @@ const ExamView = ({ examId: propExamId, onBack }) => {
                           <strong>{p.texto || "Sin texto"}</strong>
                         </div>
                         <div className="exam-info">
-                          {p.opciones?.map((o, j) => (
-                            <div key={j} className="exam-info-item option-item">
-                              <i className={
-                                j === p.correcta 
-                                  ? "fas fa-check-circle text-success" 
-                                  : "fas fa-circle text-muted"
-                              }></i>
-                              <span className={`option-text ${j === p.correcta ? "fw-bold text-success" : ""}`}>
-                                {o || "Opción vacía"}
-                                {j === p.correcta && (
-                                  <span className="correct-badge">
-                                    Correcta
+                          {p.tipo === 'matching' ? (
+                            p.opciones?.slice(0, p.correcta).map((concepto, j) => {
+                              const respuesta = p.opciones[p.correcta + j];
+                              return (
+                                <div key={j} className="exam-info-item option-item d-flex align-items-center gap-2 mb-2">
+                                  <span className="badge bg-primary" style={{ fontSize: '0.75rem', minWidth: '30px' }}>
+                                    {j + 1}
                                   </span>
-                                )}
-                              </span>
-                            </div>
-                          ))}
+                                  <span style={{ fontSize: '0.9rem' }}>{concepto || "Concepto vacío"}</span>
+                                  <i className="fas fa-arrow-right text-primary"></i>
+                                  <span className="badge bg-success" style={{ fontSize: '0.75rem', minWidth: '30px' }}>
+                                    {String.fromCharCode(65 + j)}
+                                  </span>
+                                  <span style={{ fontSize: '0.9rem' }}>{respuesta || "Respuesta vacía"}</span>
+                                </div>
+                              );
+                            })
+                          ) : p.tipo === 'fill_in_blank' ? (
+                            <>
+                              <div className="mb-2">
+                                <small className="text-success fw-bold"><i className="fas fa-check-circle me-1"></i>Respuestas correctas (en orden):</small>
+                              </div>
+                              {p.opciones?.slice(0, p.correcta).map((o, j) => (
+                                <div key={j} className="exam-info-item option-item">
+                                  <span className="badge bg-success me-2" style={{ fontSize: '0.7rem' }}>{j + 1}</span>
+                                  <span className="option-text fw-bold text-success">
+                                    {o || "Respuesta vacía"}
+                                  </span>
+                                </div>
+                              ))}
+                              {p.opciones?.length > p.correcta && (
+                                <>
+                                  <div className="mt-3 mb-2">
+                                    <small className="text-danger fw-bold"><i className="fas fa-times-circle me-1"></i>Distractores:</small>
+                                  </div>
+                                  {p.opciones.slice(p.correcta).map((o, j) => (
+                                    <div key={j} className="exam-info-item option-item">
+                                      <i className="fas fa-times text-danger"></i>
+                                      <span className="option-text">
+                                        {o || "Opción vacía"}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </>
+                              )}
+                            </>
+                          ) : (
+                            p.opciones?.map((o, j) => (
+                              <div key={j} className="exam-info-item option-item">
+                                <i className={
+                                  j === p.correcta 
+                                    ? "fas fa-check-circle text-success" 
+                                    : "fas fa-circle text-muted"
+                                }></i>
+                                <span className={`option-text ${j === p.correcta ? "fw-bold text-success" : ""}`}>
+                                  {o || "Opción vacía"}
+                                  {j === p.correcta && (
+                                    <span className="correct-badge">
+                                      Correcta
+                                    </span>
+                                  )}
+                                </span>
+                              </div>
+                            ))
+                          )}
                         </div>
                       </div>
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Solución de Referencia - Solo visible para el profesor */}
+      {exam.tipo === 'programming' && user && exam.profesorId === user.userId && (
+        <div className="modern-card mt-4">
+          <div className="modern-card-header">
+            <h3 className="modern-card-title">
+              <i className="fas fa-star me-2" style={{ color: '#ffd700' }}></i>
+              Solución de Referencia
+            </h3>
+          </div>
+          <div className="modern-card-body">
+            {loadingReferenceFiles ? (
+              <div className="text-center py-4">
+                <div className="spinner-border text-primary" role="status">
+                  <span className="visually-hidden">Cargando...</span>
+                </div>
+                <p className="mt-2 text-muted">Cargando archivos de referencia...</p>
+              </div>
+            ) : referenceFiles.length === 0 ? (
+              <div className="alert alert-info mb-0">
+                <i className="fas fa-info-circle me-2"></i>
+                No hay archivos de solución de referencia guardados para este examen.
+                Puedes agregarlos editando el examen.
+              </div>
+            ) : (
+              <div>
+                <div className="alert alert-success mb-3">
+                  <i className="fas fa-check-circle me-2"></i>
+                  <strong>{referenceFiles.length} archivo(s) de referencia</strong>
+                  <br />
+                  <small>Esta solución es solo visible para ti y te permite validar tus test cases.</small>
+                </div>
+                
+                <div style={{ 
+                  border: '1px solid #dee2e6', 
+                  borderRadius: '8px', 
+                  overflow: 'hidden',
+                  backgroundColor: '#1e1e1e'
+                }}>
+                  {/* Tabs de archivos */}
+                  <div style={{
+                    display: 'flex',
+                    gap: '4px',
+                    padding: '8px 16px',
+                    backgroundColor: '#2d2d30',
+                    borderBottom: '1px solid #3e3e42',
+                    color: '#cccccc',
+                    flexWrap: 'wrap'
+                  }}>
+                    {referenceFiles.map((file) => (
+                      <div
+                        key={file.filename}
+                        onClick={() => setCurrentReferenceFile(file.filename)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '6px 12px',
+                          backgroundColor: currentReferenceFile === file.filename ? '#1e1e1e' : 'transparent',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '13px',
+                          border: currentReferenceFile === file.filename ? '1px solid #3e3e42' : '1px solid transparent',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (currentReferenceFile !== file.filename) {
+                            e.currentTarget.style.backgroundColor = '#3e3e42';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (currentReferenceFile !== file.filename) {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                          }
+                        }}
+                      >
+                        <i className="fas fa-file-code" style={{ 
+                          color: currentReferenceFile === file.filename ? '#4ec9b0' : '#858585' 
+                        }}></i>
+                        <span>{file.filename}</span>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Editor Monaco (read-only) */}
+                  <Editor
+                    height="400px"
+                    language={exam.lenguajeProgramacion}
+                    value={referenceFiles.find(f => f.filename === currentReferenceFile)?.content || ''}
+                    theme="vs-dark"
+                    options={{
+                      readOnly: true,
+                      selectOnLineNumbers: true,
+                      roundedSelection: false,
+                      cursorStyle: 'line',
+                      automaticLayout: true,
+                      scrollBeyondLastLine: false,
+                      minimap: { enabled: true },
+                      fontSize: 14,
+                      lineNumbers: 'on',
+                      wordWrap: 'on'
+                    }}
+                  />
+                </div>
               </div>
             )}
           </div>
