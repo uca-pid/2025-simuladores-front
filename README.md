@@ -1,13 +1,18 @@
-# Ingenieria del Software II - Template
+# Examline - Frontend
 
-![GHA Status](https://github.com/uca-argentina/project-template/actions/workflows/GHA.yml/badge.svg)
-[![Coverage Status](https://coveralls.io/repos/github/uca-argentina/project-template/badge.svg?branch=master)](https://coveralls.io/github/uca-argentina/project-template?branch=master)
+Frontend de Examline.
 
-## Metacello
+## Desarrollo
 
-```smalltalk
-Metacello new
-   baseline: 'IngSoft2';
-   githubUser: 'uca-argentina' project: 'project-template' commitish: 'master' path: 'repository';
-   load: 'development'.
+```bash
+cd examline
+npm install
+npm start
+```
+
+## Tests
+
+```bash
+cd examline
+npm test
 ```
