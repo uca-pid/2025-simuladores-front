@@ -617,3 +617,53 @@ export async function deleteReferenceFile(examId, filename) {
     throw err;
   }
 }
+
+// Manual grading endpoints
+export async function getAttemptProfessorView(attemptId) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/exam-attempts/${attemptId}/professor-view`, {
+      method: "GET",
+      headers: getAuthHeaders(),
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
+export async function executeCodeForGrading({ code, language, filename, customInput, testCases }) {
+  try {
+    const payload = {
+      code,
+      language,
+      filename,
+      ...(customInput !== undefined && { customInput }),
+      ...(testCases !== undefined && { testCases }),
+    };
+
+    const res = await fetch(`${API_BASE_URL}/code-execution/execute`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
+export async function saveManualGrade(attemptId, calificacionManual) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/exam-attempts/${attemptId}/manual-grade`, {
+      method: "PUT",
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ calificacionManual }),
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}

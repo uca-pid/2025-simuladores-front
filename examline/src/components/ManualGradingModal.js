@@ -1,102 +1,77 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { getReferenceFiles } from '../services/api';
 import Editor from '@monaco-editor/react';
+import { useManualGrading } from '../hooks/useManualGrading';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../styles/base.css';
 
-const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:4000';
-
 export default function ManualGradingModal({ attemptId, onClose, onSave }) {
-  const { token } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [executing, setExecuting] = useState(false);
-  const [attempt, setAttempt] = useState(null);
+  const {
+    loading,
+    attempt,
+    executing,
+    executionResult,
+    setExecutionResult,
+    saving,
+    referenceFiles,
+    loadingReferenceFiles,
+    executeCode,
+    saveGrade,
+  } = useManualGrading(attemptId);
+
   const [selectedFileIndex, setSelectedFileIndex] = useState(0);
   const [fileVersion, setFileVersion] = useState('submission');
   const [editedCode, setEditedCode] = useState('');
-  const [executionResult, setExecutionResult] = useState(null);
   const [calificacionManual, setCalificacionManual] = useState('');
-  const [saving, setSaving] = useState(false);
   const [customInput, setCustomInput] = useState('');
   const [useCustomInput, setUseCustomInput] = useState(false);
-  const [referenceFiles, setReferenceFiles] = useState([]);
   const [currentReferenceFile, setCurrentReferenceFile] = useState('');
-  const [loadingReferenceFiles, setLoadingReferenceFiles] = useState(false);
 
+  // Inicializar estado de UI una vez que se cargan los datos del intento
   useEffect(() => {
-    loadAttemptDetails();
-  }, [attemptId]);
+    if (!attempt) return;
 
-  const loadAttemptDetails = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/exam-attempts/${attemptId}/professor-view`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+    // 🔒 IMPORTANTE: Cargar por defecto el archivo main en versión manual
+    // Este es el archivo que se usó para la corrección automática
+    const mainFileName = attempt.exam.lenguajeProgramacion === 'python' ? 'main.py' : 'main.js';
 
-      if (response.ok) {
-        const data = await response.json();
-        console.log('🔍 Datos del intento recibidos:', data);
-        console.log('🔍 Solución de referencia:', data.exam?.solucionReferencia);
-        setAttempt(data);
-        
-        // 🔒 IMPORTANTE: Cargar por defecto el archivo main en versión manual
-        // Este es el archivo que se usó para la corrección automática
-        const mainFileName = data.exam.lenguajeProgramacion === 'python' ? 'main.py' : 'main.js';
-        
-        // Intentar encontrar el archivo main en versión manual
-        let targetVersion = 'manual';
-        let targetIndex = data.manualFiles.findIndex(f => f.filename === mainFileName);
-        
-        // Si no existe en manual, buscar en submission
-        if (targetIndex === -1 && data.submissionFiles.length > 0) {
-          targetVersion = 'submission';
-          targetIndex = data.submissionFiles.findIndex(f => f.filename === mainFileName);
-        }
-        
-        // Si aún no se encuentra, usar el primer archivo disponible
-        if (targetIndex === -1) {
-          targetVersion = data.manualFiles.length > 0 ? 'manual' : 'submission';
-          targetIndex = 0;
-        }
-        
-        // Configurar el estado inicial
-        setFileVersion(targetVersion);
-        setSelectedFileIndex(targetIndex);
-        
-        const files = targetVersion === 'manual' ? data.manualFiles : data.submissionFiles;
-        if (files && files.length > 0 && files[targetIndex]) {
-          setEditedCode(files[targetIndex].content || '');
-        }
+    // Intentar encontrar el archivo main en versión manual
+    let targetVersion = 'manual';
+    let targetIndex = attempt.manualFiles.findIndex(f => f.filename === mainFileName);
 
-        // Pre-llenar calificación manual si ya existe
-        if (data.calificacionManual !== null) {
-          setCalificacionManual(data.calificacionManual.toString());
-        }
-
-        // Cargar archivos de referencia si es examen de programación
-        if (data.exam.tipo === 'programming') {
-          try {
-            setLoadingReferenceFiles(true);
-            const refFiles = await getReferenceFiles(data.examId);
-            if (refFiles && refFiles.length > 0) {
-              setReferenceFiles(refFiles);
-              setCurrentReferenceFile(refFiles[0].filename);
-            }
-          } catch (error) {
-            console.error('Error loading reference files:', error);
-          } finally {
-            setLoadingReferenceFiles(false);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error loading attempt:', error);
-    } finally {
-      setLoading(false);
+    // Si no existe en manual, buscar en submission
+    if (targetIndex === -1 && attempt.submissionFiles.length > 0) {
+      targetVersion = 'submission';
+      targetIndex = attempt.submissionFiles.findIndex(f => f.filename === mainFileName);
     }
-  };
+
+    // Si aún no se encuentra, usar el primer archivo disponible
+    if (targetIndex === -1) {
+      targetVersion = attempt.manualFiles.length > 0 ? 'manual' : 'submission';
+      targetIndex = 0;
+    }
+
+    // Configurar el estado inicial
+    setFileVersion(targetVersion);
+    setSelectedFileIndex(targetIndex);
+
+    const files = targetVersion === 'manual' ? attempt.manualFiles : attempt.submissionFiles;
+    if (files && files.length > 0 && files[targetIndex]) {
+      setEditedCode(files[targetIndex].content || '');
+    }
+
+    // Pre-llenar calificación manual si ya existe
+    if (attempt.calificacionManual !== null) {
+      setCalificacionManual(attempt.calificacionManual.toString());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [attempt]);
+
+  // Preseleccionar el primer archivo de referencia cuando se cargan
+  useEffect(() => {
+    if (referenceFiles && referenceFiles.length > 0) {
+      setCurrentReferenceFile(referenceFiles[0].filename);
+    }
+  }, [referenceFiles]);
 
   const handleUseAutomaticGrade = () => {
     if (attempt && attempt.puntaje !== null) {
@@ -137,61 +112,24 @@ export default function ManualGradingModal({ attemptId, onClose, onSave }) {
   const handleExecute = async () => {
     if (!attempt || attempt.exam.tipo !== 'programming') return;
 
-    try {
-      setExecuting(true);
-      setExecutionResult(null);
+    const currentFiles = getCurrentFiles();
+    const mainFile = currentFiles[selectedFileIndex];
 
-      const currentFiles = getCurrentFiles();
-      const mainFile = currentFiles[selectedFileIndex];
-
-      if (!mainFile) {
-        setExecutionResult({
-          error: 'No hay archivo seleccionado para ejecutar'
-        });
-        return;
-      }
-
-      // Preparar payload para ejecución
-      const payload = {
-        code: editedCode,
-        language: attempt.exam.lenguajeProgramacion,
-        filename: mainFile.filename,
-        // Si usa input personalizado, enviarlo
-        ...(useCustomInput && customInput && { 
-          customInput: customInput 
-        }),
-        // Si no usa input personalizado y hay test cases, ejecutarlos
-        ...(!useCustomInput && attempt.exam.testCases && {
-          testCases: attempt.exam.testCases
-        })
-      };
-
-      const response = await fetch(`${API_BASE_URL}/code-execution/execute`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        setExecutionResult(result);
-      } else {
-        const errorData = await response.json();
-        setExecutionResult({
-          error: errorData.error || 'Error al ejecutar el código'
-        });
-      }
-    } catch (error) {
-      console.error('Error executing code:', error);
+    if (!mainFile) {
       setExecutionResult({
-        error: 'Error de conexión al ejecutar el código'
+        error: 'No hay archivo seleccionado para ejecutar'
       });
-    } finally {
-      setExecuting(false);
+      return;
     }
+
+    await executeCode({
+      code: editedCode,
+      language: attempt.exam.lenguajeProgramacion,
+      filename: mainFile.filename,
+      useCustomInput,
+      customInput,
+      testCases: attempt.exam.testCases,
+    });
   };
 
   const handleSaveGrade = async () => {
@@ -204,30 +142,10 @@ export default function ManualGradingModal({ attemptId, onClose, onSave }) {
       return;
     }
 
-    try {
-      setSaving(true);
-      const response = await fetch(`${API_BASE_URL}/exam-attempts/${attemptId}/manual-grade`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          calificacionManual: grade
-        })
-      });
-
-      if (response.ok) {
-        if (onSave) onSave();
-        if (onClose) onClose();
-      } else {
-        const errorData = await response.json();
-        console.error('Error al guardar:', errorData);
-      }
-    } catch (error) {
-      console.error('Error saving grade:', error);
-    } finally {
-      setSaving(false);
+    const success = await saveGrade(grade);
+    if (success) {
+      if (onSave) onSave();
+      if (onClose) onClose();
     }
   };
 
