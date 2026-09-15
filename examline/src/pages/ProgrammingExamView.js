@@ -101,12 +101,10 @@ const ProgrammingExamView = () => {
   // Estados para modal de confirmación de finalizar examen
   const [showFinishModal, setShowFinishModal] = useState(false);
 
-  // Navegación lateral (Consigna | Programación)
-  const [activeSection, setActiveSection] = useState('programacion'); // 'consigna' | 'programacion'
-  
-  // 📱 Estado para sidebar colapsado en móviles
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  
+  // Navegación lateral: la consigna se muestra a la par del editor en desktop,
+  // y de forma exclusiva (una u otra) en móviles por falta de espacio.
+  const [showConsigna, setShowConsigna] = useState(true);
+
   // 🔄 Estado para alternar entre vista de entrada/salida en móviles
   const [mobileTerminalView, setMobileTerminalView] = useState('output'); // 'input' | 'output'
 
@@ -117,12 +115,6 @@ const ProgrammingExamView = () => {
   useEffect(() => {
     const handleResize = () => {
       setWindowWidth(window.innerWidth);
-      // Auto-colapsar sidebar en móviles
-      if (window.innerWidth < 768) {
-        setIsSidebarCollapsed(true);
-      } else {
-        setIsSidebarCollapsed(false);
-      }
     };
     
     window.addEventListener('resize', handleResize);
@@ -290,108 +282,47 @@ const ProgrammingExamView = () => {
                 )}
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Contenido principal con sidebar */}
-      <div className="programming-exam-content">
-        <div className={`exam-shell ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
-          {/* Overlay para cerrar el sidebar en móviles */}
-          {!isSidebarCollapsed && windowWidth < 768 && (
-            <div 
-              className="sidebar-overlay"
-              onClick={() => setIsSidebarCollapsed(true)}
-            />
-          )}
-          
-          {/* Botón toggle para móviles */}
-          <button 
-            className="sidebar-toggle d-md-none"
-            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-            aria-label="Toggle menu"
-          >
-            <i className={`fas ${isSidebarCollapsed ? 'fa-bars' : 'fa-times'}`}></i>
-          </button>
-          
-          {/* Sidebar */}
-          <aside className={`exam-sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
-            <div className="sidebar-header">
-              <div className="student-pill" title="Alumno">
-                <i className="fas fa-user-graduate"></i>
-              </div>
-              <div className="sidebar-title">Examen</div>
-            </div>
-            <nav className="sidebar-nav">
+            <div className="col-auto d-flex align-items-center gap-2">
               <button
-                className={`sidebar-item ${activeSection === 'consigna' ? 'active' : ''}`}
-                onClick={() => {
-                  setActiveSection('consigna');
-                  if (windowWidth < 768) setIsSidebarCollapsed(true);
-                }}
+                className={`btn-header-toggle ${showConsigna ? 'active' : ''}`}
+                onClick={() => setShowConsigna(!showConsigna)}
               >
-                <i className="fas fa-file-alt me-2"></i>
-                <span className="sidebar-text">Consigna</span>
+                <i className={`fas ${showConsigna ? 'fa-code' : 'fa-file-alt'} me-2`}></i>
+                <span>{showConsigna ? (windowWidth < 768 ? 'Programación' : 'Ocultar consigna') : 'Mostrar consigna'}</span>
               </button>
-              <button
-                className={`sidebar-item ${activeSection === 'programacion' ? 'active' : ''}`}
-                onClick={() => {
-                  setActiveSection('programacion');
-                  if (windowWidth < 768) setIsSidebarCollapsed(true);
-                }}
-              >
-                <i className="fas fa-code me-2"></i>
-                <span className="sidebar-text">Programación</span>
-              </button>
-            </nav>
-            
-            {/* Aviso importante sobre la entrega */}
-            <div style={{
-              padding: '12px',
-              margin: '12px',
-              backgroundColor: '#e3f2fd',
-              border: '1px solid #2196f3',
-              borderLeft: '4px solid #2196f3',
-              borderRadius: '4px',
-              fontSize: '0.85rem'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'start', gap: '8px' }}>
-                <div style={{ flex: 1 }}>
-                  <strong style={{ color: '#1976d2', display: 'block', marginBottom: '6px', fontSize: '0.9rem' }}>
-                    📝 Importante:
-                  </strong>
-                  <div style={{ color: '#0d47a1', lineHeight: '1.4' }}>
-                    Entregar la versión final en el archivo main.py y guardar manualmente antes de finalizar.
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="sidebar-footer">
               <button
                 className="btn-send-exam"
                 onClick={handleFinishExamClick}
                 disabled={loading || saving}
               >
                 <i className="fas fa-paper-plane me-2"></i>
-                <span className="sidebar-text">Finalizar examen</span>
+                <span>Finalizar examen</span>
               </button>
             </div>
-          </aside>
+          </div>
+        </div>
+      </div>
 
+      {/* Contenido principal */}
+      <div className="programming-exam-content">
+        <div className="exam-shell">
           {/* Main content */}
           <main className="exam-main">
-            {activeSection === 'consigna' ? (
+            {showConsigna && (
               <div className="consigna-panel">
                 <h3 className="consigna-title">
                   <i className="fas fa-puzzle-piece me-2"></i>
                   Consigna
                 </h3>
+                <div className="consigna-notice">
+                  <strong>📝 Importante:</strong> Entregar la versión final en el archivo main.py y guardar manualmente antes de finalizar.
+                </div>
                 <div className="problem-statement">
                   {exam.enunciadoProgramacion}
                 </div>
               </div>
-            ) : (
+            )}
+            {(windowWidth >= 768 || !showConsigna) && (
               <div className="programming-area">
                 {/* Toolbar superior: tabs y acciones */}
                 <div className="editor-header">
@@ -1589,206 +1520,99 @@ const ProgrammingExamView = () => {
       {/* Estilos del nuevo layout con sidebar */}
       <style>{`
         .exam-shell {
-          display: grid;
-          grid-template-columns: 260px 1fr;
+          display: flex;
           height: 100%;
           position: relative;
         }
-        
-        .exam-shell.sidebar-collapsed {
-          grid-template-columns: 1fr;
-        }
-        
-        /* Overlay para cerrar sidebar en móviles */
-        .sidebar-overlay {
-          display: none;
-        }
-        
-        @media (max-width: 767px) {
-          .sidebar-overlay {
-            display: block;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 999;
-            animation: fadeIn 0.3s ease;
-          }
-        }
-        
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-          }
-          to {
-            opacity: 1;
-          }
-        }
-        
-        /* Botón toggle para móviles */
-        .sidebar-toggle {
-          position: fixed;
-          top: 80px;
-          left: 10px;
-          z-index: 1001;
-          background: #111827;
-          border: 2px solid #374151;
-          color: #e5e7eb;
-          width: 44px;
-          height: 44px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-          transition: all 0.3s ease;
-        }
-        
-        .sidebar-toggle:hover {
-          background: #1f2937;
-          transform: scale(1.05);
-        }
-        
-        .sidebar-toggle:active {
-          transform: scale(0.95);
-        }
-        
-        @media (min-width: 768px) {
-          .sidebar-toggle {
-            display: none;
-          }
-        }
-        
-        .exam-sidebar {
-          background: #111827;
-          color: #d1d5db;
-          border-right: 1px solid #1f2937;
-          display: flex;
-          flex-direction: column;
-          padding: 14px 10px;
-          gap: 10px;
-          transition: transform 0.3s ease;
-        }
-        
-        @media (max-width: 767px) {
-          .exam-sidebar {
-            position: fixed;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 260px;
-            z-index: 1000;
-            transform: translateX(0);
-            box-shadow: 2px 0 10px rgba(0,0,0,0.3);
-          }
-          
-          .exam-sidebar.collapsed {
-            transform: translateX(-100%);
-          }
-        }
-        
-        .sidebar-header {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          padding: 6px 8px;
-        }
-        
-        .student-pill {
-          width: 28px; 
-          height: 28px;
-          border-radius: 6px;
-          background: #374151;
-          display: flex; 
-          align-items: center; 
-          justify-content: center;
-          flex-shrink: 0;
-        }
-        
-        .sidebar-title { 
-          font-weight: 700; 
-          color: #e5e7eb; 
-        }
-        
-        .sidebar-nav { 
-          display: flex; 
-          flex-direction: column; 
-          gap: 6px; 
-          margin-top: 6px; 
-        }
-        
-        .sidebar-item {
-          text-align: left;
+
+        .btn-header-toggle {
           background: transparent;
-          border: 1px solid transparent;
-          color: inherit;
-          padding: 10px 12px;
+          border: 1px solid #2563eb;
+          color: #2563eb;
+          padding: 8px 14px;
           border-radius: 8px;
           cursor: pointer;
-          transition: background .15s, border .15s;
+          transition: background .15s, border .15s, color .15s;
           display: flex;
           align-items: center;
+          white-space: nowrap;
         }
-        
-        .sidebar-item:hover { 
-          background: #1f2937; 
+
+        .btn-header-toggle:hover {
+          background: rgba(37, 99, 235, 0.1);
         }
-        
-        .sidebar-item.active { 
-          background: #2563eb; 
-          color: #fff; 
-          border-color: #2563eb; 
+
+        .btn-header-toggle.active {
+          background: #2563eb;
+          color: #fff;
+          border-color: #2563eb;
         }
-        
-        .sidebar-footer { 
-          margin-top: auto; 
-          padding-top: 8px; 
-          border-top: 1px solid #1f2937; 
+
+        .btn-header-toggle.active:hover {
+          background: #1d4ed8;
         }
-        
+
+        .consigna-notice {
+          padding: 10px 14px;
+          margin-bottom: 14px;
+          background-color: #e3f2fd;
+          border: 1px solid #2196f3;
+          border-left: 4px solid #2196f3;
+          border-radius: 4px;
+          font-size: 0.85rem;
+          color: #0d47a1;
+          line-height: 1.4;
+        }
+
         .btn-send-exam {
-          width: 100%;
           background: linear-gradient(45deg, #10b981, #059669);
-          border: none; 
-          color: #fff; 
+          border: none;
+          color: #fff;
           font-weight: 700;
-          padding: 10px 12px; 
-          border-radius: 10px; 
+          padding: 8px 16px;
+          border-radius: 10px;
           cursor: pointer;
           transition: all 0.2s ease;
           display: flex;
           align-items: center;
           justify-content: center;
+          white-space: nowrap;
         }
-        
+
         .btn-send-exam:hover:not(:disabled) {
           transform: translateY(-2px);
           box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
         }
-        
-        .btn-send-exam:disabled { 
-          opacity: .6; 
-          cursor: not-allowed; 
+
+        .btn-send-exam:disabled {
+          opacity: .6;
+          cursor: not-allowed;
         }
 
-        .exam-main { 
-          height: 100%; 
-          overflow: hidden; 
-          background: #0b0f17; 
+        .exam-main {
+          height: 100%;
+          width: 100%;
+          flex: 1;
+          overflow: hidden;
+          background: #0b0f17;
+          display: flex;
+          flex-direction: row;
         }
-        
-        .consigna-panel { 
-          padding: 18px; 
-          height: 100%; 
-          overflow: auto; 
+
+        .consigna-panel {
+          padding: 18px;
+          height: 100%;
+          overflow: auto;
+          width: 400px;
+          flex-shrink: 0;
+          border-right: 1px solid rgba(255, 255, 255, 0.08);
         }
-        
+
         @media (max-width: 768px) {
           .consigna-panel {
             padding: 12px;
+            width: 100%;
+            border-right: none;
           }
         }
         
@@ -1804,9 +1628,11 @@ const ProgrammingExamView = () => {
           }
         }
         
-        .programming-area { 
-          height: 100%; 
-          display: flex; 
+        .programming-area {
+          height: 100%;
+          flex: 1;
+          min-width: 0;
+          display: flex;
           flex-direction: column;
           overflow: hidden;
         }
@@ -2126,15 +1952,6 @@ const ProgrammingExamView = () => {
 
         /* Media queries para tablets */
         @media (max-width: 992px) and (min-width: 768px) {
-          .exam-shell { 
-            grid-template-columns: 200px 1fr; 
-          }
-          
-          .sidebar-item {
-            padding: 8px 10px;
-            font-size: 0.9rem;
-          }
-          
           .programming-grid {
             grid-template-columns: 1.5fr 1fr;
           }
@@ -2196,10 +2013,6 @@ const ProgrammingExamView = () => {
           .grid-right {
             min-height: 300px;
             max-height: 50vh;
-          }
-          
-          .sidebar-text {
-            font-size: 0.9rem;
           }
           
           .mobile-terminal-content {
