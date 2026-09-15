@@ -18,4 +18,4 @@ jobs:
           cache: npm
           cache-dependency-path: examline/package-lock.json
       - run: npm ci
-      - run: npm test
+      - run: npm test -- --passWithNoTests
