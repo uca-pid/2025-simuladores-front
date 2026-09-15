@@ -1,0 +1,160 @@
+/* Student Exam Tabs Responsive */
+.student-exam-tabs {
+  display: flex;
+  width: 100%;
+}
+
+.student-tab-button {
+  flex: 1;
+  border: none;
+  padding: 1rem;
+  background: transparent;
+  border-radius: 0;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #64748b;
+  min-height: 60px;
+  cursor: pointer;
+  flex-wrap: wrap;
+  text-align: center;
+}
+
+.student-tab-button:first-child {
+  border-radius: 12px 0 0 12px;
+}
+
+.student-tab-button:last-child {
+  border-radius: 0 12px 12px 0;
+}
+
+.student-tab-button.active {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  font-weight: 600;
+}
+
+.student-tab-button:hover:not(.active) {
+  background: #f8fafc;
+  color: #334155;
+}
+
+.student-tab-button .tab-text {
+  white-space: nowrap;
+}
+
+.student-tab-button .tab-count {
+  font-weight: 600;
+}
+
+/* Responsive breakpoints for tabs */
+@media (max-width: 768px) {
+  .student-tab-button {
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.75rem 0.5rem;
+    font-size: 0.85rem;
+    min-height: 70px;
+  }
+  
+  .student-tab-button .fas {
+    margin-right: 0 !important;
+    font-size: 1.1rem;
+  }
+  
+  .student-tab-button .tab-text {
+    font-size: 0.8rem;
+    line-height: 1.2;
+  }
+  
+  .student-tab-button .tab-count {
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .student-tab-button {
+    padding: 0.6rem 0.25rem;
+    font-size: 0.8rem;
+    min-height: 65px;
+  }
+  
+  .student-tab-button .tab-text {
+    font-size: 0.75rem;
+    white-space: normal;
+    text-align: center;
+  }
+  
+  .student-tab-button .tab-count {
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .student-exam-tabs {
+    flex-direction: column;
+  }
+  
+  .student-tab-button {
+    flex-direction: row;
+    justify-content: center;
+    min-height: 50px;
+    padding: 0.75rem 1rem;
+    gap: 0.5rem;
+  }
+  
+  .student-tab-button:first-child {
+    border-radius: 12px 12px 0 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  }
+  
+  .student-tab-button:last-child {
+    border-radius: 0 0 12px 12px;
+  }
+  
+  .student-tab-button .fas {
+    margin-right: 0.5rem !important;
+  }
+  
+  .student-tab-button .tab-text {
+    white-space: nowrap;
+    font-size: 0.8rem;
+  }
+}
+
+/* Student filters responsive */
+.student-filters-actions {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 576px) {
+  .student-filters-actions {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 0.5rem;
+  }
+  
+  .student-filters-actions .modern-btn {
+    min-height: 44px;
+    justify-content: center;
+  }
+  
+  .student-filters-actions .btn-text {
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .student-filters-actions .btn-text {
+    display: none;
+  }
+  
+  .student-filters-actions .modern-btn .fas {
+    margin-right: 0 !important;
+  }
+}
+

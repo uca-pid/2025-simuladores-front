@@ -1,0 +1,136 @@
+/* ExamCreator Page Responsive Styles */
+.exam-creator-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.exam-creator-title-section {
+  flex: 1;
+  min-width: 200px;
+}
+
+.exam-creator-actions {
+  flex-shrink: 0;
+}
+
+.exam-creator-buttons {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.exam-creator-questions-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+
+.exam-creator-question-card {
+  width: 100%;
+}
+
+.question-number {
+  display: inline;
+}
+
+.badge-text {
+  display: inline;
+}
+
+.question-text {
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+.exam-creator-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.exam-creator-option-item {
+  flex: 1;
+}
+
+/* ExamCreator Tablet Styles */
+@media (max-width: 768px) and (min-width: 577px) {
+  .exam-creator-header {
+    gap: 0.75rem;
+  }
+  
+  .exam-creator-buttons {
+    gap: 0.5rem;
+  }
+  
+  .exam-creator-buttons .modern-btn {
+    font-size: 0.9rem;
+    padding: 0.65rem 0.9rem;
+  }
+}
+
+/* ExamCreator Mobile Styles */
+@media (max-width: 576px) {
+  .exam-creator-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+  
+  .exam-creator-title-section .page-title {
+    font-size: 1.5rem;
+  }
+  
+  .exam-creator-title-section .page-subtitle {
+    font-size: 0.9rem;
+    margin-top: 0.25rem;
+  }
+  
+  .exam-creator-buttons {
+    width: 100%;
+    justify-content: stretch;
+  }
+  
+  .exam-creator-buttons .modern-btn {
+    flex: 1;
+    min-height: 44px;
+    font-size: 0.9rem;
+    padding: 0.6rem 0.8rem;
+  }
+  
+  .question-text {
+    font-size: 0.95rem;
+  }
+  
+  .exam-info-item {
+    font-size: 0.9rem;
+    margin-bottom: 0.4rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .exam-creator-title-section .title-text {
+    display: block;
+    margin-top: 0.25rem;
+  }
+  
+  .exam-creator-buttons .button-text {
+    font-size: 0.85rem;
+  }
+  
+  .exam-creator-buttons .modern-btn {
+    padding: 0.5rem 0.6rem;
+  }
+  
+  .question-number {
+    font-size: 0.9rem;
+  }
+  
+  .badge-text {
+    display: none;
+  }
+}
+

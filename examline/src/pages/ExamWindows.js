@@ -7,6 +7,7 @@ import BackToMainButton from '../components/BackToMainButton';
 import Modal from '../components/Modal';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../button-styles.css';
+import './ExamWindows.css';
 
 export default function ExamWindowsPage() {
   const { user, token } = useAuth();

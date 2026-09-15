@@ -1,6 +1,6 @@
 import React from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
-import '../modern-examline.css';
+import '../styles/base.css';
 import './Modal.css';
 
 const Modal = ({

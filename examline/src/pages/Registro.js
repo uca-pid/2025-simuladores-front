@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
+import "../styles/shared.css";
 import { useAuth } from "../contexts/AuthContext";
 import { signupUser, loginUser } from "../services/api";
 import { validatePasswordStrength } from "../utils/password";

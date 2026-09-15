@@ -12,7 +12,7 @@ import {
   getUnlockedAchievements,
 } from "../utils/gamification";
 import "bootstrap/dist/css/bootstrap.min.css";
-import "../modern-examline.css";
+import "./StudentProgress.css";
 
 const API_BASE_URL =
   process.env.REACT_APP_BACKEND_URL ||

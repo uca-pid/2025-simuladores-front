@@ -4,6 +4,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useSEB } from "../hooks";
 import { loginUser } from "../services/api";
 import "bootstrap/dist/css/bootstrap.min.css";
+import "../styles/shared.css";
 
 const Login = () => {
   const [email, setEmail] = useState("");

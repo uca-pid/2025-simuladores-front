@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import UserHeader from "../components/UserHeader";
 import StudentInscriptionsPage from "./StudentInscriptions";
+import "./StudentExamPage.css";
 
 const StudentExamPage = () => {
   const navigate = useNavigate();

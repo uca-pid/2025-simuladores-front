@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import BackToMainButton from '../components/BackToMainButton';
 import Modal from '../components/Modal';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import '../modern-examline.css';
+import './WindowInscriptions.css';
 
 // Función auxiliar para convertir fechas del servidor a zona horaria local automáticamente
 // eslint-disable-next-line no-unused-vars

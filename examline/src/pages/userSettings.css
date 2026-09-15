@@ -1,0 +1,111 @@
+/* User Settings Header Responsive */
+.user-settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.user-settings-header .header-title-section {
+  flex: 1;
+  min-width: 200px;
+}
+
+.user-settings-header .header-actions-section {
+  flex-shrink: 0;
+}
+
+/* Responsive breakpoints for user settings */
+@media (max-width: 768px) {
+  .user-settings-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+  
+  .user-settings-header .header-title-section {
+    text-align: center;
+  }
+  
+  .user-settings-header .header-actions-section {
+    width: 100%;
+  }
+  
+  .user-settings-header .header-actions-section .d-flex {
+    justify-content: center !important;
+  }
+}
+
+@media (max-width: 576px) {
+  .user-settings-header .page-title .title-text {
+    font-size: 1.1rem;
+  }
+  
+  .user-settings-header .page-title .fas {
+    font-size: 1rem;
+  }
+  
+  .user-settings-header .header-actions-section .modern-btn {
+    font-size: 0.75rem;
+    padding: 0.5rem 0.6rem;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 400px) {
+  .user-settings-header .header-actions-section .d-flex {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .user-settings-header .header-actions-section .modern-btn {
+    width: 100%;
+    justify-content: center;
+    font-size: 0.8rem;
+    padding: 0.6rem 1rem;
+  }
+}
+
+/* Save changes button responsive */
+@media (max-width: 576px) {
+  .save-changes-btn {
+    width: 100%;
+    padding: 0.75rem 1rem !important;
+    font-size: 0.9rem;
+  }
+}
+
+/* Tablet-specific improvements for user settings */
+@media (min-width: 768px) and (max-width: 991px) {
+  .user-settings-header {
+    align-items: center;
+  }
+  
+  .user-settings-header .page-title {
+    font-size: 1.5rem;
+  }
+  
+  .user-settings-header .header-actions-section .modern-btn {
+    font-size: 0.85rem;
+    padding: 0.6rem 1rem;
+  }
+}
+
+/* Extra small screens - keep text but make more compact */
+@media (max-width: 350px) {
+  .user-settings-header .header-actions-section .modern-btn {
+    font-size: 0.7rem;
+    padding: 0.4rem 0.5rem;
+  }
+  
+  .user-settings-header .page-title .title-text {
+    font-size: 1rem;
+  }
+  
+  .save-changes-btn {
+    font-size: 0.85rem;
+    padding: 0.7rem 0.8rem !important;
+  }
+}
+

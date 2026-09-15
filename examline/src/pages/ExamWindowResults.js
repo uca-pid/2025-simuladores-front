@@ -6,7 +6,7 @@ import Modal from '../components/Modal';
 import MoodleIntegration from '../components/MoodleIntegration';
 import ManualGradingModal from '../components/ManualGradingModal';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import '../modern-examline.css';
+import './ExamResults.css';
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:4000';
 

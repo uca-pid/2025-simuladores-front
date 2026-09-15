@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
-import '../modern-examline.css';
+import './userSettings.css';
+import '../styles/shared.css';
 import BackToMainButton from "../components/BackToMainButton";
 import Modal from "../components/Modal";
 import { useAuth } from "../contexts/AuthContext";

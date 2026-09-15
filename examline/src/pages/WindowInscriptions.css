@@ -1,0 +1,435 @@
+/* Window Inscriptions Header Responsive */
+.header-title-section {
+  flex: 1;
+  min-width: 0; /* Permite que el flex item se reduzca */
+}
+
+.header-title-section .page-title {
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+
+.header-actions-section {
+  flex-shrink: 0;
+  width: 100%;
+}
+
+/* Responsive adjustments for window inscriptions */
+@media (max-width: 576px) {
+  .header-title-section .page-title {
+    font-size: 1.1rem;
+  }
+  
+  .header-actions-section .modern-btn {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.75rem;
+  }
+  
+  .modern-card-header {
+    padding: 1rem;
+  }
+  
+  .header-actions-section {
+    width: 100%;
+  }
+  
+  .header-actions-section .d-flex {
+    width: 100%;
+  }
+}
+
+@media (min-width: 576px) {
+  .header-actions-section {
+    width: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .header-title-section .page-title .fas {
+    font-size: 1.1rem;
+  }
+  
+  .header-title-section .page-title {
+    font-size: 1.25rem;
+  }
+}
+
+/* WindowInscriptions Mobile Styles */
+@media (max-width: 991px) and (min-width: 769px) {
+  .window-inscriptions-info-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .window-inscriptions-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+  
+  .window-inscriptions-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+  
+  .window-inscriptions-actions .modern-btn {
+    flex: 1;
+    min-height: 44px;
+  }
+  
+  .compact-btn {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.85rem;
+  }
+  
+  .window-inscriptions-info-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .attendance-actions {
+    width: 100%;
+  }
+  
+  .attendance-btn {
+    width: 100%;
+    min-width: auto;
+  }
+  
+  .inscription-compact-card {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0.75rem;
+    gap: 0.75rem;
+  }
+  
+  .attendance-controls-section {
+    margin-left: 0;
+  }
+  
+  .student-meta {
+    gap: 0.75rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .window-inscriptions-header .page-title {
+    font-size: 1.5rem;
+  }
+  
+  .exam-title-text {
+    font-size: 0.9rem;
+    display: block;
+    margin-top: 0.25rem;
+  }
+  
+  .window-inscriptions-actions {
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  
+  .compact-btn {
+    padding: 0.5rem 0.7rem;
+    font-size: 0.8rem;
+  }
+  
+  .attendance-description {
+    font-size: 0.9rem;
+  }
+  
+  .info-value {
+    font-size: 0.9rem;
+  }
+  
+  .inscription-compact-card {
+    padding: 0.6rem;
+    min-height: 60px;
+  }
+  
+  .student-details .student-name {
+    font-size: 0.95rem;
+  }
+  
+  .student-email,
+  .inscription-date {
+    font-size: 0.8rem;
+  }
+  
+  .attendance-toggle-btn {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.8rem;
+    min-width: 70px;
+  }
+  
+  .toggle-label {
+    display: none;
+  }
+  
+  .status-indicator {
+    font-size: 0.8rem;
+    padding: 0.25rem 0.5rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .window-inscriptions-header .title-text {
+    font-size: 0.85rem;
+  }
+  
+  .window-inscriptions-actions .btn-text {
+    font-size: 0.8rem;
+  }
+  
+  .compact-btn {
+    padding: 0.45rem 0.6rem;
+    font-size: 0.75rem;
+  }
+  
+  .student-details .student-name {
+    font-size: 0.9rem;
+  }
+  
+  .student-meta {
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  
+  .student-email,
+  .inscription-date {
+    font-size: 0.75rem;
+  }
+  
+  .attendance-toggle-btn {
+    padding: 0.35rem 0.5rem;
+    min-width: 60px;
+  }
+  
+  .description-text {
+    font-size: 0.85rem;
+  }
+  
+  .inscription-date {
+    display: none !important;
+  }
+}
+
+/* WindowInscriptions Page Responsive Styles */
+.window-inscriptions-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.window-inscriptions-header .header-content-section {
+  flex: 1;
+  min-width: 250px;
+}
+
+.window-inscriptions-header .header-actions-section {
+  flex-shrink: 0;
+}
+
+.window-inscriptions-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.compact-btn {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.exam-title-text {
+  word-wrap: break-word;
+  line-height: 1.3;
+}
+
+.window-inscriptions-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+}
+
+.info-section {
+  flex: 1;
+}
+
+.info-value {
+  color: var(--primary-color);
+  font-weight: 500;
+}
+
+.attendance-management-section {
+  text-align: center;
+}
+
+.attendance-description {
+  margin-bottom: 1rem;
+}
+
+.description-text {
+  display: inline;
+}
+
+.attendance-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.attendance-btn {
+  min-width: 180px;
+  padding: 0.6rem 1rem;
+}
+
+/* Compact List Design */
+.window-inscriptions-compact-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.inscription-compact-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  min-height: 70px;
+}
+
+.inscription-compact-card:hover {
+  border-color: var(--primary-color);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.student-info-section {
+  flex: 1;
+  min-width: 0;
+}
+
+.student-details .student-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-color);
+  margin-bottom: 0.3rem;
+}
+
+.student-meta {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.student-email,
+.inscription-date {
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.attendance-controls-section {
+  flex-shrink: 0;
+  margin-left: 1rem;
+}
+
+.attendance-toggle-group {
+  display: flex;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+
+.attendance-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  background: var(--card-bg);
+  color: var(--text-color-2);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.85rem;
+  min-width: 80px;
+  justify-content: center;
+}
+
+.attendance-toggle-btn:hover:not(:disabled) {
+  background: var(--hover-bg);
+}
+
+.attendance-toggle-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.present-btn.active {
+  background: var(--success-color);
+  color: white;
+}
+
+.absent-btn.active {
+  background: var(--danger-color);
+  color: white;
+}
+
+.attendance-toggle-btn + .attendance-toggle-btn {
+  border-left: 1px solid var(--border-color);
+}
+
+.toggle-label {
+  font-weight: 500;
+}
+
+.attendance-status-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0.75rem;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.status-indicator.present {
+  background: rgba(34, 197, 94, 0.1);
+  color: var(--success-color);
+}
+
+.status-indicator.absent {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--danger-color);
+}
+
+.status-indicator.unknown {
+  background: rgba(107, 114, 128, 0.1);
+  color: var(--text-color-2);
+}
+
+.window-inscriptions-loading-state,
+.window-inscriptions-error-state {
+  max-width: 600px;
+  margin: 0 auto;
+  text-align: center;
+}
+

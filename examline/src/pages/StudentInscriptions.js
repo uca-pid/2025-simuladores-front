@@ -6,7 +6,8 @@ import { API_BASE_URL } from '../services/api';
 import BackToMainButton from '../components/BackToMainButton';
 import Modal from '../components/Modal';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import '../modern-examline.css';
+import './StudentInscriptions.css';
+import '../styles/shared.css';
 
 export default function StudentInscriptionsPage({ 
   embedded = false, 

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "../components/action-cards.css";
+import "./Principal.css";
 import UserHeader from "../components/UserHeader";
 
 const Principal = () => {

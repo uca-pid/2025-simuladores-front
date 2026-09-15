@@ -1,0 +1,299 @@
+/* ExamResults Page Responsive Styles */
+.exam-results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.exam-results-header .header-content-section {
+  flex: 1;
+  min-width: 250px;
+}
+
+.exam-results-header .header-actions-section {
+  flex-shrink: 0;
+}
+
+.exam-results-info {
+  text-align: left;
+}
+
+.exam-results-title {
+  color: var(--primary-color);
+  font-weight: 600;
+  word-wrap: break-word;
+}
+
+.exam-results-description {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.description-text {
+  display: inline;
+}
+
+.exam-results-questions-grid {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+}
+
+.exam-results-question-card {
+  width: 100%;
+}
+
+.exam-results-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.correct-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75rem;
+}
+
+.correct-badge .badge-text {
+  display: inline;
+}
+
+.exam-results-error-state {
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+/* ExamResults Mobile Styles */
+@media (max-width: 991px) and (min-width: 769px) {
+  .exam-results-questions-grid {
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.25rem;
+  }
+}
+
+@media (max-width: 768px) and (min-width: 577px) {
+  .exam-results-questions-grid {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+  
+  .exam-results-title {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .exam-results-questions-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 576px) {
+  .exam-results-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+  
+  .exam-results-header .page-title {
+    font-size: 1.5rem;
+  }
+  
+  .exam-results-questions-grid {
+    gap: 1rem;
+  }
+  
+  .exam-results-title {
+    font-size: 1.25rem;
+    line-height: 1.3;
+  }
+  
+  .exam-results-description {
+    font-size: 0.9rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+  
+  .question-text {
+    font-size: 0.95rem;
+    line-height: 1.4;
+  }
+  
+  .exam-results-options-list .exam-info-item {
+    font-size: 0.9rem;
+    margin-bottom: 0.4rem;
+  }
+  
+  .correct-badge {
+    font-size: 0.7rem;
+  }
+  
+  .exam-results-error-state {
+    padding: 1.5rem 0.5rem;
+  }
+  
+  .exam-results-error-state .empty-title {
+    font-size: 1.25rem;
+  }
+  
+  .exam-results-error-state .empty-subtitle {
+    font-size: 0.9rem;
+  }
+  
+  .exam-results-error-state .modern-btn {
+    width: 100%;
+    min-height: 48px;
+  }
+}
+
+@media (max-width: 400px) {
+  .exam-results-header .title-text {
+    display: block;
+    margin-top: 0.25rem;
+  }
+  
+  .description-text {
+    font-size: 0.85rem;
+  }
+  
+  .correct-badge .badge-text {
+    display: none;
+  }
+  
+  .correct-badge {
+    min-width: 20px;
+    min-height: 20px;
+    border-radius: 50%;
+    padding: 2px;
+  }
+  
+  .options-label {
+    display: none;
+  }
+  
+  .exam-results-title {
+    font-size: 1.1rem;
+  }
+  
+  .exam-results-error-state .btn-text {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .exam-windows-header .page-title .title-text {
+    font-size: 1.25rem;
+  }
+  
+  .exam-windows-header .header-actions-section .modern-btn {
+    font-size: 0.8rem;
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .exam-states-panel {
+    padding: 0.75rem;
+  }
+  
+  .exam-states-panel .panel-title {
+    font-size: 0.9rem;
+  }
+  
+  .state-item {
+    padding: 0.5rem;
+    gap: 0.5rem;
+  }
+  
+  .state-badge {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+  }
+  
+  .state-description {
+    font-size: 0.8rem;
+  }
+  
+  .exam-windows-tab-button {
+    padding: 0.5rem 0.15rem;
+    font-size: 0.75rem;
+    min-height: 65px;
+    gap: 0.2rem;
+  }
+  
+  .exam-windows-tab-button .tab-text {
+    font-size: 0.7rem;
+    white-space: nowrap;
+  }
+  
+  .exam-windows-tab-button .tab-count {
+    font-size: 0.65rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .exam-windows-tabs {
+    flex-direction: column;
+  }
+  
+  .exam-windows-tab-button {
+    flex-direction: row;
+    justify-content: center;
+    min-height: 50px;
+    padding: 0.75rem 1rem;
+    gap: 0.5rem;
+    border-left: none !important;
+    border-right: none !important;
+  }
+  
+  .exam-windows-tab-button:first-child {
+    border-radius: 12px 12px 0 0;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+  }
+  
+  .exam-windows-tab-button:nth-child(2) {
+    border-radius: 0;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+    border-top: 1px solid rgba(226, 232, 240, 0.5);
+  }
+  
+  .exam-windows-tab-button:last-child {
+    border-radius: 0 0 12px 12px;
+    border-top: 1px solid rgba(226, 232, 240, 0.5);
+  }
+  
+  .exam-windows-tab-button .fas {
+    margin-right: 0.5rem !important;
+  }
+  
+  .exam-windows-tab-button .tab-text {
+    white-space: nowrap;
+    font-size: 0.8rem;
+  }
+  
+  .exam-windows-header .header-actions-section .d-flex {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .exam-windows-header .header-actions-section .modern-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .states-grid {
+    gap: 0.5rem;
+  }
+  
+  .state-item {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.5rem;
+  }
+}
+

@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
+import "./ExamCreator.css";
 import Editor from '@monaco-editor/react';
 import { useModal } from "../hooks";
 import BackToMainButton from "../components/BackToMainButton";

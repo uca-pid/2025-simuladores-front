@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
+import "./ExamView.css";
 import Editor from '@monaco-editor/react';
 import BackToMainButton from "../components/BackToMainButton";
 import { useAuth } from "../contexts/AuthContext";

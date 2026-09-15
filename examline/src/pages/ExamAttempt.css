@@ -1,0 +1,187 @@
+/* ExamAttempt Page Responsive Styles */
+.exam-attempt-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.exam-attempt-header .header-content-section {
+  flex: 1;
+  min-width: 250px;
+}
+
+.exam-attempt-header .header-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.exam-attempt-questions-grid {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+}
+
+.exam-attempt-question-card {
+  width: 100%;
+}
+
+.question-text {
+  word-wrap: break-word;
+  line-height: 1.4;
+}
+
+.options-label {
+  display: inline;
+}
+
+.exam-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.exam-completion-section {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.completion-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.completion-text {
+  display: inline;
+}
+
+.completion-description {
+  line-height: 1.5;
+}
+
+.exam-attempt-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.badge-text {
+  display: inline;
+}
+
+.count-text {
+  display: inline;
+}
+
+/* ExamAttempt Mobile Styles */
+@media (max-width: 991px) and (min-width: 769px) {
+  .exam-attempt-questions-grid {
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.25rem;
+  }
+}
+
+@media (max-width: 768px) and (min-width: 577px) {
+  .exam-attempt-questions-grid {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+  
+  .exam-attempt-actions {
+    gap: 0.6rem;
+  }
+  
+  .exam-attempt-actions .modern-btn {
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .exam-attempt-questions-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 576px) {
+  .exam-attempt-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+  
+  .exam-attempt-header .page-title {
+    font-size: 1.5rem;
+  }
+  
+  .exam-attempt-header .header-badges {
+    justify-content: flex-start;
+  }
+  
+  .exam-attempt-questions-grid {
+    gap: 1rem;
+  }
+  
+  .completion-title {
+    font-size: 1.1rem;
+    justify-content: center;
+  }
+  
+  .completion-description {
+    font-size: 0.9rem;
+  }
+  
+  .exam-attempt-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+  
+  .exam-attempt-actions .modern-btn {
+    width: 100%;
+    min-height: 48px;
+  }
+  
+  .question-text {
+    font-size: 0.95rem;
+  }
+  
+  .exam-options-list .exam-info-item {
+    font-size: 0.9rem;
+    margin-bottom: 0.4rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .exam-attempt-header .title-text {
+    display: block;
+    margin-top: 0.25rem;
+  }
+  
+  .badge-text {
+    display: none;
+  }
+  
+  .count-text {
+    font-size: 0.85rem;
+  }
+  
+  .completion-text {
+    font-size: 0.95rem;
+  }
+  
+  .exam-attempt-actions .btn-text {
+    font-size: 0.9rem;
+  }
+  
+  .options-label {
+    display: none;
+  }
+}
+

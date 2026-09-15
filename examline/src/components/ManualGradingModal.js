@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { getReferenceFiles } from '../services/api';
 import Editor from '@monaco-editor/react';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import '../modern-examline.css';
+import '../styles/base.css';
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:4000';
 

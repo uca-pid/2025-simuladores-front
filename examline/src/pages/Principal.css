@@ -1,0 +1,180 @@
+/* Principal Page Professor Panel Responsive */
+.instructivo-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.profesor-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.profesor-panel-header .panel-title-section {
+  flex: 1;
+  min-width: 200px;
+}
+
+.profesor-panel-header .panel-actions-section {
+  flex-shrink: 0;
+}
+
+.exams-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.exam-grid-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.exam-grid-item .exam-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.exam-grid-item .exam-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* Responsive breakpoints for Professor Panel */
+@media (max-width: 768px) {
+  .instructivo-header {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+  
+  .profesor-panel-header {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+  
+  .profesor-panel-header .panel-actions-section {
+    width: 100%;
+  }
+  
+  .profesor-panel-header .panel-actions-section .d-flex {
+    justify-content: center;
+  }
+  
+  .exams-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .instructivo-header .modern-card-title .title-text {
+    font-size: 1.1rem;
+  }
+  
+  .instructivo-header .modern-btn {
+    font-size: 0.8rem;
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .profesor-panel-header .page-title .title-text {
+    font-size: 1.25rem;
+  }
+  
+  .profesor-panel-header .panel-actions-section .modern-btn {
+    font-size: 0.75rem;
+    padding: 0.5rem 0.6rem;
+    white-space: nowrap;
+  }
+  
+  .exam-card .exam-badge .badge-text {
+    font-size: 0.7rem;
+  }
+  
+  .view-exam-btn {
+    font-size: 0.85rem;
+    padding: 0.6rem 1rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .profesor-panel-header .panel-actions-section .d-flex {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .profesor-panel-header .panel-actions-section .modern-btn {
+    width: 100%;
+    justify-content: center;
+    font-size: 0.8rem;
+    padding: 0.6rem 1rem;
+  }
+  
+  .view-exam-btn {
+    font-size: 0.8rem;
+    padding: 0.7rem 1rem;
+  }
+  
+  .exams-grid {
+    gap: 0.75rem;
+  }
+}
+
+/* Better touch targets for professor panel */
+@media (max-width: 768px) {
+  .profesor-panel-header .modern-btn {
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+  
+  .view-exam-btn {
+    min-height: 48px;
+  }
+}
+
+/* Extra small screens - keep text but make more compact */
+@media (max-width: 350px) {
+  .profesor-panel-header .panel-actions-section .modern-btn {
+    font-size: 0.7rem;
+    padding: 0.5rem 0.6rem;
+  }
+  
+  .instructivo-header .modern-btn {
+    font-size: 0.75rem;
+    padding: 0.4rem 0.6rem;
+  }
+  
+  .view-exam-btn {
+    font-size: 0.75rem;
+    padding: 0.6rem 0.8rem;
+  }
+  
+  .profesor-panel-header .page-title .title-text {
+    font-size: 1.1rem;
+  }
+}
+
+/* Tablet specific improvements for professor panel */
+@media (min-width: 768px) and (max-width: 991px) {
+  .profesor-panel-header {
+    align-items: center;
+  }
+  
+  .profesor-panel-header .page-title {
+    font-size: 1.5rem;
+  }
+  
+  .exams-grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+}
+

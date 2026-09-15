@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import '../modern-examline.css';
+import '../styles/base.css';
 
 const BackToMainButton = ({ className = "modern-btn modern-btn-secondary", customPath = null, customLabel = null, disabled = false }) => {
   const navigate = useNavigate();

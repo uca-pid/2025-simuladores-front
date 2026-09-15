@@ -1,0 +1,216 @@
+/* ExamWindows Page Responsive Styles */
+.exam-windows-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.exam-windows-header .header-content-section {
+  flex: 1;
+  min-width: 250px;
+}
+
+.exam-windows-header .header-actions-section {
+  flex-shrink: 0;
+}
+
+.exam-states-panel {
+  padding: 1rem;
+}
+
+.exam-states-panel .panel-title {
+  margin-bottom: 1rem;
+  color: var(--text-color-2);
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.states-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.state-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.state-badge {
+  white-space: nowrap;
+  flex-shrink: 0;
+  padding: 0.375rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.state-description {
+  color: var(--text-color-1);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+/* ExamWindows Tabs */
+.exam-windows-tabs {
+  display: flex;
+  width: 100%;
+}
+
+.exam-windows-tab-button {
+  flex: 1;
+  border: none;
+  padding: 0.875rem 0.5rem;
+  background: transparent;
+  border-radius: 0;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #64748b;
+  min-height: 60px;
+  cursor: pointer;
+  text-align: center;
+  flex-wrap: wrap;
+}
+
+.exam-windows-tab-button:first-child {
+  border-radius: 12px 0 0 12px;
+}
+
+.exam-windows-tab-button:nth-child(2) {
+  border-left: 1px solid rgba(226, 232, 240, 0.5);
+  border-right: 1px solid rgba(226, 232, 240, 0.5);
+}
+
+.exam-windows-tab-button:last-child {
+  border-radius: 0 12px 12px 0;
+}
+
+.exam-windows-tab-button.active {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  font-weight: 600;
+}
+
+.exam-windows-tab-button:hover:not(.active) {
+  background: #f8fafc;
+  color: #334155;
+}
+
+.exam-windows-tab-button .tab-text {
+  white-space: nowrap;
+}
+
+.exam-windows-tab-button .tab-count {
+  font-weight: 600;
+}
+
+/* ExamWindows Grid */
+.exam-windows-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.5rem;
+  align-items: start;
+  width: 100%;
+  max-width: 100%;
+}
+
+.exam-window-card-wrapper {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+/* Desktop breakpoints for ExamWindows */
+@media (min-width: 1400px) {
+  .exam-windows-grid {
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 2rem;
+    max-width: none;
+  }
+}
+
+@media (min-width: 1200px) and (max-width: 1399px) {
+  .exam-windows-grid {
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 1.75rem;
+  }
+}
+
+@media (min-width: 992px) and (max-width: 1199px) {
+  .exam-windows-grid {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+  }
+}
+
+/* Responsive breakpoints for ExamWindows */
+@media (max-width: 768px) {
+  .exam-windows-header {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+  
+  .exam-windows-header .header-content-section {
+    text-align: center;
+  }
+  
+  .exam-windows-header .header-actions-section {
+    width: 100%;
+  }
+  
+  .exam-windows-header .header-actions-section .d-flex {
+    justify-content: center;
+  }
+  
+  .exam-windows-header .update-time {
+    display: block;
+    margin-top: 0.5rem;
+    margin-left: 0 !important;
+  }
+  
+  .states-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  
+  .exam-windows-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .exam-windows-tab-button {
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.65rem 0.25rem;
+    font-size: 0.8rem;
+    min-height: 70px;
+  }
+  
+  .exam-windows-tab-button .fas {
+    margin-right: 0 !important;
+    font-size: 1rem;
+  }
+  
+  .exam-windows-tab-button .tab-text {
+    font-size: 0.75rem;
+    line-height: 1.2;
+  }
+  
+  .exam-windows-tab-button .tab-count {
+    font-size: 0.7rem;
+  }
+}
+

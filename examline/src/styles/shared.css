@@ -1,0 +1,99 @@
+/* Better touch targets for mobile */
+@media (max-width: 768px) {
+  .user-settings-header .modern-btn {
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+  
+  .modern-card .form-control {
+    min-height: 44px;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+  
+  .save-changes-btn {
+    min-height: 48px;
+  }
+  
+  .student-tab-button {
+    touch-action: manipulation;
+  }
+}
+
+/* Login and Registro Responsive Enhancements */
+.login-card,
+.registro-card {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .login-card,
+  .registro-card {
+    margin: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+  
+  .registro-card .row {
+    flex-direction: column;
+  }
+  
+  .registro-card .col-md-4,
+  .registro-card .col-md-8 {
+    max-width: 100%;
+    flex: 0 0 100%;
+  }
+}
+
+@media (max-width: 576px) {
+  .login-card,
+  .registro-card {
+    margin: 0.5rem;
+  }
+  
+  .modern-card .modern-card-body {
+    padding: 2rem 1.5rem !important;
+  }
+  
+  .form-control {
+    font-size: 16px !important; /* Previene zoom en iOS */
+  }
+  
+  .modern-btn-lg,
+  .login-submit-btn {
+    padding: 0.875rem 1.5rem !important;
+    font-size: 1rem !important;
+    min-height: 48px;
+  }
+  
+  .registro-submit-btn {
+    padding: 0.75rem 1.5rem !important;
+    font-size: 0.95rem !important;
+    min-height: 48px;
+  }
+}
+
+@media (max-width: 400px) {
+  .login-card .modern-card-body,
+  .registro-card .modern-card-body {
+    padding: 1.5rem 1rem !important;
+  }
+  
+  .page-title {
+    font-size: 1.5rem !important;
+  }
+  
+  .page-subtitle {
+    font-size: 0.9rem !important;
+  }
+  
+  .login-submit-btn .btn-text,
+  .registro-submit-btn .btn-text {
+    font-size: 0.9rem;
+  }
+  
+  .registro-card .col-md-4 {
+    padding: 1.5rem 1rem !important;
+  }
+}
+

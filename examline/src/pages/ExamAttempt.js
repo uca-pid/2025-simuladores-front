@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
-import '../modern-examline.css';
+import './ExamAttempt.css';
 import { getExamById, API_BASE_URL } from "../services/api";
 import { useModal, useSEB } from "../hooks";
 import Modal from "../components/Modal";

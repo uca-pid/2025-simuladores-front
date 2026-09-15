@@ -20,7 +20,7 @@ import ExamWindowResults from "./pages/ExamWindowResults";
 import SEBExamLauncher from "./pages/SEBExamLauncher";
 import QuestionBank from "./pages/QuestionBank";
 import WindowInscriptions from "./pages/WindowInscriptions";
-import "./modern-examline.css";
+import "./styles/base.css";
 
 
 // Wrapper para login/registro: redirige si ya está logueado
