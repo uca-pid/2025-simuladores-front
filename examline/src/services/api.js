@@ -245,6 +245,89 @@ export async function getExamById(examId, windowId = null) {
   }
 }
 
+// Exam window endpoints
+export async function getExamWindowsProfesor() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/exam-windows/profesor`, {
+      method: "GET",
+      headers: getAuthHeaders(),
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
+export async function createExamWindow(payload) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/exam-windows`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
+export async function updateExamWindow(windowId, payload) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/exam-windows/${windowId}`, {
+      method: "PUT",
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
+export async function toggleExamWindowActive(windowId) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/exam-windows/${windowId}/toggle-active`, {
+      method: "PATCH",
+      headers: getAuthHeaders(),
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
+// Exam attempt endpoints
+export async function getExamAttemptResults(attemptId) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/exam-attempts/${attemptId}/results`, {
+      method: "GET",
+      headers: getAuthHeaders(),
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
+// Exam files endpoints
+export async function getExamFiles(examId, version) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/exam-files/${examId}/files?version=${version}`, {
+      method: "GET",
+      headers: getAuthHeaders(),
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
 // Moodle Integration endpoints
 export async function verifyMoodleConnection({ moodleUrl, moodleToken }) {
   try {

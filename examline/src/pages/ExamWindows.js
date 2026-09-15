@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useModal } from '../hooks';
-import { API_BASE_URL } from '../services/api';
+import { getExams, getExamWindowsProfesor, createExamWindow, updateExamWindow, toggleExamWindowActive } from '../services/api';
 import BackToMainButton from '../components/BackToMainButton';
 import Modal from '../components/Modal';
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -89,46 +89,12 @@ export default function ExamWindowsPage() {
         return;
       }
       
-      const examsRes = await fetch(`${API_BASE_URL}/exams`, {
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (examsRes.status === 401) {
-        console.error('Token expirado o inválido');
-        navigate('/login');
-        return;
-      }
-      
-      if (examsRes.ok) {
-        const examsData = await examsRes.json();
-        setExams(examsData);
-      } else {
-        console.error('Error cargando exámenes:', examsRes.status, await examsRes.text());
-      }
+      const examsData = await getExams();
+      setExams(examsData);
 
-      const windowsRes = await fetch(`${API_BASE_URL}/exam-windows/profesor`, {
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (windowsRes.status === 401) {
-        console.error('Token expirado o inválido al cargar ventanas');
-        navigate('/login');
-        return;
-      }
-      
-      if (windowsRes.ok) {
-        const windowsData = await windowsRes.json();
-        setExamWindows(windowsData);
-        setLastUpdate(new Date());
-      } else {
-        console.error('Error cargando ventanas:', windowsRes.status, await windowsRes.text());
-      }
+      const windowsData = await getExamWindowsProfesor();
+      setExamWindows(windowsData);
+      setLastUpdate(new Date());
     } catch (error) {
       console.error('Error cargando datos:', error);
       if (!isBackgroundUpdate) {
@@ -398,11 +364,6 @@ export default function ExamWindowsPage() {
     
     setIsSavingWindow(true);
     try {
-      const url = editingWindow 
-        ? `${API_BASE_URL}/exam-windows/${editingWindow.id}`
-        : `${API_BASE_URL}/exam-windows`;
-      
-      const method = editingWindow ? 'PUT' : 'POST';
       const isEditingEnCurso = !!editingWindow && editingWindow.estado === 'en_curso';
       const payload = { ...formData };
       
@@ -434,28 +395,20 @@ export default function ExamWindowsPage() {
 
       }
 
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (response.ok) {
-        showModal('success', '¡Éxito!', 
-          `Ventana ${editingWindow ? 'actualizada' : 'creada'} correctamente`);
-        setShowCreateModal(false);
-        resetForm();
-        loadData();
+      if (editingWindow) {
+        await updateExamWindow(editingWindow.id, payload);
       } else {
-        const errorData = await response.json();
-        showModal('error', 'Error', errorData.error || 'Error al guardar la ventana');
+        await createExamWindow(payload);
       }
+
+      showModal('success', '¡Éxito!',
+        `Ventana ${editingWindow ? 'actualizada' : 'creada'} correctamente`);
+      setShowCreateModal(false);
+      resetForm();
+      loadData();
     } catch (error) {
       console.error('Error guardando ventana:', error);
-      showModal('error', 'Error', 'Error de conexión');
+      showModal('error', 'Error', error.message || 'Error de conexión');
     } finally {
       setIsSavingWindow(false);
     }
@@ -472,32 +425,13 @@ export default function ExamWindowsPage() {
     ));
     
     try {
-      const response = await fetch(`${API_BASE_URL}/exam-windows/${windowId}/toggle-active`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        // Confirma el cambio con los datos del servidor
-        setExamWindows(prev => prev.map(window => 
-          window.id === windowId 
-            ? { ...window, activa: result.window.activa }
-            : window
-        ));
-      } else {
-        // Revierte el cambio optimista si falla
-        setExamWindows(prev => prev.map(window => 
-          window.id === windowId 
-            ? { ...window, activa: currentActive }
-            : window
-        ));
-        const errorData = await response.json();
-        showModal('error', 'Error', errorData.error || `Error al ${action} la ventana`);
-      }
+      const result = await toggleExamWindowActive(windowId);
+      // Confirma el cambio con los datos del servidor
+      setExamWindows(prev => prev.map(window =>
+        window.id === windowId
+          ? { ...window, activa: result.window.activa }
+          : window
+      ));
     } catch (error) {
       // Revierte el cambio optimista si hay error
       setExamWindows(prev => prev.map(window => 

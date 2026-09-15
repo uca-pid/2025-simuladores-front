@@ -5,8 +5,7 @@ import '../modern-examline.css';
 import BackToMainButton from "../components/BackToMainButton";
 import { useAuth } from "../contexts/AuthContext";
 import { useSEB } from "../hooks/useSEB";
-
-const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
+import { getExamAttemptResults, getExamFiles } from "../services/api";
 
 const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
   const { attemptId: routeAttemptId } = useParams();
@@ -34,29 +33,18 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
       try {
         setLoading(true);
         
-        const response = await fetch(`${API_BASE_URL}/exam-attempts/${attemptId}/results`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        const data = await getExamAttemptResults(attemptId);
+        setAttempt(data);
 
-        if (response.ok) {
-          const data = await response.json();
-          setAttempt(data);
-          
-          // Si es un examen de programación, cargar ambas versiones de archivos
-          if (data.exam.tipo === 'programming') {
-            await fetchFileVersions(data.exam.id);
-          }
-          
-          setError(null);
-        } else {
-          const errorData = await response.json();
-          setError(errorData.error || 'Error cargando resultados');
+        // Si es un examen de programación, cargar ambas versiones de archivos
+        if (data.exam.tipo === 'programming') {
+          await fetchFileVersions(data.exam.id);
         }
+
+        setError(null);
       } catch (err) {
         console.error('Error fetching results:', err);
-        setError('Error de conexión');
+        setError(err.message || 'Error de conexión');
       } finally {
         setLoading(false);
       }
@@ -69,24 +57,13 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
   // Función para cargar ambas versiones de archivos
   const fetchFileVersions = async (examId) => {
     try {
-      const [manualResponse, submissionResponse] = await Promise.all([
-        fetch(`${API_BASE_URL}/exam-files/${examId}/files?version=manual`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }),
-        fetch(`${API_BASE_URL}/exam-files/${examId}/files?version=submission`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
+      const [manualData, submissionData] = await Promise.all([
+        getExamFiles(examId, 'manual'),
+        getExamFiles(examId, 'submission')
       ]);
 
-      if (manualResponse.ok) {
-        const manualData = await manualResponse.json();
-        setManualFiles(manualData);
-      }
-
-      if (submissionResponse.ok) {
-        const submissionData = await submissionResponse.json();
-        setSubmissionFiles(submissionData);
-      }
+      setManualFiles(manualData);
+      setSubmissionFiles(submissionData);
     } catch (err) {
       console.error('Error fetching file versions:', err);
     }
