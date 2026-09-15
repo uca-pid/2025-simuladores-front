@@ -309,7 +309,7 @@ const ProgrammingExamView = () => {
           {/* Main content */}
           <main className="exam-main">
             {showConsigna && (
-              <div className="consigna-panel">
+              <div className={`consigna-panel ${exam.enunciadoUrl ? 'with-iframe' : ''}`}>
                 <h3 className="consigna-title">
                   <i className="fas fa-puzzle-piece me-2"></i>
                   Consigna
@@ -320,6 +320,13 @@ const ProgrammingExamView = () => {
                 <div className="problem-statement">
                   {exam.enunciadoProgramacion}
                 </div>
+                {exam.enunciadoUrl && (
+                  <iframe
+                    src={exam.enunciadoUrl}
+                    title="Consigna del examen"
+                    className="consigna-iframe"
+                  />
+                )}
               </div>
             )}
             {(windowWidth >= 768 || !showConsigna) && (
@@ -1606,10 +1613,26 @@ const ProgrammingExamView = () => {
           width: 400px;
           flex-shrink: 0;
           border-right: 1px solid rgba(255, 255, 255, 0.08);
+          display: flex;
+          flex-direction: column;
+        }
+
+        .consigna-panel.with-iframe {
+          width: 620px;
+        }
+
+        .consigna-iframe {
+          width: 100%;
+          flex: 1;
+          min-height: 500px;
+          margin-top: 14px;
+          border: 2px solid rgba(226, 232, 240, 0.5);
+          border-radius: 12px;
+          background: #fff;
         }
 
         @media (max-width: 768px) {
-          .consigna-panel {
+          .consigna-panel, .consigna-panel.with-iframe {
             padding: 12px;
             width: 100%;
             border-right: none;

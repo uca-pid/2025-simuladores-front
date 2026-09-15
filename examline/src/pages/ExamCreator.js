@@ -41,6 +41,7 @@ const ExamCreator = () => {
   const [lenguajeProgramacion, setLenguajeProgramacion] = useState(draft?.lenguajeProgramacion || "python");
   const [intellisenseHabilitado, setIntellisenseHabilitado] = useState(draft?.intellisenseHabilitado || false);
   const [enunciadoProgramacion, setEnunciadoProgramacion] = useState(draft?.enunciadoProgramacion || "");
+  const [enunciadoUrl, setEnunciadoUrl] = useState(draft?.enunciadoUrl || "");
   const [codigoInicial, setCodigoInicial] = useState(draft?.codigoInicial || "");
   const [testCases, setTestCases] = useState(draft?.testCases || [
     { description: "", input: "", expectedOutput: "" }
@@ -75,6 +76,7 @@ const ExamCreator = () => {
       lenguajeProgramacion,
       intellisenseHabilitado,
       enunciadoProgramacion,
+      enunciadoUrl,
       codigoInicial,
       testCases,
       referenceFiles,
@@ -84,7 +86,7 @@ const ExamCreator = () => {
     };
 
     // Solo guardar si hay contenido
-    const hasContent = titulo || preguntas.length > 0 || enunciadoProgramacion ||
+    const hasContent = titulo || preguntas.length > 0 || enunciadoProgramacion || enunciadoUrl ||
                       testCases.some(tc => tc.description || tc.input || tc.expectedOutput) ||
                       referenceFiles.some(f => f.content);
 
@@ -93,7 +95,7 @@ const ExamCreator = () => {
       setHasDraft(true);
     }
   }, [titulo, tipoExamen, ordenAleatorio, preguntas,
-      lenguajeProgramacion, intellisenseHabilitado, enunciadoProgramacion,
+      lenguajeProgramacion, intellisenseHabilitado, enunciadoProgramacion, enunciadoUrl,
       codigoInicial, testCases, referenceFiles, currentReferenceFile, saveReferenceSolution]);
 
   // Función para descartar borrador
@@ -112,6 +114,7 @@ const ExamCreator = () => {
         setLenguajeProgramacion("python");
         setIntellisenseHabilitado(false);
         setEnunciadoProgramacion("");
+        setEnunciadoUrl("");
         setCodigoInicial("");
         setTestCases([{ description: "", input: "", expectedOutput: "" }]);
         setReferenceFiles([{ filename: 'main.py', content: '' }]);
@@ -337,6 +340,7 @@ const ExamCreator = () => {
         examData.lenguajeProgramacion = lenguajeProgramacion;
         examData.intellisenseHabilitado = intellisenseHabilitado;
         examData.enunciadoProgramacion = enunciadoProgramacion;
+        examData.enunciadoUrl = enunciadoUrl;
         examData.codigoInicial = codigoInicial;
         examData.testCases = testCases;
         // Solo enviar archivos de referencia si el profesor eligió guardarlos
@@ -606,7 +610,31 @@ const ExamCreator = () => {
                   }}
                 />
               </div>
-              
+
+              <div className="mb-3">
+                <label className="form-label d-flex align-items-center gap-2">
+                  <i className="fas fa-link text-muted"></i>
+                  Link con la consigna (opcional)
+                </label>
+                <input
+                  type="url"
+                  className="form-control"
+                  placeholder="https://docs.google.com/document/d/e/.../pub"
+                  value={enunciadoUrl}
+                  onChange={(e) => setEnunciadoUrl(e.target.value)}
+                  disabled={isPublishing}
+                  style={{
+                    padding: '0.75rem 1rem',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '8px',
+                    fontSize: '1rem'
+                  }}
+                />
+                <small className="text-muted">
+                  Si lo completás (ej. un Google Doc publicado con "Publicar en la web"), se muestra embebido en la consigna del alumno además del texto de arriba.
+                </small>
+              </div>
+
               <div className="mb-0">
                 <label className="form-label d-flex align-items-center gap-2">
                   <i className="fas fa-code text-muted"></i>
