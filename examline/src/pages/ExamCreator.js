@@ -657,7 +657,10 @@ const ExamCreator = () => {
                   }}
                 />
                 <small className="form-text text-muted">
-                  Código que aparecerá precargado en el editor del estudiante
+                  Código que aparecerá precargado en el editor del estudiante.
+                  Para bloquear una parte y que el alumno no pueda modificarla ni borrarla,
+                  encerrala entre <code>{lenguajeProgramacion === 'python' ? '# ==RO==' : '// ==RO=='}</code> y{' '}
+                  <code>{lenguajeProgramacion === 'python' ? '# ==/RO==' : '// ==/RO=='}</code>.
                 </small>
               </div>
             </div>

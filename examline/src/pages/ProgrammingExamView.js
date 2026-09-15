@@ -59,6 +59,7 @@ const ProgrammingExamView = () => {
     getMainFileName,
     isMainFile,
     handleEditorChange,
+    handleEditorMount,
     handleManualSave,
     loadFile,
     hideFile,
@@ -528,6 +529,7 @@ const ProgrammingExamView = () => {
                         theme="vs-dark"
                         value={code}
                         onChange={handleEditorChange}
+                        onMount={handleEditorMount}
                         options={{
                           ...editorOptions,
                           readOnly: saving || fileOperationLoading,

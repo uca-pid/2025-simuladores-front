@@ -1,9 +1,40 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   getExamAttemptFiles,
   saveExamAttemptFile,
   deleteExamAttemptFile
 } from '../services/api';
+
+/**
+ * Extrae los bloques "protegidos" (no editables) de un texto, delimitados por
+ * comentarios marcadores `==RO==` / `==/RO==` (en Python `#`, en JS `//`).
+ * El profesor marca así, en el código inicial, las partes que el alumno no
+ * debe modificar (ej. funciones auxiliares provistas). Devuelve el texto
+ * exacto de cada bloque (incluyendo los marcadores) para poder verificar
+ * luego que sigue presente sin cambios en el código del alumno.
+ */
+const LOCK_START = /^\s*(#|\/\/)\s*==RO==\s*$/;
+const LOCK_END = /^\s*(#|\/\/)\s*==\/RO==\s*$/;
+
+export const extractLockedBlocks = (text) => {
+  const lines = (text || '').split('\n');
+  const blocks = [];
+  let current = null;
+
+  for (const line of lines) {
+    if (current === null && LOCK_START.test(line)) {
+      current = [line];
+    } else if (current !== null) {
+      current.push(line);
+      if (LOCK_END.test(line)) {
+        blocks.push(current.join('\n'));
+        current = null;
+      }
+    }
+  }
+
+  return blocks;
+};
 
 /**
  * Hook personalizado para gestionar los archivos de un intento de examen de programación.
@@ -37,6 +68,18 @@ export const useExamFiles = (examId, exam, attempt, setError) => {
 
   // 👁️ Estado para archivos ocultos de la vista
   const [hiddenFiles, setHiddenFiles] = useState(new Set());
+
+  // 🔒 Bloques de código protegidos (no editables) definidos en el código inicial del examen
+  const lockedBlocksRef = useRef([]);
+  useEffect(() => {
+    lockedBlocksRef.current = extractLockedBlocks(exam?.codigoInicial);
+  }, [exam]);
+
+  // Referencia a la instancia de Monaco para poder deshacer ediciones inválidas
+  const editorRef = useRef(null);
+  const handleEditorMount = useCallback((editor) => {
+    editorRef.current = editor;
+  }, []);
 
   // Estados para modal de eliminación
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -122,6 +165,17 @@ export const useExamFiles = (examId, exam, attempt, setError) => {
   // Manejar cambios en el editor con debounce para reducir actualizaciones
   const handleEditorChange = useCallback((value) => {
     const newValue = value || '';
+
+    // 🔒 Si el archivo actual es el principal y tiene bloques protegidos,
+    // no permitir ediciones que los alteren o eliminen: se deshace el cambio.
+    if (isMainFile(currentFileName) && lockedBlocksRef.current.length > 0) {
+      const intacto = lockedBlocksRef.current.every(block => newValue.includes(block));
+      if (!intacto) {
+        editorRef.current?.trigger('keyboard', 'undo', null);
+        return;
+      }
+    }
+
     setCode(newValue);
 
     // 💾 Actualizar el caché en tiempo real
@@ -134,7 +188,7 @@ export const useExamFiles = (examId, exam, attempt, setError) => {
       // 📝 Marcar archivo como no guardado
       setUnsavedFiles(prev => new Set(prev).add(currentFileName));
     }
-  }, [currentFileName]);
+  }, [currentFileName, isMainFile]);
 
   const saveCurrentFile = useCallback(async (filename = currentFileName, content = code) => {
     if (!filename || !attempt) return;
@@ -391,6 +445,7 @@ export const useExamFiles = (examId, exam, attempt, setError) => {
     isMainFile,
     fetchFiles,
     handleEditorChange,
+    handleEditorMount,
     saveCurrentFile,
     handleManualSave,
     loadFile,
