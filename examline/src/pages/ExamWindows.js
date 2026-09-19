@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useModal } from '../hooks';
-import { getExams, getExamWindowsProfesor, createExamWindow, updateExamWindow, toggleExamWindowActive } from '../services/api';
+import { getExams, getExamWindowsProfesor, createExamWindow, updateExamWindow, toggleExamWindowActive, extendExamWindowTime } from '../services/api';
 import BackToMainButton from '../components/BackToMainButton';
 import Modal from '../components/Modal';
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -66,6 +66,42 @@ export default function ExamWindowsPage() {
   const [activeTab, setActiveTab] = useState(() => {
     return localStorage.getItem('examWindows_activeTab') || 'current';
   });
+
+  const promptExtendWindowTime = (windowItem) => {
+    let minutes = 15;
+    showModal(
+      'confirm',
+      `Adicionar más tiempo - ${windowItem.nombre}`,
+      <div className="mt-3 text-start">
+        <p className="text-secondary small mb-2">
+          Se otorgarán minutos adicionales a todos los estudiantes inscritos en esta ventana de examen.
+        </p>
+        <label className="form-label text-dark fw-bold">Minutos a adicionar:</label>
+        <input 
+          type="number" 
+          className="form-control" 
+          defaultValue={15} 
+          min={1} 
+          onChange={(e) => { minutes = parseInt(e.target.value) || 0; }}
+        />
+      </div>,
+      async () => {
+        if (minutes > 0) {
+          try {
+            await extendExamWindowTime(windowItem.id, minutes, 'Otorgado por el profesor');
+            showModal('success', '¡Tiempo Adicionado!', `Se añadieron ${minutes} minutos a la ventana "${windowItem.nombre}".`);
+            loadData();
+          } catch (err) {
+            console.error('Error extendiendo tiempo:', err);
+            showModal('error', 'Error', err.message || 'No se pudo adicionar tiempo.');
+          }
+        } else {
+          closeModal();
+        }
+      },
+      true
+    );
+  };
 
   const adjustTextareaHeight = (textarea) => {
     if (!textarea) return;
@@ -662,12 +698,33 @@ export default function ExamWindowsPage() {
                 </div>
               </div>
               <div className="exam-actions" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <button 
+                  className="modern-btn modern-btn-info modern-btn-sm w-100 text-white"
+                  style={{ backgroundColor: '#0284c7', borderColor: '#0284c7' }}
+                  onClick={() => {
+                    navigate(`/exam-windows/${window.id}/inscriptions`);
+                  }}
+                  title="Ver lista de alumnos inscriptos y estado de entregas del examen"
+                >
+                  <i className="fas fa-users me-1"></i>
+                  Ver Alumnos ({getInscritosCount(window)})
+                </button>
+                {!window.sinTiempo && window.estado !== 'finalizada' && (
+                  <button 
+                    className="modern-btn modern-btn-warning modern-btn-sm w-100"
+                    onClick={() => promptExtendWindowTime(window)}
+                    title="Adicionar tiempo extra a todos los alumnos de la ventana"
+                  >
+                    <i className="fas fa-clock me-1"></i>
+                    + Adicionar Tiempo
+                  </button>
+                )}
                 {window.estado !== 'finalizada' && (
                   <button 
                     className="modern-btn modern-btn-secondary modern-btn-sm w-100"
                     onClick={() => handleEditWindow(window)}
                   >
-                    <i className="fas fa-edit"></i>
+                    <i className="fas fa-edit me-1"></i>
                     Editar
                   </button>
                 )}
@@ -677,7 +734,7 @@ export default function ExamWindowsPage() {
                     navigate(`/exam-windows/${window.id}/results`);
                   }}
                 >
-                  <i className="fas fa-trophy"></i>
+                  <i className="fas fa-trophy me-1"></i>
                   Resultados
                 </button>
               </div>

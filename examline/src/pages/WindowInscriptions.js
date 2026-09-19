@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { API_BASE_URL } from '../services/api';
 import BackToMainButton from '../components/BackToMainButton';
 import Modal from '../components/Modal';
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -12,8 +13,6 @@ const adjustDateFromServer = (serverDateString) => {
   // JavaScript maneja automáticamente la conversión de UTC a zona horaria local
   return new Date(serverDateString);
 };
-
-const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:4000';
 
 export default function WindowInscriptionsPage() {
   const { windowId } = useParams();
@@ -30,6 +29,15 @@ export default function WindowInscriptionsPage() {
     onConfirm: null,
     showCancel: false
   });
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Actualizar el reloj cada segundo para el tiempo restante
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Verificar que es profesor
   useEffect(() => {
@@ -49,12 +57,9 @@ export default function WindowInscriptionsPage() {
       
       if (windowResponse.ok) {
         const windows = await windowResponse.json();
-        const window = windows.find(w => w.id === parseInt(windowId));
+        const window = windows.find(w => String(w.id) === String(windowId));
         if (window) {
           setExamWindow(window);
-        } else {
-          navigate('/exam-windows');
-          return;
         }
       }
 
@@ -101,12 +106,9 @@ export default function WindowInscriptionsPage() {
       
       if (windowResponse.ok) {
         const windows = await windowResponse.json();
-        const window = windows.find(w => w.id === parseInt(windowId));
+        const window = windows.find(w => String(w.id) === String(windowId));
         if (window) {
           setExamWindow(window);
-        } else {
-          navigate('/exam-windows');
-          return;
         }
       }
 
@@ -140,6 +142,82 @@ export default function WindowInscriptionsPage() {
 
   const closeModal = () => {
     setModal(prev => ({ ...prev, show: false }));
+  };
+
+  const calculateRemainingTime = (attempt) => {
+    if (!attempt || !examWindow) return null;
+    if (attempt.estado === 'terminado') return { status: 'Terminado', minutes: 0 };
+    
+    const start = new Date(attempt.startedAt);
+    const baseDuration = examWindow.duracion;
+    const extraMinutes = attempt.extensionesTiempo ? attempt.extensionesTiempo.reduce((acc, ext) => acc + ext.minutosExtras, 0) : 0;
+    const totalDurationMs = (baseDuration + extraMinutes) * 60 * 1000;
+    
+    const end = new Date(start.getTime() + totalDurationMs);
+    const remainingMs = end.getTime() - currentTime.getTime();
+    
+    if (remainingMs <= 0) return { status: 'Tiempo Agotado', minutes: 0 };
+    
+    const remainingMinutes = Math.floor(remainingMs / 60000);
+    const remainingSeconds = Math.floor((remainingMs % 60000) / 1000);
+    
+    return {
+      status: 'Activo',
+      minutes: remainingMinutes,
+      seconds: remainingSeconds,
+      formatted: `${remainingMinutes}:${remainingSeconds.toString().padStart(2, '0')}`
+    };
+  };
+
+  const handleExtendTime = async (minutes, attemptId = null) => {
+    try {
+      const url = attemptId 
+        ? `${API_BASE_URL}/exam-attempts/${attemptId}/extend-time`
+        : `${API_BASE_URL}/exam-windows/${windowId}/extend-time-all`;
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ minutos: minutes, minutosExtras: minutes, motivo: 'Otorgado por el profesor' })
+      });
+
+      if (response.ok) {
+        showModal('success', '¡Éxito!', `Se añadieron ${minutes} minutos correctamente.`);
+        loadData();
+      } else {
+        const error = await response.json();
+        showModal('error', 'Error', error.error || 'Error al extender el tiempo');
+      }
+    } catch (error) {
+      console.error('Error extendiendo tiempo:', error);
+      showModal('error', 'Error', 'Error de conexión');
+    }
+  };
+
+  const promptExtension = (title, attemptId = null) => {
+    let minutes = 15;
+    showModal(
+      'confirm',
+      title,
+      <div className="mt-3 text-start">
+        <label className="form-label text-dark fw-bold">Minutos a adicionar:</label>
+        <input 
+          type="number" 
+          className="form-control" 
+          defaultValue={15} 
+          min={1} 
+          onChange={(e) => { minutes = parseInt(e.target.value) || 0; }}
+        />
+      </div>,
+      () => {
+        if (minutes > 0) handleExtendTime(minutes, attemptId);
+        else closeModal();
+      },
+      true
+    );
   };
 
   const handleAttendanceToggle = async (inscriptionId, currentPresente) => {
@@ -297,6 +375,17 @@ export default function WindowInscriptionsPage() {
   const canManage = canManageAttendance();
   const isFinished = isExamFinished();
 
+  const totalInscriptos = inscriptions.length;
+  const entregadosCount = inscriptions.filter(i => {
+    const att = i.user.intentos && i.user.intentos[0];
+    return att && (att.estado === 'finalizado' || att.estado === 'terminado');
+  }).length;
+  const enProgresoCount = inscriptions.filter(i => {
+    const att = i.user.intentos && i.user.intentos[0];
+    return att && att.estado === 'en_progreso';
+  }).length;
+  const sinIniciarCount = totalInscriptos - entregadosCount - enProgresoCount;
+
   return (
     <div className="container py-5">
       <div className="modern-card mb-4">
@@ -331,19 +420,71 @@ export default function WindowInscriptionsPage() {
         </div>
       </div>
 
+      {/* Resumen de Métricas */}
+      <div className="row g-3 mb-4">
+        <div className="col-6 col-md-3">
+          <div className="modern-card p-3 text-center border-start border-primary border-4 h-100">
+            <div className="text-muted small fw-semibold">Inscriptos</div>
+            <div className="fs-3 fw-bold text-primary">{totalInscriptos}</div>
+          </div>
+        </div>
+        <div className="col-6 col-md-3">
+          <div className="modern-card p-3 text-center border-start border-warning border-4 h-100">
+            <div className="text-muted small fw-semibold">En Progreso</div>
+            <div className="fs-3 fw-bold text-warning">{enProgresoCount}</div>
+          </div>
+        </div>
+        <div className="col-6 col-md-3">
+          <div className="modern-card p-3 text-center border-start border-success border-4 h-100">
+            <div className="text-muted small fw-semibold">Entregados</div>
+            <div className="fs-3 fw-bold text-success">{entregadosCount}</div>
+          </div>
+        </div>
+        <div className="col-6 col-md-3">
+          <div className="modern-card p-3 text-center border-start border-secondary border-4 h-100">
+            <div className="text-muted small fw-semibold">Sin Iniciar</div>
+            <div className="fs-3 fw-bold text-secondary">{sinIniciarCount}</div>
+          </div>
+        </div>
+      </div>
+
       {/* Controles de gestión */}
       {!isFinished && inscriptions.length > 0 && (
         <div className="modern-card mb-4">
           <div className="modern-card-header">
             <h3 className="modern-card-title">
-              <i className="fas fa-cog me-2"></i>
-              Configuración de Presentismo
+              <i className="fas fa-tools me-2"></i>
+              Gestión de Examen y Presentismo
             </h3>
           </div>
           <div className="modern-card-body">
             <div className="attendance-management-section">
-              <div className="presentismo-toggle-section mb-4">
-                <div className="d-flex align-items-center justify-content-between flex-wrap">
+              {/* Botón para Adicionar Tiempo a Todos para ventanas con tiempo */}
+              {!examWindow.sinTiempo && (
+                <div className="mb-4 pb-3 border-bottom">
+                  <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div>
+                      <h6 className="mb-1 fw-bold">
+                        <i className="fas fa-clock text-warning me-2"></i>
+                        Adicionar Tiempo Extra Global
+                      </h6>
+                      <p className="text-muted mb-0 small">
+                        Otorga minutos adicionales a todos los estudiantes inscritos en esta ventana de examen.
+                      </p>
+                    </div>
+                    <button 
+                      className="modern-btn modern-btn-warning"
+                      onClick={() => promptExtension('Adicionar tiempo a TODOS los alumnos')}
+                    >
+                      <i className="fas fa-clock me-2"></i>
+                      + Tiempo a Todos
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="presentismo-toggle-section">
+                <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
                   <div className="presentismo-info">
                     <h6 className="mb-1">
                       <i className={`fas ${examWindow.requierePresente === true ? 'fa-user-check text-success' : 'fa-user-slash text-muted'} me-2`}></i>
@@ -367,13 +508,12 @@ export default function WindowInscriptionsPage() {
               </div>
 
               {examWindow.requierePresente === true && canManage && (
-                <div className="attendance-controls-section">
-                  <hr className="my-3" />
+                <div className="attendance-controls-section mt-3 pt-3 border-top">
                   <p className="attendance-description text-muted mb-3">
                     <i className="fas fa-info-circle me-2"></i>
                     <span className="description-text">Marca a los estudiantes como presentes para habilitarlos a rendir el examen.</span>
                   </p>
-                  <div className="attendance-actions">
+                  <div className="attendance-actions d-flex gap-3 flex-wrap">
                     <button 
                       className="modern-btn modern-btn-primary attendance-btn"
                       onClick={markAllPresent}
@@ -411,84 +551,150 @@ export default function WindowInscriptionsPage() {
             </div>
           ) : (
             <div className="window-inscriptions-compact-list">
-              {inscriptions.map((inscription, index) => (
-                <div key={inscription.id} className={`inscription-compact-card fade-in-up`} style={{animationDelay: `${index * 0.1}s`}}>
-                  <div className="student-info-section">
-                    <div className="student-details">
-                      <h6 className="student-name mb-1">{inscription.user.nombre}</h6>
-                      <div className="student-meta">
-                        <span className="student-email text-muted">
-                          <i className="fas fa-envelope me-1"></i>
-                          {inscription.user.email}
-                        </span>
-                        <span className="inscription-date text-muted d-none d-sm-inline">
-                          <i className="fas fa-calendar-plus me-1"></i>
-                          {new Date(inscription.inscribedAt).toLocaleDateString()}
-                        </span>
+              {inscriptions.map((inscription, index) => {
+                const attempt = inscription.user.intentos && inscription.user.intentos[0];
+                const isAttemptFinished = attempt && (attempt.estado === 'finalizado' || attempt.estado === 'terminado');
+                const isAttemptInProgress = attempt && attempt.estado === 'en_progreso';
+                const score = attempt ? (attempt.calificacionManual ?? attempt.puntaje) : null;
+
+                return (
+                  <div key={inscription.id} className={`inscription-compact-card fade-in-up`} style={{animationDelay: `${index * 0.1}s`}}>
+                    <div className="student-info-section" style={{ flex: 1 }}>
+                      <div className="student-details">
+                        <h6 className="student-name mb-1">{inscription.user.nombre}</h6>
+                        <div className="student-meta mb-2">
+                          <span className="student-email text-muted me-3">
+                            <i className="fas fa-envelope me-1"></i>
+                            {inscription.user.email}
+                          </span>
+                          <span className="inscription-date text-muted d-none d-sm-inline">
+                            <i className="fas fa-calendar-plus me-1"></i>
+                            {new Date(inscription.inscribedAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                        
+                        {/* Estado detallado de entrega del examen */}
+                        <div className="student-attempt-status">
+                          {!attempt && (
+                            <span className="badge bg-secondary p-2">
+                              <i className="fas fa-minus-circle me-1"></i>
+                              No Inició
+                            </span>
+                          )}
+
+                          {isAttemptInProgress && (
+                            <div className="d-inline-flex align-items-center gap-2 flex-wrap">
+                              <span className="badge bg-warning text-dark p-2">
+                                <i className="fas fa-spinner fa-spin me-1"></i>
+                                En Progreso
+                              </span>
+                              {!examWindow.sinTiempo && (() => {
+                                const timeInfo = calculateRemainingTime(attempt);
+                                if (!timeInfo) return null;
+                                return (
+                                  <span className={`badge ${timeInfo.status === 'Activo' ? (timeInfo.minutes < 10 ? 'bg-danger' : 'bg-primary') : 'bg-secondary'} p-2`}>
+                                    <i className="fas fa-stopwatch me-1"></i>
+                                    {timeInfo.status === 'Activo' ? `Quedan ${timeInfo.formatted}` : timeInfo.status}
+                                  </span>
+                                );
+                              })()}
+                            </div>
+                          )}
+
+                          {isAttemptFinished && (
+                            <div className="d-inline-flex align-items-center gap-2 flex-wrap">
+                              <span className="badge bg-success p-2">
+                                <i className="fas fa-check-circle me-1"></i>
+                                Entregado {attempt.finishedAt ? `(${new Date(attempt.finishedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})` : ''}
+                              </span>
+                              {score !== null && score !== undefined ? (
+                                <span className="badge bg-info text-dark p-2">
+                                  Nota: {score}
+                                </span>
+                              ) : (
+                                <span className="badge bg-light text-dark border p-2">
+                                  Entregado
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  
-                  <div className="attendance-controls-section">
-                    {examWindow.requierePresente === true && canManage && (
-                      <div className="attendance-toggle-group">
-                        <button 
-                          className={`attendance-toggle-btn present-btn ${
-                            inscription.presente === true ? 'active' : ''
-                          }`}
-                          onClick={() => handleAttendanceToggle(inscription.id, inscription.presente)}
-                          disabled={inscription.presente === true}
-                          title="Marcar como presente"
-                        >
-                          <i className="fas fa-check"></i>
-                          <span className="toggle-label">Presente</span>
-                        </button>
-                        <button 
-                          className={`attendance-toggle-btn absent-btn ${
-                            inscription.presente === false ? 'active' : ''
-                          }`}
-                          onClick={() => handleAttendanceToggle(inscription.id, inscription.presente)}
-                          disabled={inscription.presente === false}
-                          title="Marcar como ausente"
-                        >
-                          <i className="fas fa-times"></i>
-                          <span className="toggle-label">Ausente</span>
-                        </button>
-                      </div>
-                    )}
                     
-                    {examWindow.requierePresente === true && (isFinished || !canManage) && (
-                      <div className="attendance-status-display">
-                        <span className={`status-indicator ${
-                          inscription.presente === true ? 'present' : 
-                          inscription.presente === false ? 'absent' : 
-                          'unknown'
-                        }`}>
-                          <i className={`fas ${
-                            inscription.presente === true ? 'fa-check-circle' : 
-                            inscription.presente === false ? 'fa-times-circle' : 
-                            'fa-question-circle'
-                          }`}></i>
-                          <span className="status-text">
-                            {inscription.presente === true ? 'Presente' : 
-                             inscription.presente === false ? 'Ausente' : 
-                             'Sin registrar'}
+                    <div className="attendance-controls-section">
+                      {examWindow.requierePresente === true && canManage && (
+                        <div className="attendance-toggle-group me-2">
+                          <button 
+                            className={`attendance-toggle-btn present-btn ${
+                              inscription.presente === true ? 'active' : ''
+                            }`}
+                            onClick={() => handleAttendanceToggle(inscription.id, inscription.presente)}
+                            disabled={inscription.presente === true}
+                            title="Marcar como presente"
+                          >
+                            <i className="fas fa-check"></i>
+                            <span className="toggle-label">Presente</span>
+                          </button>
+                          <button 
+                            className={`attendance-toggle-btn absent-btn ${
+                              inscription.presente === false ? 'active' : ''
+                            }`}
+                            onClick={() => handleAttendanceToggle(inscription.id, inscription.presente)}
+                            disabled={inscription.presente === false}
+                            title="Marcar como ausente"
+                          >
+                            <i className="fas fa-times"></i>
+                            <span className="toggle-label">Ausente</span>
+                          </button>
+                        </div>
+                      )}
+                      
+                      {/* Botón para adicionar tiempo individual a estudiantes en progreso */}
+                      {!examWindow.sinTiempo && !isFinished && isAttemptInProgress && (
+                        <button 
+                          className="modern-btn modern-btn-warning compact-btn"
+                          onClick={() => promptExtension(`Adicionar tiempo a ${inscription.user.nombre}`, attempt.id)}
+                          title="Agregar tiempo extra a este estudiante"
+                        >
+                          <i className="fas fa-clock"></i>
+                          <span className="d-none d-sm-inline ms-1">+ Tiempo</span>
+                        </button>
+                      )}
+                      
+                      {examWindow.requierePresente === true && (isFinished || !canManage) && (
+                        <div className="attendance-status-display me-2">
+                          <span className={`status-indicator ${
+                            inscription.presente === true ? 'present' : 
+                            inscription.presente === false ? 'absent' : 
+                            'unknown'
+                          }`}>
+                            <i className={`fas ${
+                              inscription.presente === true ? 'fa-check-circle' : 
+                              inscription.presente === false ? 'fa-times-circle' : 
+                              'fa-question-circle'
+                            }`}></i>
+                            <span className="status-text">
+                              {inscription.presente === true ? 'Presente' : 
+                               inscription.presente === false ? 'Ausente' : 
+                               'Sin registrar'}
+                            </span>
                           </span>
-                        </span>
-                      </div>
-                    )}
+                        </div>
+                      )}
 
-                    {examWindow.requierePresente !== true && (
-                      <div className="attendance-status-display">
-                        <span className="status-indicator present">
-                          <i className="fas fa-unlock"></i>
-                          <span className="status-text">Acceso libre</span>
-                        </span>
-                      </div>
-                    )}
+                      {examWindow.requierePresente !== true && (
+                        <div className="attendance-status-display">
+                          <span className="status-indicator present">
+                            <i className="fas fa-unlock"></i>
+                            <span className="status-text">Acceso libre</span>
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

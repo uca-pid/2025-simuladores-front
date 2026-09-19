@@ -25,14 +25,16 @@ export const useSEB = () => {
     );
   }, []);
 
+  const DEFAULT_QUIT_URL = 'http://quit.seb/';
+
   /**
    * Cierra SEB redireccionando a una URL específica
    * Esta es la forma estándar de "cerrar" SEB después de un examen
    * Primero intenta usar la API nativa de SEB si está disponible
-   * @param {string} redirectUrl - URL a la que redireccionar (default: ferrocarriloeste.com.ar)
+   * @param {string} redirectUrl - URL a la que redireccionar
    * @returns {Promise<boolean>} true si logró cerrar/redireccionar, false si fue cancelado
    */
-  const closeSEB = useCallback(async (redirectUrl = 'https://ferrocarriloeste.com.ar/') => {
+  const closeSEB = useCallback(async (redirectUrl = DEFAULT_QUIT_URL) => {
     try {
       console.log('Intentando cerrar SEB y redireccionar a:', redirectUrl);
       
@@ -42,21 +44,21 @@ export const useSEB = () => {
         return true;
       }
       
-      // Si no hay API nativa, redirigir a URL
+      // Si no hay API nativa, redirigir a URL de salida
       window.location.href = redirectUrl;
       return true;
     } catch (error) {
       console.error('Error al redireccionar desde SEB:', error);
       return false;
     }
-  }, []);
+  }, [DEFAULT_QUIT_URL]);
 
   /**
    * Intenta cerrar SEB con una confirmación y retorna si tuvo éxito
    * Usa un timeout para detectar si el usuario canceló el cierre
    * @returns {Promise<boolean>} true si el usuario confirmó y se cerró, false si canceló
    */
-  const tryCloseSEB = useCallback(async () => {
+  const tryCloseSEB = useCallback(async (redirectUrl = DEFAULT_QUIT_URL) => {
     try {
       console.log('Intentando cerrar SEB...');
       
@@ -73,14 +75,14 @@ export const useSEB = () => {
       } else {
         console.log('No hay API de SEB, intentando cerrar por URL...');
         // Si no hay API, intentar cerrar por URL de quit
-        window.location.href = 'https://ferocarcineto.com.ar/';
+        window.location.href = redirectUrl;
         return true;
       }
     } catch (error) {
       console.error('Error al cerrar SEB:', error);
       return false;
     }
-  }, []);
+  }, [DEFAULT_QUIT_URL]);
 
   /**
    * Detectar SEB al montar el componente

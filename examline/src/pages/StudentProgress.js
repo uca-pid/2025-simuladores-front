@@ -16,7 +16,7 @@ import "./StudentProgress.css";
 
 const API_BASE_URL =
   process.env.REACT_APP_BACKEND_URL ||
-  "https://two025-simuladores-back-1.onrender.com";
+  "http://localhost:4000";
 
 const StudentProgress = () => {
   const { user, token } = useAuth();

@@ -1,7 +1,7 @@
 import { hashPassword } from '../utils/password';
 
 // Exportar API_BASE_URL para uso en otros componentes
-export const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
+export const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:4000';
 
 // Helper function to get auth headers
 const getAuthHeaders = () => {
@@ -667,3 +667,18 @@ export async function saveManualGrade(attemptId, calificacionManual) {
     throw err;
   }
 }
+
+export async function extendExamWindowTime(windowId, minutos, motivo = 'Otorgado por el profesor') {
+  try {
+    const res = await fetch(`${API_BASE_URL}/exam-windows/${windowId}/extend-time-all`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ minutos, motivo }),
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+

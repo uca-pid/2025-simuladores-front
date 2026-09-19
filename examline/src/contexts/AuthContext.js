@@ -83,7 +83,7 @@ export const AuthProvider = ({ children }) => {
     if (!currentToken) return false;
 
     try {
-      const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
+      const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:4000';
       const response = await fetch(`${API_BASE_URL}/users/refresh-token`, {
         method: 'POST',
         headers: {
