@@ -45,12 +45,20 @@ const PdfCanvasViewer = ({ url }) => {
       pageWrapper.style.margin = '0 auto 12px auto';
       pageWrapper.style.boxShadow = '0 1px 4px rgba(0,0,0,0.3)';
 
+      // Renderizamos el canvas a la resolución real de píxeles del dispositivo
+      // (devicePixelRatio) para que no se vea borroso en pantallas de alta
+      // densidad o con escalado de Windows >100%, y lo achicamos visualmente
+      // con CSS al tamaño "lógico" que corresponde (viewport.width/height).
+      const dpr = window.devicePixelRatio || 1;
       const canvas = document.createElement('canvas');
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
+      canvas.width = viewport.width * dpr;
+      canvas.height = viewport.height * dpr;
+      canvas.style.width = `${viewport.width}px`;
+      canvas.style.height = `${viewport.height}px`;
       canvas.style.display = 'block';
 
       const context = canvas.getContext('2d');
+      context.scale(dpr, dpr);
       await page.render({ canvasContext: context, viewport }).promise;
 
       // Capa de texto invisible superpuesta al canvas: permite seleccionar y

@@ -4,6 +4,7 @@ import Editor from '@monaco-editor/react';
 import { useSEB, useExamAttempt, useExamFiles, useCodeCompiler, useExamFinish } from '../hooks';
 import Modal from '../components/Modal';
 import EnunciadoArchivoViewer from '../components/EnunciadoArchivoViewer';
+import CsvDatasetViewer from '../components/CsvDatasetViewer';
 
 const ProgrammingExamView = () => {
   const { examId } = useParams();
@@ -326,6 +327,7 @@ const ProgrammingExamView = () => {
                     {exam.enunciadoProgramacion}
                   </div>
                 )}
+                <CsvDatasetViewer url={exam.datasetCsvUrl} nombre={exam.datasetCsvNombre} />
               </div>
             )}
             {(windowWidth >= 768 || !showConsigna) && (
@@ -1679,6 +1681,51 @@ const ProgrammingExamView = () => {
         .enunciado-archivo-error {
           background: rgba(220, 38, 38, 0.15);
           border: 1px solid rgba(220, 38, 38, 0.4);
+        }
+
+        .dataset-csv-viewer {
+          margin-top: 14px;
+        }
+
+        .dataset-csv-toggle {
+          width: 100%;
+          text-align: left;
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          color: #e5e7eb;
+          border-radius: 8px;
+          padding: 10px 14px;
+          font-size: 0.9rem;
+          cursor: pointer;
+        }
+
+        .dataset-csv-table-wrapper {
+          margin-top: 8px;
+          max-height: 320px;
+          overflow: auto;
+          border: 2px solid rgba(226, 232, 240, 0.5);
+          border-radius: 8px;
+          background: #fff;
+        }
+
+        .dataset-csv-table {
+          border-collapse: collapse;
+          font-size: 0.8rem;
+          color: #1a1a1a;
+          white-space: nowrap;
+        }
+
+        .dataset-csv-table th,
+        .dataset-csv-table td {
+          padding: 6px 10px;
+          border-bottom: 1px solid #e5e7eb;
+          border-right: 1px solid #e5e7eb;
+        }
+
+        .dataset-csv-table th {
+          background: #f1f5f9;
+          position: sticky;
+          top: 0;
         }
 
         @media (max-width: 768px) {

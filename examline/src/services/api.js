@@ -233,6 +233,26 @@ export async function uploadEnunciado(file) {
   }
 }
 
+export async function uploadDataset(file) {
+  try {
+    const token = localStorage.getItem('token');
+    const formData = new FormData();
+    formData.append('archivo', file);
+
+    const res = await fetch(`${API_BASE_URL}/exams/upload-dataset`, {
+      method: "POST",
+      headers: {
+        ...(token && { 'Authorization': `Bearer ${token}` })
+      },
+      body: formData,
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
 export async function getExams() {
   try {
     const res = await fetch(`${API_BASE_URL}/exams`, {
