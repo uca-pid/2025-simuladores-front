@@ -9,7 +9,7 @@ import BackToMainButton from "../components/BackToMainButton";
 import Modal from "../components/Modal";
 import QuestionCreator from "../components/QuestionCreator";
 import QuestionBankSelector from "../components/QuestionBankSelector";
-import { createExam, testSolutionPreview } from "../services/api";
+import { createExam, testSolutionPreview, uploadEnunciado } from "../services/api";
 
 const DRAFT_KEY = 'examCreatorDraft';
 
@@ -40,8 +40,11 @@ const ExamCreator = () => {
   // Estados para exámenes de programación
   const [lenguajeProgramacion, setLenguajeProgramacion] = useState(draft?.lenguajeProgramacion || "python");
   const [intellisenseHabilitado, setIntellisenseHabilitado] = useState(draft?.intellisenseHabilitado || false);
+  const [enunciadoTipo, setEnunciadoTipo] = useState(draft?.enunciadoTipo || "texto"); // "texto" | "archivo"
   const [enunciadoProgramacion, setEnunciadoProgramacion] = useState(draft?.enunciadoProgramacion || "");
   const [enunciadoUrl, setEnunciadoUrl] = useState(draft?.enunciadoUrl || "");
+  const [enunciadoArchivoNombre, setEnunciadoArchivoNombre] = useState(draft?.enunciadoArchivoNombre || "");
+  const [isUploadingEnunciado, setIsUploadingEnunciado] = useState(false);
   const [codigoInicial, setCodigoInicial] = useState(draft?.codigoInicial || "");
   const [testCases, setTestCases] = useState(draft?.testCases || [
     { description: "", input: "", expectedOutput: "" }
@@ -75,8 +78,10 @@ const ExamCreator = () => {
       preguntas,
       lenguajeProgramacion,
       intellisenseHabilitado,
+      enunciadoTipo,
       enunciadoProgramacion,
       enunciadoUrl,
+      enunciadoArchivoNombre,
       codigoInicial,
       testCases,
       referenceFiles,
@@ -95,8 +100,33 @@ const ExamCreator = () => {
       setHasDraft(true);
     }
   }, [titulo, tipoExamen, ordenAleatorio, preguntas,
-      lenguajeProgramacion, intellisenseHabilitado, enunciadoProgramacion, enunciadoUrl,
-      codigoInicial, testCases, referenceFiles, currentReferenceFile, saveReferenceSolution]);
+      lenguajeProgramacion, intellisenseHabilitado, enunciadoTipo, enunciadoProgramacion, enunciadoUrl,
+      enunciadoArchivoNombre, codigoInicial, testCases, referenceFiles, currentReferenceFile, saveReferenceSolution]);
+
+  // Sube el archivo de consigna apenas se selecciona, y guarda la URL resultante
+  const handleEnunciadoArchivoChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingEnunciado(true);
+    try {
+      const { url, nombre } = await uploadEnunciado(file);
+      setEnunciadoUrl(url);
+      setEnunciadoArchivoNombre(nombre);
+    } catch (err) {
+      console.error(err);
+      showModal(
+        'error',
+        'Error al subir el archivo',
+        err.message || 'No se pudo subir el archivo de consigna',
+        null,
+        false
+      );
+    } finally {
+      setIsUploadingEnunciado(false);
+      e.target.value = '';
+    }
+  };
 
   // Función para descartar borrador
   const handleDiscardDraft = () => {
@@ -339,8 +369,10 @@ const ExamCreator = () => {
       } else if (tipoExamen === "programming") {
         examData.lenguajeProgramacion = lenguajeProgramacion;
         examData.intellisenseHabilitado = intellisenseHabilitado;
-        examData.enunciadoProgramacion = enunciadoProgramacion;
-        examData.enunciadoUrl = enunciadoUrl;
+        examData.enunciadoTipo = enunciadoTipo;
+        examData.enunciadoProgramacion = enunciadoTipo === "texto" ? enunciadoProgramacion : "";
+        examData.enunciadoUrl = enunciadoTipo === "archivo" ? enunciadoUrl : "";
+        examData.enunciadoArchivoNombre = enunciadoTipo === "archivo" ? enunciadoArchivoNombre : "";
         examData.codigoInicial = codigoInicial;
         examData.testCases = testCases;
         // Solo enviar archivos de referencia si el profesor eligió guardarlos
@@ -398,11 +430,21 @@ const ExamCreator = () => {
         return;
       }
     } else if (tipoExamen === "programming") {
-      if (!enunciadoProgramacion.trim()) {
+      if (enunciadoTipo === "texto" && !enunciadoProgramacion.trim()) {
         showModal(
           'warning',
           'No se puede publicar el examen',
           'No se puede publicar un examen de programación sin consigna. Por favor, ingresa el enunciado del problema antes de continuar.',
+          null,
+          false
+        );
+        return;
+      }
+      if (enunciadoTipo === "archivo" && !enunciadoUrl) {
+        showModal(
+          'warning',
+          'No se puede publicar el examen',
+          'No se puede publicar un examen de programación sin consigna. Por favor, subí el archivo PDF/DOCX con el enunciado antes de continuar.',
           null,
           false
         );
@@ -592,47 +634,87 @@ const ExamCreator = () => {
               <div className="mb-3">
                 <label className="form-label d-flex align-items-center gap-2">
                   <i className="fas fa-file-alt text-muted"></i>
-                  Enunciado del Problema
+                  Consigna del Problema
                 </label>
-                <textarea
-                  className="form-control"
-                  rows="6"
-                  placeholder="Describe detalladamente el problema que deben resolver los estudiantes..."
-                  value={enunciadoProgramacion}
-                  onChange={(e) => setEnunciadoProgramacion(e.target.value)}
-                  disabled={isPublishing}
-                  style={{
-                    padding: '0.75rem 1rem',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '8px',
-                    fontSize: '1rem',
-                    fontFamily: 'monospace'
-                  }}
-                />
-              </div>
+                <div className="d-flex gap-3 mb-2">
+                  <div className="form-check">
+                    <input
+                      className="form-check-input"
+                      type="radio"
+                      name="enunciadoTipo"
+                      id="enunciadoTipoTexto"
+                      checked={enunciadoTipo === "texto"}
+                      onChange={() => setEnunciadoTipo("texto")}
+                      disabled={isPublishing}
+                    />
+                    <label className="form-check-label" htmlFor="enunciadoTipoTexto">
+                      Escribir texto
+                    </label>
+                  </div>
+                  <div className="form-check">
+                    <input
+                      className="form-check-input"
+                      type="radio"
+                      name="enunciadoTipo"
+                      id="enunciadoTipoArchivo"
+                      checked={enunciadoTipo === "archivo"}
+                      onChange={() => setEnunciadoTipo("archivo")}
+                      disabled={isPublishing}
+                    />
+                    <label className="form-check-label" htmlFor="enunciadoTipoArchivo">
+                      Adjuntar archivo (PDF/DOCX)
+                    </label>
+                  </div>
+                </div>
 
-              <div className="mb-3">
-                <label className="form-label d-flex align-items-center gap-2">
-                  <i className="fas fa-link text-muted"></i>
-                  Link con la consigna (opcional)
-                </label>
-                <input
-                  type="url"
-                  className="form-control"
-                  placeholder="https://docs.google.com/document/d/e/.../pub"
-                  value={enunciadoUrl}
-                  onChange={(e) => setEnunciadoUrl(e.target.value)}
-                  disabled={isPublishing}
-                  style={{
-                    padding: '0.75rem 1rem',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '8px',
-                    fontSize: '1rem'
-                  }}
-                />
-                <small className="text-muted">
-                  Si lo completás (ej. un Google Doc publicado con "Publicar en la web"), se muestra embebido en la consigna del alumno además del texto de arriba.
-                </small>
+                {enunciadoTipo === "texto" ? (
+                  <textarea
+                    className="form-control"
+                    rows="6"
+                    placeholder="Describe detalladamente el problema que deben resolver los estudiantes..."
+                    value={enunciadoProgramacion}
+                    onChange={(e) => setEnunciadoProgramacion(e.target.value)}
+                    disabled={isPublishing}
+                    style={{
+                      padding: '0.75rem 1rem',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '8px',
+                      fontSize: '1rem',
+                      fontFamily: 'monospace'
+                    }}
+                  />
+                ) : (
+                  <div>
+                    <input
+                      type="file"
+                      className="form-control"
+                      accept=".pdf,.docx"
+                      onChange={handleEnunciadoArchivoChange}
+                      disabled={isPublishing || isUploadingEnunciado}
+                      style={{
+                        padding: '0.75rem 1rem',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: '8px',
+                        fontSize: '1rem'
+                      }}
+                    />
+                    {isUploadingEnunciado && (
+                      <small className="text-muted d-block mt-2">
+                        <i className="fas fa-spinner fa-spin me-1"></i>
+                        Subiendo archivo...
+                      </small>
+                    )}
+                    {!isUploadingEnunciado && enunciadoArchivoNombre && (
+                      <small className="text-success d-block mt-2">
+                        <i className="fas fa-check-circle me-1"></i>
+                        Archivo cargado: {enunciadoArchivoNombre}
+                      </small>
+                    )}
+                    <small className="text-muted d-block mt-1">
+                      Se mostrará embebido en la consigna del alumno. Tamaño máximo: 10MB.
+                    </small>
+                  </div>
+                )}
               </div>
 
               <div className="mb-0">

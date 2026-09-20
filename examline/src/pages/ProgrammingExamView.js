@@ -3,6 +3,7 @@ import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import { useSEB, useExamAttempt, useExamFiles, useCodeCompiler, useExamFinish } from '../hooks';
 import Modal from '../components/Modal';
+import EnunciadoArchivoViewer from '../components/EnunciadoArchivoViewer';
 
 const ProgrammingExamView = () => {
   const { examId } = useParams();
@@ -310,7 +311,7 @@ const ProgrammingExamView = () => {
           {/* Main content */}
           <main className="exam-main">
             {showConsigna && (
-              <div className={`consigna-panel ${exam.enunciadoUrl ? 'with-iframe' : ''}`}>
+              <div className={`consigna-panel ${exam.enunciadoTipo === 'archivo' ? 'with-iframe' : ''}`}>
                 <h3 className="consigna-title">
                   <i className="fas fa-puzzle-piece me-2"></i>
                   Consigna
@@ -318,15 +319,12 @@ const ProgrammingExamView = () => {
                 <div className="consigna-notice">
                   <strong>📝 Importante:</strong> Entregar la versión final en el archivo main.py y guardar manualmente antes de finalizar.
                 </div>
-                <div className="problem-statement">
-                  {exam.enunciadoProgramacion}
-                </div>
-                {exam.enunciadoUrl && (
-                  <iframe
-                    src={exam.enunciadoUrl}
-                    title="Consigna del examen"
-                    className="consigna-iframe"
-                  />
+                {exam.enunciadoTipo === 'archivo' ? (
+                  <EnunciadoArchivoViewer url={exam.enunciadoUrl} nombre={exam.enunciadoArchivoNombre} />
+                ) : (
+                  <div className="problem-statement">
+                    {exam.enunciadoProgramacion}
+                  </div>
                 )}
               </div>
             )}
@@ -1623,14 +1621,64 @@ const ProgrammingExamView = () => {
           width: 620px;
         }
 
-        .consigna-iframe {
-          width: 100%;
-          flex: 1;
-          min-height: 500px;
+        .enunciado-archivo-toolbar {
+          display: flex;
+          align-items: center;
+          gap: 10px;
           margin-top: 14px;
+          color: #e5e7eb;
+          font-size: 0.85rem;
+        }
+
+        .enunciado-archivo-toolbar button {
+          background: rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          color: #e5e7eb;
+          border-radius: 6px;
+          width: 28px;
+          height: 28px;
+          cursor: pointer;
+        }
+
+        .enunciado-archivo-toolbar button:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+        }
+
+        .enunciado-archivo-pdf,
+        .enunciado-archivo-docx {
+          margin-top: 10px;
           border: 2px solid rgba(226, 232, 240, 0.5);
           border-radius: 12px;
           background: #fff;
+          padding: 16px;
+        }
+
+        .enunciado-archivo-pdf {
+          overflow-x: auto;
+        }
+
+        .enunciado-archivo-pdf .textLayer {
+          user-select: text;
+        }
+
+        .enunciado-archivo-docx {
+          color: #1a1a1a;
+          font-size: 0.95rem;
+          line-height: 1.5;
+        }
+
+        .enunciado-archivo-loading,
+        .enunciado-archivo-error {
+          margin-top: 14px;
+          padding: 16px;
+          border-radius: 12px;
+          color: #e5e7eb;
+        }
+
+        .enunciado-archivo-error {
+          background: rgba(220, 38, 38, 0.15);
+          border: 1px solid rgba(220, 38, 38, 0.4);
         }
 
         @media (max-width: 768px) {

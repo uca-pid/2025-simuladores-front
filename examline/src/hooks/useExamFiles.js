@@ -180,13 +180,17 @@ export const useExamFiles = (examId, exam, attempt, setError) => {
 
     // 💾 Actualizar el caché en tiempo real
     if (currentFileName) {
-      setFileCache(prev => ({
-        ...prev,
-        [currentFileName]: newValue
-      }));
-
-      // 📝 Marcar archivo como no guardado
-      setUnsavedFiles(prev => new Set(prev).add(currentFileName));
+      setFileCache(prev => {
+        // 📝 Solo marcar como no guardado si el contenido realmente cambió
+        // respecto al último valor cacheado. Esto evita que un intento de
+        // edición dentro de un bloque protegido (deshecho vía undo, que
+        // dispara un segundo onChange con el valor ya revertido) marque el
+        // archivo como "sin guardar" sin haber cambiado nada en los hechos.
+        if (prev[currentFileName] !== newValue) {
+          setUnsavedFiles(prevUnsaved => new Set(prevUnsaved).add(currentFileName));
+        }
+        return { ...prev, [currentFileName]: newValue };
+      });
     }
   }, [currentFileName, isMainFile]);
 
@@ -279,15 +283,14 @@ export const useExamFiles = (examId, exam, attempt, setError) => {
 
       if (visibleFiles.length > 0) {
         loadFile(visibleFiles[0].filename);
-      } else {
-        // Si no hay archivos visibles, crear uno nuevo por defecto
-        const defaultFileName = `main.${exam?.lenguajeProgramacion === 'python' ? 'py' : 'js'}`;
-        setCurrentFileName(defaultFileName);
-        setCode('');
       }
+      // Si no queda ningún archivo visible al cual cambiar, dejamos
+      // `currentFileName`/`code` (y por lo tanto `fileCache`) sin tocar.
+      // Vaciar `code` acá corrompía el caché: al reabrir el archivo,
+      // `loadFile` vuelca el `code` (ya vacío) sobre `fileCache[filename]`
+      // antes de leerlo, perdiendo el contenido (ej. el código inicial).
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentFileName, files, exam?.lenguajeProgramacion]);
+  }, [currentFileName, files, hiddenFiles, loadFile]);
 
   // Función para mostrar archivo en la vista
   const showFile = useCallback((filename) => {

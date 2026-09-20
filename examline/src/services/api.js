@@ -212,6 +212,27 @@ export async function createExam(examData) {
   }
 }
 
+export async function uploadEnunciado(file) {
+  try {
+    const token = localStorage.getItem('token');
+    const formData = new FormData();
+    formData.append('archivo', file);
+
+    const res = await fetch(`${API_BASE_URL}/exams/upload-enunciado`, {
+      method: "POST",
+      headers: {
+        ...(token && { 'Authorization': `Bearer ${token}` })
+        // No seteamos Content-Type: el browser lo define con el boundary correcto para FormData
+      },
+      body: formData,
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
 export async function getExams() {
   try {
     const res = await fetch(`${API_BASE_URL}/exams`, {
