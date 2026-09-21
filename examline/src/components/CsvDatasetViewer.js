@@ -44,15 +44,18 @@ const parseCsv = (text) => {
 };
 
 /**
- * Muestra un CSV de examen como tabla, dentro de un panel colapsable, para
- * que el alumno pueda inspeccionar visualmente los datos con los que va a
- * trabajar (mismo espíritu que una función "imprimirVuelos" dada por el
- * profesor, pero genérica y automática).
+ * Muestra un CSV de examen como tabla, para que el alumno pueda inspeccionar
+ * visualmente los datos con los que va a trabajar (mismo espíritu que una
+ * función "imprimirVuelos" dada por el profesor, pero genérica y automática).
+ *
+ * `standalone`: cuando el llamador ya decide cuándo mostrar el componente
+ * (ej. una tab dedicada "Datos"), se omite el botón propio de expandir/
+ * colapsar y se carga y muestra la tabla directamente al montar.
  */
-const CsvDatasetViewer = ({ url, nombre }) => {
+const CsvDatasetViewer = ({ url, nombre, standalone = false }) => {
   const [rows, setRows] = useState(null);
   const [error, setError] = useState(null);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(standalone);
 
   const fullUrl = url?.startsWith('http') ? url : `${API_BASE_URL}${url}`;
 
@@ -72,6 +75,33 @@ const CsvDatasetViewer = ({ url, nombre }) => {
 
   const [header, ...body] = rows || [[]];
 
+  const table = (
+    <div className="dataset-csv-table-wrapper">
+      {error && <div className="enunciado-archivo-error">No se pudo mostrar el archivo: {error}</div>}
+      {!error && !rows && <div className="enunciado-archivo-loading">Cargando datos...</div>}
+      {!error && rows && (
+        <table className="dataset-csv-table">
+          <thead>
+            <tr>
+              {header.map((col, i) => <th key={i}>{col}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {body.map((r, i) => (
+              <tr key={i}>
+                {r.map((cell, j) => <td key={j}>{cell}</td>)}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+
+  if (standalone) {
+    return <div className="dataset-csv-viewer">{table}</div>;
+  }
+
   return (
     <div className="dataset-csv-viewer">
       <button
@@ -84,28 +114,7 @@ const CsvDatasetViewer = ({ url, nombre }) => {
         Ver datos ({nombre || 'archivo.csv'})
       </button>
 
-      {expanded && (
-        <div className="dataset-csv-table-wrapper">
-          {error && <div className="enunciado-archivo-error">No se pudo mostrar el archivo: {error}</div>}
-          {!error && !rows && <div className="enunciado-archivo-loading">Cargando datos...</div>}
-          {!error && rows && (
-            <table className="dataset-csv-table">
-              <thead>
-                <tr>
-                  {header.map((col, i) => <th key={i}>{col}</th>)}
-                </tr>
-              </thead>
-              <tbody>
-                {body.map((r, i) => (
-                  <tr key={i}>
-                    {r.map((cell, j) => <td key={j}>{cell}</td>)}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      )}
+      {expanded && table}
     </div>
   );
 };

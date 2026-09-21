@@ -107,6 +107,7 @@ const ProgrammingExamView = () => {
   // Navegación lateral: la consigna se muestra a la par del editor en desktop,
   // y de forma exclusiva (una u otra) en móviles por falta de espacio.
   const [showConsigna, setShowConsigna] = useState(true);
+  const [consignaTab, setConsignaTab] = useState('enunciado'); // 'enunciado' | 'datos'
 
   // 🔄 Estado para alternar entre vista de entrada/salida en móviles
   const [mobileTerminalView, setMobileTerminalView] = useState('output'); // 'input' | 'output'
@@ -313,21 +314,42 @@ const ProgrammingExamView = () => {
           <main className="exam-main">
             {showConsigna && (
               <div className={`consigna-panel ${exam.enunciadoTipo === 'archivo' ? 'with-iframe' : ''}`}>
-                <h3 className="consigna-title">
-                  <i className="fas fa-puzzle-piece me-2"></i>
-                  Consigna
-                </h3>
                 <div className="consigna-notice">
                   <strong>📝 Importante:</strong> Entregar la versión final en el archivo main.py y guardar manualmente antes de finalizar.
                 </div>
-                {exam.enunciadoTipo === 'archivo' ? (
-                  <EnunciadoArchivoViewer url={exam.enunciadoUrl} nombre={exam.enunciadoArchivoNombre} />
-                ) : (
-                  <div className="problem-statement">
-                    {exam.enunciadoProgramacion}
+
+                {exam.datasetCsvUrl && (
+                  <div className="consigna-tabs">
+                    <button
+                      type="button"
+                      className={`consigna-tab ${consignaTab === 'enunciado' ? 'active' : ''}`}
+                      onClick={() => setConsignaTab('enunciado')}
+                    >
+                      Enunciado
+                    </button>
+                    <button
+                      type="button"
+                      className={`consigna-tab ${consignaTab === 'datos' ? 'active' : ''}`}
+                      onClick={() => setConsignaTab('datos')}
+                    >
+                      Datos ({exam.datasetCsvNombre})
+                    </button>
                   </div>
                 )}
-                <CsvDatasetViewer url={exam.datasetCsvUrl} nombre={exam.datasetCsvNombre} />
+
+                {(!exam.datasetCsvUrl || consignaTab === 'enunciado') && (
+                  exam.enunciadoTipo === 'archivo' ? (
+                    <EnunciadoArchivoViewer url={exam.enunciadoUrl} nombre={exam.enunciadoArchivoNombre} />
+                  ) : (
+                    <div className="problem-statement">
+                      {exam.enunciadoProgramacion}
+                    </div>
+                  )
+                )}
+
+                {exam.datasetCsvUrl && consignaTab === 'datos' && (
+                  <CsvDatasetViewer url={exam.datasetCsvUrl} nombre={exam.datasetCsvNombre} standalone />
+                )}
               </div>
             )}
             {(windowWidth >= 768 || !showConsigna) && (
@@ -1681,6 +1703,28 @@ const ProgrammingExamView = () => {
         .enunciado-archivo-error {
           background: rgba(220, 38, 38, 0.15);
           border: 1px solid rgba(220, 38, 38, 0.4);
+        }
+
+        .consigna-tabs {
+          display: flex;
+          gap: 4px;
+          margin-top: 14px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .consigna-tab {
+          background: none;
+          border: none;
+          color: #9ca3af;
+          padding: 8px 14px;
+          font-size: 0.9rem;
+          cursor: pointer;
+          border-bottom: 2px solid transparent;
+        }
+
+        .consigna-tab.active {
+          color: #e5e7eb;
+          border-bottom-color: #3b82f6;
         }
 
         .dataset-csv-viewer {
