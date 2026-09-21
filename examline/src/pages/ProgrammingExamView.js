@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import { useSEB, useExamAttempt, useExamFiles, useCodeCompiler, useExamFinish } from '../hooks';
@@ -107,7 +107,30 @@ const ProgrammingExamView = () => {
   // Navegación lateral: la consigna se muestra a la par del editor en desktop,
   // y de forma exclusiva (una u otra) en móviles por falta de espacio.
   const [showConsigna, setShowConsigna] = useState(true);
-  const [consignaTab, setConsignaTab] = useState('enunciado'); // 'enunciado' | 'datos'
+  const [consignaTab, setConsignaTab] = useState('enunciado'); // 'enunciado' | nombre del dataset
+  const [consignaWidth, setConsignaWidth] = useState(null); // null = usar el ancho por defecto (400/620px); número = ancho fijado por el usuario arrastrando
+  const [consignaCollapsed, setConsignaCollapsed] = useState(false); // desktop: achica el panel a una franja mínima en vez de ocultarlo del todo
+  const isResizingConsignaRef = useRef(false);
+
+  const handleConsignaResizeStart = useCallback((e) => {
+    e.preventDefault();
+    isResizingConsignaRef.current = true;
+
+    const handleMouseMove = (moveEvent) => {
+      if (!isResizingConsignaRef.current) return;
+      const newWidth = Math.min(900, Math.max(300, moveEvent.clientX));
+      setConsignaWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      isResizingConsignaRef.current = false;
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, []);
 
   // 🔄 Estado para alternar entre vista de entrada/salida en móviles
   const [mobileTerminalView, setMobileTerminalView] = useState('output'); // 'input' | 'output'
@@ -287,13 +310,15 @@ const ProgrammingExamView = () => {
               </div>
             </div>
             <div className="col-auto d-flex align-items-center gap-2">
-              <button
-                className={`btn-header-toggle ${showConsigna ? 'active' : ''}`}
-                onClick={() => setShowConsigna(!showConsigna)}
-              >
-                <i className={`fas ${showConsigna ? 'fa-code' : 'fa-file-alt'} me-2`}></i>
-                <span>{showConsigna ? (windowWidth < 768 ? 'Programación' : 'Ocultar consigna') : 'Mostrar consigna'}</span>
-              </button>
+              {windowWidth < 768 && (
+                <button
+                  className={`btn-header-toggle ${showConsigna ? 'active' : ''}`}
+                  onClick={() => setShowConsigna(!showConsigna)}
+                >
+                  <i className={`fas ${showConsigna ? 'fa-code' : 'fa-file-alt'} me-2`}></i>
+                  <span>{showConsigna ? 'Programación' : 'Mostrar consigna'}</span>
+                </button>
+              )}
               <button
                 className="btn-send-exam"
                 onClick={handleFinishExamClick}
@@ -312,44 +337,94 @@ const ProgrammingExamView = () => {
         <div className="exam-shell">
           {/* Main content */}
           <main className="exam-main">
-            {showConsigna && (
-              <div className={`consigna-panel ${exam.enunciadoTipo === 'archivo' ? 'with-iframe' : ''}`}>
-                <div className="consigna-notice">
-                  <strong>📝 Importante:</strong> Entregar la versión final en el archivo main.py y guardar manualmente antes de finalizar.
-                </div>
+            {(windowWidth < 768 ? showConsigna : true) && (() => {
+              // En desktop, en vez de desmontar el panel (showConsigna), se lo puede
+              // "achicar" a una franja mínima (consignaCollapsed) sin perder su lugar
+              // en el layout. En mobile se mantiene el comportamiento anterior: o se
+              // ve la consigna, o se ve el editor (no hay espacio para ambos).
+              const collapsedDesktop = windowWidth >= 768 && consignaCollapsed;
 
-                {exam.datasetCsvUrl && (
-                  <div className="consigna-tabs">
-                    <button
-                      type="button"
-                      className={`consigna-tab ${consignaTab === 'enunciado' ? 'active' : ''}`}
-                      onClick={() => setConsignaTab('enunciado')}
-                    >
-                      Enunciado
-                    </button>
-                    <button
-                      type="button"
-                      className={`consigna-tab ${consignaTab === 'datos' ? 'active' : ''}`}
-                      onClick={() => setConsignaTab('datos')}
-                    >
-                      Datos ({exam.datasetCsvNombre})
-                    </button>
+              // Array normalizado de datasets: usa `datasetFiles` (nuevo) o cae
+              // al par legacy `datasetCsvUrl`/`datasetCsvNombre` (exámenes viejos, un solo archivo).
+              const datasetFilesList = Array.isArray(exam.datasetFiles) && exam.datasetFiles.length > 0
+                ? exam.datasetFiles
+                : (exam.datasetCsvUrl ? [{ url: exam.datasetCsvUrl, nombre: exam.datasetCsvNombre }] : []);
+
+              if (collapsedDesktop) {
+                return (
+                  <button
+                    type="button"
+                    className="consigna-collapsed-strip"
+                    onClick={() => setConsignaCollapsed(false)}
+                    title="Mostrar consigna"
+                  >
+                    <i className="fas fa-chevron-right"></i>
+                  </button>
+                );
+              }
+
+              return (
+                <div
+                  className={`consigna-panel ${exam.enunciadoTipo === 'archivo' ? 'with-iframe' : ''}`}
+                  style={consignaWidth ? { width: `${consignaWidth}px` } : undefined}
+                >
+                  <div className="consigna-notice">
+                    <strong>📝 Importante:</strong> Entregar la versión final en el archivo main.py y guardar manualmente antes de finalizar.
                   </div>
-                )}
 
-                {(!exam.datasetCsvUrl || consignaTab === 'enunciado') && (
-                  exam.enunciadoTipo === 'archivo' ? (
-                    <EnunciadoArchivoViewer url={exam.enunciadoUrl} nombre={exam.enunciadoArchivoNombre} />
-                  ) : (
-                    <div className="problem-statement">
-                      {exam.enunciadoProgramacion}
+                  {datasetFilesList.length > 0 && (
+                    <div className="consigna-tabs">
+                      <button
+                        type="button"
+                        className={`consigna-tab ${consignaTab === 'enunciado' ? 'active' : ''}`}
+                        onClick={() => setConsignaTab('enunciado')}
+                      >
+                        Enunciado
+                      </button>
+                      {datasetFilesList.map(f => (
+                        <button
+                          key={f.nombre}
+                          type="button"
+                          className={`consigna-tab ${consignaTab === f.nombre ? 'active' : ''}`}
+                          onClick={() => setConsignaTab(f.nombre)}
+                        >
+                          {f.nombre}
+                        </button>
+                      ))}
                     </div>
-                  )
-                )}
+                  )}
 
-                {exam.datasetCsvUrl && consignaTab === 'datos' && (
-                  <CsvDatasetViewer url={exam.datasetCsvUrl} nombre={exam.datasetCsvNombre} standalone />
-                )}
+                  <div className="consigna-body">
+                    {consignaTab === 'enunciado' && (
+                      exam.enunciadoTipo === 'archivo' ? (
+                        <EnunciadoArchivoViewer url={exam.enunciadoUrl} nombre={exam.enunciadoArchivoNombre} />
+                      ) : (
+                        <div className="problem-statement">
+                          {exam.enunciadoProgramacion}
+                        </div>
+                      )
+                    )}
+
+                    {datasetFilesList.map(f => (
+                      consignaTab === f.nombre && (
+                        <CsvDatasetViewer key={f.nombre} url={f.url} nombre={f.nombre} standalone />
+                      )
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+            {windowWidth >= 768 && !consignaCollapsed && (
+              <div className="consigna-resizer" onMouseDown={handleConsignaResizeStart} title="Arrastrar para cambiar el ancho">
+                <button
+                  type="button"
+                  className="consigna-resizer-toggle"
+                  onClick={(e) => { e.stopPropagation(); setConsignaCollapsed(true); }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  title="Achicar consigna"
+                >
+                  <i className="fas fa-chevron-left"></i>
+                </button>
               </div>
             )}
             {(windowWidth >= 768 || !showConsigna) && (
@@ -1645,6 +1720,67 @@ const ProgrammingExamView = () => {
           width: 620px;
         }
 
+        .consigna-resizer {
+          width: 6px;
+          flex-shrink: 0;
+          cursor: col-resize;
+          background: rgba(255, 255, 255, 0.06);
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .consigna-resizer:hover,
+        .consigna-resizer:active {
+          background: rgba(59, 130, 246, 0.5);
+        }
+
+        .consigna-resizer-toggle {
+          position: absolute;
+          width: 20px;
+          height: 40px;
+          border-radius: 6px;
+          background: #1f2937;
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          color: #9ca3af;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          z-index: 2;
+        }
+
+        .consigna-resizer-toggle:hover {
+          color: #e5e7eb;
+          border-color: rgba(59, 130, 246, 0.6);
+        }
+
+        .consigna-collapsed-strip {
+          width: 22px;
+          flex-shrink: 0;
+          height: 100%;
+          background: rgba(255, 255, 255, 0.03);
+          border-right: 1px solid rgba(255, 255, 255, 0.08);
+          border-left: none;
+          border-top: none;
+          border-bottom: none;
+          color: #9ca3af;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .consigna-collapsed-strip:hover {
+          color: #e5e7eb;
+          background: rgba(59, 130, 246, 0.15);
+        }
+
+        .consigna-body {
+          margin-top: 16px;
+        }
+
         .enunciado-archivo-toolbar {
           display: flex;
           align-items: center;
@@ -1707,6 +1843,7 @@ const ProgrammingExamView = () => {
 
         .consigna-tabs {
           display: flex;
+          flex-wrap: wrap;
           gap: 4px;
           margin-top: 14px;
           border-bottom: 1px solid rgba(255, 255, 255, 0.15);

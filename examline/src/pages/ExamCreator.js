@@ -45,8 +45,7 @@ const ExamCreator = () => {
   const [enunciadoUrl, setEnunciadoUrl] = useState(draft?.enunciadoUrl || "");
   const [enunciadoArchivoNombre, setEnunciadoArchivoNombre] = useState(draft?.enunciadoArchivoNombre || "");
   const [isUploadingEnunciado, setIsUploadingEnunciado] = useState(false);
-  const [datasetCsvUrl, setDatasetCsvUrl] = useState(draft?.datasetCsvUrl || "");
-  const [datasetCsvNombre, setDatasetCsvNombre] = useState(draft?.datasetCsvNombre || "");
+  const [datasetFiles, setDatasetFiles] = useState(draft?.datasetFiles || []); // [{ url, nombre }]
   const [isUploadingDataset, setIsUploadingDataset] = useState(false);
   const [codigoInicial, setCodigoInicial] = useState(draft?.codigoInicial || "");
   const [testCases, setTestCases] = useState(draft?.testCases || [
@@ -85,8 +84,7 @@ const ExamCreator = () => {
       enunciadoProgramacion,
       enunciadoUrl,
       enunciadoArchivoNombre,
-      datasetCsvUrl,
-      datasetCsvNombre,
+      datasetFiles,
       codigoInicial,
       testCases,
       referenceFiles,
@@ -106,25 +104,26 @@ const ExamCreator = () => {
     }
   }, [titulo, tipoExamen, ordenAleatorio, preguntas,
       lenguajeProgramacion, intellisenseHabilitado, enunciadoTipo, enunciadoProgramacion, enunciadoUrl,
-      enunciadoArchivoNombre, datasetCsvUrl, datasetCsvNombre, codigoInicial, testCases, referenceFiles,
+      enunciadoArchivoNombre, datasetFiles, codigoInicial, testCases, referenceFiles,
       currentReferenceFile, saveReferenceSolution]);
 
-  // Sube el CSV de datos apenas se selecciona, y guarda la URL resultante
+  // Sube uno o varios archivos de datos apenas se seleccionan, y los agrega a la lista de datasets
   const handleDatasetArchivoChange = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
     setIsUploadingDataset(true);
     try {
-      const { url, nombre } = await uploadDataset(file);
-      setDatasetCsvUrl(url);
-      setDatasetCsvNombre(nombre);
+      for (const file of files) {
+        const { url, nombre } = await uploadDataset(file);
+        setDatasetFiles(prev => [...prev, { url, nombre }]);
+      }
     } catch (err) {
       console.error(err);
       showModal(
         'error',
         'Error al subir el archivo',
-        err.message || 'No se pudo subir el archivo CSV',
+        err.message || 'No se pudo subir el archivo',
         null,
         false
       );
@@ -132,6 +131,10 @@ const ExamCreator = () => {
       setIsUploadingDataset(false);
       e.target.value = '';
     }
+  };
+
+  const handleRemoveDatasetFile = (nombre) => {
+    setDatasetFiles(prev => prev.filter(f => f.nombre !== nombre));
   };
 
   // Sube el archivo de consigna apenas se selecciona, y guarda la URL resultante
@@ -404,8 +407,7 @@ const ExamCreator = () => {
         examData.enunciadoProgramacion = enunciadoTipo === "texto" ? enunciadoProgramacion : "";
         examData.enunciadoUrl = enunciadoTipo === "archivo" ? enunciadoUrl : "";
         examData.enunciadoArchivoNombre = enunciadoTipo === "archivo" ? enunciadoArchivoNombre : "";
-        examData.datasetCsvUrl = datasetCsvUrl;
-        examData.datasetCsvNombre = datasetCsvNombre;
+        examData.datasetFiles = datasetFiles;
         examData.codigoInicial = codigoInicial;
         examData.testCases = testCases;
         // Solo enviar archivos de referencia si el profesor eligió guardarlos
@@ -753,12 +755,13 @@ const ExamCreator = () => {
               <div className="mb-3">
                 <label className="form-label d-flex align-items-center gap-2">
                   <i className="fas fa-table text-muted"></i>
-                  Dataset CSV (Opcional)
+                  Datasets CSV/TXT (Opcional)
                 </label>
                 <input
                   type="file"
                   className="form-control"
-                  accept=".csv"
+                  accept=".csv,.txt"
+                  multiple
                   onChange={handleDatasetArchivoChange}
                   disabled={isPublishing || isUploadingDataset}
                   style={{
@@ -774,15 +777,27 @@ const ExamCreator = () => {
                     Subiendo archivo...
                   </small>
                 )}
-                {!isUploadingDataset && datasetCsvNombre && (
-                  <small className="text-success d-block mt-2">
-                    <i className="fas fa-check-circle me-1"></i>
-                    Archivo cargado: {datasetCsvNombre}
-                  </small>
+                {datasetFiles.length > 0 && (
+                  <ul className="list-unstyled mt-2 mb-0">
+                    {datasetFiles.map(f => (
+                      <li key={f.nombre} className="d-flex align-items-center gap-2 text-success mb-1">
+                        <i className="fas fa-check-circle"></i>
+                        <span>{f.nombre}</span>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-link text-danger p-0"
+                          onClick={() => handleRemoveDatasetFile(f.nombre)}
+                          disabled={isPublishing}
+                        >
+                          Quitar
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
                 )}
                 <small className="text-muted d-block mt-1">
-                  El alumno podrá abrirlo desde su código con <code>open("{datasetCsvNombre || 'nombre_del_archivo.csv'}")</code> (Python)
-                  o el método equivalente en JavaScript, exactamente con ese nombre. También se muestra como tabla en la consigna. Tamaño máximo: 5MB.
+                  Podés subir varios archivos. El alumno podrá abrirlos desde su código con <code>open("nombre_exacto.csv")</code> (Python)
+                  o el método equivalente en JavaScript, usando el mismo nombre con el que se subieron. También se muestran como tabla en la consigna. Tamaño máximo: 5MB por archivo.
                 </small>
               </div>
 
