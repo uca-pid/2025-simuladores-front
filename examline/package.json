@@ -18,11 +18,13 @@
     "react-native-dotenv": "^3.4.11",
     "react-router-dom": "^7.8.2",
     "react-scripts": "5.0.1",
+    "serve": "^14.2.6",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
+    "serve": "serve -s build -l $PORT",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
