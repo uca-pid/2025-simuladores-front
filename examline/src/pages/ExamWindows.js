@@ -144,6 +144,17 @@ export default function ExamWindowsPage() {
     }
   }, [showCreateModal, editingWindow]);
 
+  // Bloquea el scroll de la página de fondo mientras el modal está abierto,
+  // para que la rueda del mouse solo scrollee el contenido del modal
+  useEffect(() => {
+    if (showCreateModal) {
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = '';
+      };
+    }
+  }, [showCreateModal]);
+
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     const inputValue = type === 'checkbox' ? checked : value;

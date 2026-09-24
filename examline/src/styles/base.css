@@ -895,8 +895,9 @@ body {
   background-color: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(3px);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
+  overflow-y: auto;
   z-index: 1050;
   animation: fadeIn 0.15s ease-out;
 }
