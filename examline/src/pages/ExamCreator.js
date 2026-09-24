@@ -1,5 +1,5 @@
 // src/pages/ExamCreator.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./ExamCreator.css";
@@ -296,6 +296,32 @@ const ExamCreator = () => {
     setReferenceFiles(referenceFiles.map(f => 
       f.filename === filename ? { ...f, content } : f
     ));
+  };
+
+  // Marca la selección actual del código inicial como bloque de solo lectura,
+  // envolviéndola con los comentarios marcadores del lenguaje elegido
+  const codigoInicialEditorRef = useRef(null);
+  const [hasCodigoSelection, setHasCodigoSelection] = useState(false);
+  const handleCodigoInicialMount = (editor) => {
+    codigoInicialEditorRef.current = editor;
+    editor.onDidChangeCursorSelection((e) => {
+      setHasCodigoSelection(!e.selection.isEmpty());
+    });
+  };
+  const handleMarkReadOnly = () => {
+    const editor = codigoInicialEditorRef.current;
+    if (!editor) return;
+
+    const selection = editor.getSelection();
+    if (!selection || selection.isEmpty()) return;
+
+    const selected = editor.getModel().getValueInRange(selection);
+    const commentChar = lenguajeProgramacion === 'python' ? '#' : '//';
+    const wrapped = `${commentChar} SOLO LECTURA\n${selected}\n${commentChar} FIN SOLO LECTURA`;
+
+    editor.executeEdits('mark-readonly', [{ range: selection, text: wrapped }]);
+    editor.focus();
+    setHasCodigoSelection(false);
   };
 
   // Funciones para manejar test cases
@@ -802,31 +828,44 @@ const ExamCreator = () => {
               </div>
 
               <div className="mb-0">
-                <label className="form-label d-flex align-items-center gap-2">
-                  <i className="fas fa-code text-muted"></i>
-                  Código Inicial (Opcional)
-                </label>
-                <textarea
-                  className="form-control"
-                  rows="4"
-                  placeholder={`Código inicial para ${lenguajeProgramacion}...`}
-                  value={codigoInicial}
-                  onChange={(e) => setCodigoInicial(e.target.value)}
-                  disabled={isPublishing}
-                  style={{
-                    padding: '0.75rem 1rem',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '8px',
-                    fontSize: '0.9rem',
-                    fontFamily: 'Monaco, Consolas, "Courier New", monospace',
-                    backgroundColor: '#f8f9fa'
-                  }}
-                />
+                <div className="d-flex justify-content-between align-items-center mb-2">
+                  <label className="form-label d-flex align-items-center gap-2 mb-0">
+                    <i className="fas fa-code text-muted"></i>
+                    Código Inicial (Opcional)
+                  </label>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-secondary"
+                    onClick={handleMarkReadOnly}
+                    disabled={isPublishing || !hasCodigoSelection}
+                    title={hasCodigoSelection ? undefined : "Seleccioná primero el código que querés bloquear"}
+                  >
+                    <i className="fas fa-lock me-1"></i>
+                    Marcar como solo lectura
+                  </button>
+                </div>
+                <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden' }}>
+                  <Editor
+                    height="220px"
+                    language={lenguajeProgramacion}
+                    value={codigoInicial}
+                    onChange={(value) => setCodigoInicial(value || '')}
+                    onMount={handleCodigoInicialMount}
+                    theme="vs-dark"
+                    options={{
+                      readOnly: isPublishing,
+                      automaticLayout: true,
+                      scrollBeyondLastLine: false,
+                      minimap: { enabled: false },
+                      fontSize: 13,
+                      lineNumbers: 'on',
+                    }}
+                  />
+                </div>
                 <small className="form-text text-muted">
                   Código que aparecerá precargado en el editor del estudiante.
                   Para bloquear una parte y que el alumno no pueda modificarla ni borrarla,
-                  encerrala entre <code>{lenguajeProgramacion === 'python' ? '# SOLO LECTURA' : '// SOLO LECTURA'}</code> y{' '}
-                  <code>{lenguajeProgramacion === 'python' ? '# FIN SOLO LECTURA' : '// FIN SOLO LECTURA'}</code>.
+                  seleccionala y apretá "Marcar como solo lectura".
                 </small>
               </div>
             </div>
