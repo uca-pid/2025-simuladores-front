@@ -612,29 +612,31 @@ const ExamCreator = () => {
               </select>
             </div>
             
-            <div className="mb-0">
-              <label className="form-label d-flex align-items-center gap-2">
-                <i className="fas fa-random text-muted"></i>
-                Orden Aleatorio de Preguntas
-              </label>
-              <div className="form-check form-switch mt-2">
-                <input
-                  className="form-check-input"
-                  type="checkbox"
-                  id="ordenAleatorioSwitch"
-                  checked={ordenAleatorio}
-                  onChange={(e) => setOrdenAleatorio(e.target.checked)}
-                />
-                <label className="form-check-label" htmlFor="ordenAleatorioSwitch">
-                  {ordenAleatorio ? "Las preguntas aparecerán en orden aleatorio para cada estudiante" : "Las preguntas aparecerán en el orden definido"}
+            {tipoExamen === "multiple_choice" && (
+              <div className="mb-0">
+                <label className="form-label d-flex align-items-center gap-2">
+                  <i className="fas fa-random text-muted"></i>
+                  Orden Aleatorio de Preguntas
                 </label>
+                <div className="form-check form-switch mt-2">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    id="ordenAleatorioSwitch"
+                    checked={ordenAleatorio}
+                    onChange={(e) => setOrdenAleatorio(e.target.checked)}
+                  />
+                  <label className="form-check-label" htmlFor="ordenAleatorioSwitch">
+                    {ordenAleatorio ? "Las preguntas aparecerán en orden aleatorio para cada estudiante" : "Las preguntas aparecerán en el orden definido"}
+                  </label>
+                </div>
+                <small className="form-text text-muted">
+                  {ordenAleatorio
+                    ? "✓ Cada estudiante verá las preguntas en un orden diferente"
+                    : "Las preguntas siempre aparecerán en el mismo orden"}
+                </small>
               </div>
-              <small className="form-text text-muted">
-                {ordenAleatorio 
-                  ? "✓ Cada estudiante verá las preguntas en un orden diferente"
-                  : "Las preguntas siempre aparecerán en el mismo orden"}
-              </small>
-            </div>
+            )}
           </div>
         </div>
 
@@ -865,7 +867,10 @@ const ExamCreator = () => {
                 <small className="form-text text-muted">
                   Código que aparecerá precargado en el editor del estudiante.
                   Para bloquear una parte y que el alumno no pueda modificarla ni borrarla,
-                  seleccionala y apretá "Marcar como solo lectura".
+                  seleccionala y apretá "Marcar como solo lectura". También podés escribir el marcador
+                  a mano, encerrando el bloque entre{' '}
+                  <code>{lenguajeProgramacion === 'python' ? '# SOLO LECTURA' : '// SOLO LECTURA'}</code> y{' '}
+                  <code>{lenguajeProgramacion === 'python' ? '# FIN SOLO LECTURA' : '// FIN SOLO LECTURA'}</code>.
                 </small>
               </div>
             </div>
