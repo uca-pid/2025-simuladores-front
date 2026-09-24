@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useModal } from '../hooks';
-import { getExams, getExamWindowsProfesor, createExamWindow, updateExamWindow, toggleExamWindowActive, extendExamWindowTime } from '../services/api';
+import { API_BASE_URL, getExams, getExamWindowsProfesor, createExamWindow, updateExamWindow, toggleExamWindowActive, extendExamWindowTime } from '../services/api';
 import BackToMainButton from '../components/BackToMainButton';
 import Modal from '../components/Modal';
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -27,6 +27,7 @@ export default function ExamWindowsPage() {
     cupoMaximo: 30,
     notas: '',
     usaSEB: false,
+    sebUnsafeMode: false,
     kioskMode: 0,
     sinTiempo: false,
     requierePresente: false,
@@ -39,6 +40,10 @@ export default function ExamWindowsPage() {
     sebAllowQuit: true,
     sebAllowReload: true,
     sebAllowBrowsingBackForward: false,
+    sebAllowZoom: false,
+    sebAllowTeams: false,
+    sebBrowserWindowAllowMinimize: false,
+    sebEnableTaskManager: false,
     sebEnableEsc: false,
     sebEnableAltTab: false,
     sebEnableAltEsc: false,
@@ -200,6 +205,7 @@ export default function ExamWindowsPage() {
       cupoMaximo: 30,
       notas: '',
       usaSEB: false,
+      sebUnsafeMode: false,
       kioskMode: 0,
       sinTiempo: false,
       requierePresente: false,
@@ -212,6 +218,10 @@ export default function ExamWindowsPage() {
       sebAllowQuit: true,
       sebAllowReload: true,
       sebAllowBrowsingBackForward: false,
+      sebAllowZoom: false,
+      sebAllowTeams: false,
+      sebBrowserWindowAllowMinimize: false,
+      sebEnableTaskManager: false,
       sebEnableEsc: false,
       sebEnableAltTab: false,
       sebEnableAltEsc: false,
@@ -240,6 +250,27 @@ export default function ExamWindowsPage() {
   const handleCreateWindow = () => {
     resetForm();
     setShowCreateModal(true);
+  };
+
+  const handleTestSEBConfig = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/exam-start/test-download`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      const data = await response.json();
+      if (data.sebUrl) {
+        const link = document.createElement("a");
+        link.href = data.sebUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch (err) {
+      console.error("Error probando configuración SEB:", err);
+      alert("Error al generar la prueba de SEB");
+    }
   };
 
   const formatDateTimeLocal = (dateString) => {
@@ -276,6 +307,7 @@ export default function ExamWindowsPage() {
       cupoMaximo: window.cupoMaximo,
       notas: window.notas || '',
       usaSEB: window.usaSEB || false,
+      sebUnsafeMode: window.sebUnsafeMode || false,
       kioskMode: window.kioskMode || 0,
       sinTiempo: isInfinite,
       requierePresente: isInfinite ? false : (window.requierePresente || false),
@@ -285,6 +317,10 @@ export default function ExamWindowsPage() {
       sebBrowserViewMode: window.sebBrowserViewMode ?? 0,
       sebAllowAddressBar: window.sebAllowAddressBar ?? false,
       sebEnableBrowserWindowToolbar: window.sebEnableBrowserWindowToolbar ?? false,
+      sebAllowZoom: window.sebAllowZoom ?? false,
+      sebAllowTeams: window.sebAllowTeams ?? false,
+      sebBrowserWindowAllowMinimize: window.sebBrowserWindowAllowMinimize ?? false,
+      sebEnableTaskManager: window.sebEnableTaskManager ?? false,
       sebAllowQuit: window.sebAllowQuit ?? true,
       sebAllowReload: window.sebAllowReload ?? true,
       sebAllowBrowsingBackForward: window.sebAllowBrowsingBackForward ?? false,
@@ -1198,6 +1234,58 @@ export default function ExamWindowsPage() {
                       </div>
                     </div>
 
+                    {/* Toggle para modo inseguro de SEB (Pruebas) */}
+                    {formData.usaSEB && (
+                      <div className="mb-4">
+                        <div className="card" style={{ 
+                          backgroundColor: formData.sebUnsafeMode ? '#fff3cd' : '#f8f9fa', 
+                          borderColor: formData.sebUnsafeMode ? '#ffc107' : '#e9ecef',
+                          borderWidth: '2px',
+                          transition: 'all 0.3s ease'
+                        }}>
+                          <div className="card-body p-3">
+                            <div className="d-flex align-items-center justify-content-between">
+                              <div className="d-flex align-items-center">
+                                <div className="form-check form-switch me-3">
+                                  <input 
+                                    className="form-check-input" 
+                                    type="checkbox" 
+                                    id="sebUnsafeMode"
+                                    name="sebUnsafeMode"
+                                    checked={formData.sebUnsafeMode}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, sebUnsafeMode: e.target.checked }))}
+                                    disabled={!!editingWindow && editingWindow.estado === 'en_curso'}
+                                    style={{ 
+                                      width: '3rem', 
+                                      height: '1.5rem',
+                                      backgroundColor: formData.sebUnsafeMode ? '#ffc107' : '#6c757d',
+                                      borderColor: formData.sebUnsafeMode ? '#ffc107' : '#6c757d'
+                                    }}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="form-check-label mb-0" htmlFor="sebUnsafeMode" style={{ fontWeight: '600', fontSize: '1rem', cursor: 'pointer' }}>
+                                    <i className={`fas ${formData.sebUnsafeMode ? 'fa-exclamation-triangle text-warning' : 'fa-check text-secondary'} me-2`}></i>
+                                    {formData.sebUnsafeMode ? 'Modo Inseguro (Pruebas)' : 'Modo Seguro (Producción)'}
+                                  </label>
+                                  <div style={{ fontSize: '0.85rem', color: '#6c757d', marginTop: '0.25rem' }}>
+                                    {formData.sebUnsafeMode 
+                                      ? '⚠️ SEB permitirá cerrar, Alt+Tab, copiar/pegar y no bloqueará la PC. Solo para pruebas.'
+                                      : 'SEB bloqueará la computadora normalmente.'
+                                    }
+                                  </div>
+                                </div>
+                              </div>
+                              <div style={{ fontSize: '2rem', opacity: 0.3 }}>
+                                <i className={`fas ${formData.sebUnsafeMode ? 'fa-unlock-alt text-warning' : 'fa-lock'}`}></i>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+
                     {/* Toggle para modo kiosco - Solo visible cuando SEB está activado */}
                     {formData.usaSEB && (
                       <div className="mb-4">
@@ -1249,6 +1337,23 @@ export default function ExamWindowsPage() {
                       </div>
                     )}
 
+                    {/* Boton general para probar configuración */}
+                    {formData.usaSEB && (
+                      <div className="mb-4 text-center">
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          onClick={() => handleTestSEBConfig()}
+                          style={{ fontWeight: '600', padding: '0.75rem 1.5rem', borderRadius: '8px' }}
+                        >
+                          <i className="fas fa-play me-2"></i>Probar Configuración Actual de SEB
+                        </button>
+                        <div style={{ fontSize: '0.85rem', color: '#6c757d', marginTop: '0.5rem' }}>
+                          Genera un archivo .seb de prueba con la configuración exacta seleccionada arriba para que puedas validarla.
+                        </div>
+                      </div>
+                    )}
+
                     {/* Configuración avanzada de SEB */}
                     {formData.usaSEB && (
                       <div className="mb-4">
@@ -1270,6 +1375,33 @@ export default function ExamWindowsPage() {
                               </div>
                               <div style={{ fontSize: '1.5rem', opacity: 0.3 }}>
                                 <i className="fas fa-sliders-h"></i>
+                              </div>
+                            </div>
+
+                            {/* Videollamadas y Ventana (Zoom/Teams) */}
+                            <div className="mb-4 mt-4">
+                              <h6 style={{ color: 'var(--text-color-2)', marginBottom: '0.75rem', fontWeight: '600', fontSize: '0.9rem' }}>
+                                <i className="fas fa-video me-2"></i>Virtualidad y Videollamadas
+                              </h6>
+                              <div className="row">
+                                <div className="col-md-12 mb-2">
+                                  <div className="form-check">
+                                    <input className="form-check-input" type="checkbox" id="sebAllowZoom" name="sebAllowZoom" checked={formData.sebAllowZoom} onChange={handleInputChange} />
+                                    <label className="form-check-label" htmlFor="sebAllowZoom">Permitir <strong>Zoom</strong> (no se cerrará durante el examen)</label>
+                                  </div>
+                                </div>
+                                <div className="col-md-12 mb-2">
+                                  <div className="form-check">
+                                    <input className="form-check-input" type="checkbox" id="sebAllowTeams" name="sebAllowTeams" checked={formData.sebAllowTeams} onChange={handleInputChange} />
+                                    <label className="form-check-label" htmlFor="sebAllowTeams">Permitir <strong>Microsoft Teams</strong> (no se cerrará durante el examen)</label>
+                                  </div>
+                                </div>
+                                <div className="col-md-12 mb-2">
+                                  <div className="form-check">
+                                    <input className="form-check-input" type="checkbox" id="sebBrowserWindowAllowMinimize" name="sebBrowserWindowAllowMinimize" checked={formData.sebBrowserWindowAllowMinimize} onChange={handleInputChange} />
+                                    <label className="form-check-label" htmlFor="sebBrowserWindowAllowMinimize">Permitir minimizar el examen (útil para ver el chat de Zoom)</label>
+                                  </div>
+                                </div>
                               </div>
                             </div>
 
@@ -1364,6 +1496,12 @@ export default function ExamWindowsPage() {
                                   <div className="form-check">
                                     <input className="form-check-input" type="checkbox" id="sebEnableFunctionKeys" name="sebEnableFunctionKeys" checked={formData.sebEnableFunctionKeys} onChange={handleInputChange} />
                                     <label className="form-check-label" htmlFor="sebEnableFunctionKeys">Habilitar teclas F1-F12</label>
+                                  </div>
+                                </div>
+                                <div className="col-md-6 mb-2">
+                                  <div className="form-check">
+                                    <input className="form-check-input" type="checkbox" id="sebEnableTaskManager" name="sebEnableTaskManager" checked={formData.sebEnableTaskManager} onChange={handleInputChange} />
+                                    <label className="form-check-label" htmlFor="sebEnableTaskManager">Habilitar Administrador de Tareas</label>
                                   </div>
                                 </div>
                               </div>

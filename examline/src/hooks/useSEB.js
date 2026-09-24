@@ -25,7 +25,7 @@ export const useSEB = () => {
     );
   }, []);
 
-  const DEFAULT_QUIT_URL = 'http://quit.seb/';
+  const DEFAULT_QUIT_URL = 'https://ferocarcineto.com.ar/';
 
   /**
    * Cierra SEB redireccionando a una URL específica
