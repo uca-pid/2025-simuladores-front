@@ -7,14 +7,14 @@ import {
 
 /**
  * Extrae los bloques "protegidos" (no editables) de un texto, delimitados por
- * comentarios marcadores `==RO==` / `==/RO==` (en Python `#`, en JS `//`).
+ * comentarios marcadores `SOLO LECTURA` / `FIN SOLO LECTURA` (en Python `#`, en JS `//`).
  * El profesor marca así, en el código inicial, las partes que el alumno no
  * debe modificar (ej. funciones auxiliares provistas). Devuelve el texto
  * exacto de cada bloque (incluyendo los marcadores) para poder verificar
  * luego que sigue presente sin cambios en el código del alumno.
  */
-const LOCK_START = /^\s*(#|\/\/)\s*==RO==\s*$/;
-const LOCK_END = /^\s*(#|\/\/)\s*==\/RO==\s*$/;
+const LOCK_START = /^\s*(#|\/\/)\s*SOLO LECTURA\s*$/;
+const LOCK_END = /^\s*(#|\/\/)\s*FIN SOLO LECTURA\s*$/;
 
 export const extractLockedBlocks = (text) => {
   const lines = (text || '').split('\n');
