@@ -11,6 +11,7 @@
 | **Código inicial precargado para el alumno** | ❌ No soportado | ✅ Ya existente (desarrollo previo), incluso con opción de bloquear partes como solo lectura |
 | **Imagen adjunta por pregunta (choice)** | ❌ No soportado | ✅ Nuevo en este trabajo |
 | **Plan gratuito permanente** | ❌ Solo trial de 30 días por institución | ✅ Plataforma propia, sin licencia |
+| **Integración con Moodle** | ❌ No existe (ni siquiera vía LTI genérico) — solo integra con Google Classroom y Microsoft Teams | ✅ Ya existente: conexión, lectura de cursos/actividades y sincronización automática de calificaciones |
 | **Lenguajes de programación soportados** | Python, JavaScript | Python, JavaScript *(paridad, no mejora — pendiente en Futuras Discusiones)* |
 
 **En una frase**: Examline ya resolvía dos de los tres problemas reales de la cátedra (archivos de datos y código inicial); lo que faltaba —y lo que se construyó en este trabajo— era poder tomar el examen combinado como una sola instancia con corrección automática de ambas partes.
@@ -20,3 +21,5 @@
 - Exam.net — pricing: https://exam.net/pricing
 - Exam.net Support — Programming/Code editor: https://support.exam.net/s/article/programming-code-editor
 - Exam.net Support — List of all available tools/accommodations: https://support.exam.net/s/article/list-of-all-available-tools-accommodations
+- Exam.net — Integraciones LMS (confirma solo Google Classroom y Microsoft Teams, sin Moodle): https://exam.net/es/streamline-exam-workflow-with-lms-integration
+- Búsquedas "moodle" y "LTI" en support.exam.net: 0 resultados en ambos casos
