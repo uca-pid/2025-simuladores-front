@@ -1,9 +1,10 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import './ExamAttempt.css';
 import { useModal, useSEB, useMultipleChoiceAttempt } from "../hooks";
 import Modal from "../components/Modal";
+import PartBreakScreen from "../components/PartBreakScreen";
 
 const ExamAttempt = ({ examId: propExamId, onBack }) => {
   const { examId: routeExamId } = useParams();
@@ -28,6 +29,7 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
   const { isInSEB, tryCloseSEB } = useSEB();
   const {
     exam,
+    part,
     attempt,
     loading,
     setLoading,
@@ -42,8 +44,14 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
     randomizedMatchingAnswers,
     selectedMatchingConcepts,
     setSelectedMatchingConcepts,
-    finishAttempt
+    finishAttempt,
+    continueToNextPart
   } = useMultipleChoiceAttempt(examId, windowId, navigate, { propExamId });
+
+  // Se setea cuando advance-part responde "esperando_continuar": la parte
+  // actual ya se cerró y no vuelve a mostrarse, solo queda esperar a que el
+  // estudiante confirme el paso a la siguiente.
+  const [partBreak, setPartBreak] = useState(null);
 
   // 🔒 Validación inicial de seguridad para estudiantes
   useEffect(() => {
@@ -118,8 +126,8 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
     }
 
     // Para exámenes múltiple choice, advertir si no se respondieron todas las preguntas
-    if (exam.tipo === 'multiple_choice') {
-      const totalPreguntas = exam.preguntas?.length || 0;
+    if (part?.tipo === 'multiple_choice') {
+      const totalPreguntas = part.preguntas?.length || 0;
       const preguntasRespondidas = Object.keys(respuestas).filter(key => {
         const respuesta = respuestas[key];
         // Para fill_in_blank, verificar que el array tenga elementos
@@ -163,10 +171,19 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
           setSubmitting(true);
           setModalProcessing(true); // Deshabilitar botón del modal
 
-          await finishAttempt();
+          const response = await finishAttempt();
 
-          // Redirigir directamente sin modal de éxito
           closeModal();
+
+          // Si quedan más partes, mostrar la pantalla intermedia en vez de
+          // navegar afuera: el estudiante decide cuándo continuar.
+          if (response.partStatus === 'esperando_continuar') {
+            setPartBreak({
+              partNumber: (exam?.currentPartIndex ?? 0) + 1,
+              totalParts: exam?.partes?.length
+            });
+            return;
+          }
 
           console.log('Intento finalizado exitosamente, isInSEB:', isInSEB);
 
@@ -316,6 +333,21 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
     );
   }
 
+  if (partBreak) {
+    return (
+      <PartBreakScreen
+        partNumber={partBreak.partNumber}
+        totalParts={partBreak.totalParts}
+        onContinue={async () => {
+          await continueToNextPart();
+          setPartBreak(null);
+        }}
+      />
+    );
+  }
+
+  const preguntas = part?.preguntas || [];
+
   return (
     <div className="container py-5">
       <div className="modern-card mb-4">
@@ -340,22 +372,22 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
                 )}
                 <span className="badge badge-primary">
                   <i className="fas fa-question-circle me-2"></i>
-                  <span className="count-text">{exam.preguntas?.length || 0} preguntas</span>
+                  <span className="count-text">{preguntas.length || 0} preguntas</span>
                 </span>
-                {exam.tipo === 'multiple_choice' && (
+                {part?.tipo === 'multiple_choice' && (
                   <span className={`badge ${Object.keys(respuestas).filter(key => {
                     const respuesta = respuestas[key];
                     return Array.isArray(respuesta) ? respuesta.length > 0 : respuesta !== undefined;
-                  }).length === exam.preguntas?.length ? 'bg-success' : 'bg-secondary'}`}>
+                  }).length === preguntas.length ? 'bg-success' : 'bg-secondary'}`}>
                     <i className={`fas ${Object.keys(respuestas).filter(key => {
                       const respuesta = respuestas[key];
                       return Array.isArray(respuesta) ? respuesta.length > 0 : respuesta !== undefined;
-                    }).length === exam.preguntas?.length ? 'fa-check-circle' : 'fa-list-check'} me-2`}></i>
+                    }).length === preguntas.length ? 'fa-check-circle' : 'fa-list-check'} me-2`}></i>
                     <span className="count-text">
                       {Object.keys(respuestas).filter(key => {
                         const respuesta = respuestas[key];
                         return Array.isArray(respuesta) ? respuesta.length > 0 : respuesta !== undefined;
-                      }).length} / {exam.preguntas?.length || 0} respondidas
+                      }).length} / {preguntas.length || 0} respondidas
                     </span>
                   </span>
                 )}
@@ -371,7 +403,7 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
         </div>
       </div>
 
-      {!exam.preguntas || exam.preguntas.length === 0 ? (
+      {preguntas.length === 0 ? (
         <div className="empty-state">
           <div className="empty-icon">
             <i className="fas fa-question-circle"></i>
@@ -388,7 +420,7 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
       ) : (
         <>
           <div className="exam-attempt-questions-grid">
-            {exam.preguntas.map((p, i) => {
+            {preguntas.map((p, i) => {
               const isMatching = p.tipo === 'matching';
               const opcionesParaMostrar = randomizedOptions[i] || p.opciones?.map((texto, idx) => ({ texto, originalIndex: idx })) || [];
               const isFillInBlank = p.tipo === 'fill_in_blank';
@@ -434,6 +466,13 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
                         lineHeight: '1.5'
                       }}>{p.texto || "Sin texto"}</span>
                     </h5>
+                    {p.imagenUrl && (
+                      <img
+                        src={p.imagenUrl}
+                        alt=""
+                        style={{ maxWidth: '100%', maxHeight: '320px', borderRadius: '8px', marginTop: '0.75rem', display: 'block' }}
+                      />
+                    )}
                   </div>
                   <div className="exam-card-body">
                     <div className="exam-info">

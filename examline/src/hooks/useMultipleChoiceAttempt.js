@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getExamById, checkExamAttempt, startExamAttempt, finishExamAttempt } from '../services/api';
+import { getExamById, checkExamAttempt, startExamAttempt, advancePart, continuePart } from '../services/api';
 
 /**
  * Hook personalizado para gestionar la toma de un examen NO de programación
@@ -26,6 +26,10 @@ export const useMultipleChoiceAttempt = (examId, windowId, navigate, { propExamI
   const [randomizedOptions, setRandomizedOptions] = useState({}); // { preguntaIndex: [{ texto, originalIndex }] }
   const [randomizedMatchingAnswers, setRandomizedMatchingAnswers] = useState({}); // { preguntaIndex: [{ texto, originalIndex }] }
   const [selectedMatchingConcepts, setSelectedMatchingConcepts] = useState({}); // { preguntaId: conceptoIndex | null }
+  const [reloadIndex, setReloadIndex] = useState(0); // se incrementa para forzar un refetch (p.ej. tras continuar de parte)
+
+  // Parte actual del examen (el backend nunca expone preguntas de partes que no sean la actual)
+  const part = exam?.partes?.[exam.currentPartIndex] || null;
 
   // 🔹 Cargar respuestas guardadas al montar el componente
   useEffect(() => {
@@ -105,17 +109,30 @@ export const useMultipleChoiceAttempt = (examId, windowId, navigate, { propExamI
         // SEGUNDO: Cargar examen con las preguntas
         const examData = await getExamById(examId, windowId);
 
+        const currentPart = examData.partes?.[examData.currentPartIndex];
+
+        // Si la parte actual no es de múltiple choice, esta página no debe
+        // renderizar nada: redirigir al lugar correcto según su tipo.
+        if (currentPart && currentPart.tipo === 'programming') {
+          const params = new URLSearchParams();
+          if (windowId) params.append('windowId', windowId);
+          navigate(`/programming-exam/${examId}?${params.toString()}`);
+          return;
+        }
+
         // TERCERO: Aplicar orden de preguntas ANTES de setear el estado (evita flash)
-        let preguntasAMostrar = examData.preguntas;
+        let preguntasAMostrar = currentPart?.preguntas || [];
 
         if (attemptData.ordenPreguntas && Array.isArray(attemptData.ordenPreguntas)) {
-          const ordenMap = new Map(examData.preguntas.map(p => [p.id, p]));
+          const ordenMap = new Map(preguntasAMostrar.map(p => [p.id, p]));
           preguntasAMostrar = attemptData.ordenPreguntas
             .map(id => ordenMap.get(id))
             .filter(p => p !== undefined);
         }
 
-        examData.preguntas = preguntasAMostrar;
+        if (currentPart) {
+          currentPart.preguntas = preguntasAMostrar;
+        }
 
         // CUARTO: Setear estados (ya con el orden correcto)
         setAttempt(attemptData);
@@ -163,14 +180,6 @@ export const useMultipleChoiceAttempt = (examId, windowId, navigate, { propExamI
           setRandomizedOptions(randomized);
           setRandomizedMatchingAnswers(randomizedMatching);
         }
-
-        // Redireccionar si es un examen de programación
-        if (examData.tipo === 'programming') {
-          const params = new URLSearchParams();
-          if (windowId) params.append('windowId', windowId);
-          navigate(`/programming-exam/${examId}?${params.toString()}`);
-          return;
-        }
       } catch (err) {
         console.error('Error cargando examen:', err);
         setExam(null);
@@ -195,20 +204,20 @@ export const useMultipleChoiceAttempt = (examId, windowId, navigate, { propExamI
 
     loadExamAndAttempt();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [examId, windowId]);
+  }, [examId, windowId, reloadIndex]);
 
   // Construye el body de finalización a partir de las respuestas actuales
   const buildFinishBody = useCallback(() => {
-    if (!exam || exam.tipo !== 'multiple_choice') {
+    if (!part || part.tipo !== 'multiple_choice') {
       return {};
     }
 
     const respuestasFinales = {};
     Object.keys(respuestas).forEach(preguntaId => {
-      const preguntaIndex = exam.preguntas.findIndex(p => p.id === parseInt(preguntaId));
+      const preguntaIndex = part.preguntas.findIndex(p => p.id === parseInt(preguntaId));
       if (preguntaIndex === -1) return;
 
-      const pregunta = exam.preguntas[preguntaIndex];
+      const pregunta = part.preguntas[preguntaIndex];
       const respuesta = respuestas[preguntaId];
 
       if (pregunta.tipo === 'fill_in_blank' && Array.isArray(respuesta)) {
@@ -228,24 +237,40 @@ export const useMultipleChoiceAttempt = (examId, windowId, navigate, { propExamI
       }
     });
 
-    return { respuestas: respuestasFinales };
-  }, [exam, respuestas, randomizedOptions, randomizedMatchingAnswers]);
+    return respuestasFinales;
+  }, [part, respuestas, randomizedOptions, randomizedMatchingAnswers]);
 
-  // Finaliza el intento en el backend. Lanza el error para que el componente lo maneje (modal).
+  // Cierra la parte actual (avanza a la siguiente, o finaliza el intento si era
+  // la última). La respuesta indica si hay que esperar a "continuar" o si el
+  // intento completo ya quedó finalizado.
   const finishAttempt = useCallback(async () => {
-    const body = buildFinishBody();
-    const response = await finishExamAttempt(attempt.id, body);
+    const respuestasFinales = buildFinishBody();
+    const response = await advancePart(attempt.id, respuestasFinales);
 
-    // Limpiar sessionStorage al completar el examen
-    const examKey = `exam_${examId}_windowId`;
-    sessionStorage.removeItem(examKey);
-    sessionStorage.removeItem(`exam_${examId}_respuestas`);
+    if (response.estado === 'finalizado') {
+      // Limpiar sessionStorage al completar el examen
+      const examKey = `exam_${examId}_windowId`;
+      sessionStorage.removeItem(examKey);
+      sessionStorage.removeItem(`exam_${examId}_respuestas`);
+    }
 
     return response;
   }, [attempt, buildFinishBody, examId]);
 
+  // Confirma el paso a la siguiente parte tras el estado "esperando_continuar"
+  // y fuerza un refetch del examen (que puede redirigir a la vista correcta
+  // según el tipo de la nueva parte actual).
+  const continueToNextPart = useCallback(async () => {
+    const response = await continuePart(attempt.id);
+    sessionStorage.removeItem(`exam_${examId}_respuestas`);
+    setRespuestas({});
+    setReloadIndex(prev => prev + 1);
+    return response;
+  }, [attempt, examId]);
+
   return {
     exam,
+    part,
     attempt,
     loading,
     setLoading,
@@ -260,7 +285,8 @@ export const useMultipleChoiceAttempt = (examId, windowId, navigate, { propExamI
     randomizedMatchingAnswers,
     selectedMatchingConcepts,
     setSelectedMatchingConcepts,
-    finishAttempt
+    finishAttempt,
+    continueToNextPart
   };
 };
 

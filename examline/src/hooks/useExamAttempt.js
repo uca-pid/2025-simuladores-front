@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { getExamById, checkExamAttempt, startExamAttempt } from '../services/api';
+import { getExamById, checkExamAttempt, startExamAttempt, continuePart } from '../services/api';
 
 /**
  * Hook personalizado para gestionar la carga del examen y el intento de programación
@@ -17,22 +17,33 @@ export const useExamAttempt = (examId, windowId, navigate) => {
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [reloadIndex, setReloadIndex] = useState(0);
 
   // Función para obtener el examen
   const fetchExam = useCallback(async () => {
     try {
       const examData = await getExamById(examId, windowId);
-      if (examData.tipo !== 'programming') {
-        setError('Este no es un examen de programación');
+      const currentPart = examData.partes?.[examData.currentPartIndex];
+
+      if (currentPart && currentPart.tipo !== 'programming') {
+        // La parte actual no es de programación: redirigir a la vista correcta
+        const params = new URLSearchParams();
+        if (windowId) params.append('windowId', windowId);
+        navigate(`/exam-attempt/${examId}?${params.toString()}`);
         return;
       }
-      setExam(examData);
-      setCode(examData.codigoInicial || '');
+
+      // Aplanar los campos de la parte actual sobre el examen para no romper
+      // el resto del componente, que sigue leyendo exam.enunciadoProgramacion,
+      // exam.lenguajeProgramacion, etc. directamente.
+      const merged = currentPart ? { ...examData, ...currentPart } : examData;
+      setExam(merged);
+      setCode(merged.codigoInicial || '');
     } catch (err) {
       console.error('Error fetching exam:', err);
       setError(err.message || 'Error cargando examen');
     }
-  }, [examId, windowId]);
+  }, [examId, windowId, navigate]);
 
   // Función para obtener o crear intento
   const fetchOrCreateAttempt = useCallback(async () => {
@@ -127,7 +138,16 @@ export const useExamAttempt = (examId, windowId, navigate) => {
     };
 
     loadData();
-  }, [fetchExam, fetchOrCreateAttempt, windowId]);
+  }, [fetchExam, fetchOrCreateAttempt, windowId, reloadIndex]);
+
+  // Confirma el paso a la siguiente parte tras "esperando_continuar" y
+  // fuerza un refetch (que puede redirigir si la nueva parte no es de programación).
+  const continueToNextPart = useCallback(async () => {
+    if (!attempt) return;
+    const response = await continuePart(attempt.id);
+    setReloadIndex(prev => prev + 1);
+    return response;
+  }, [attempt]);
 
   return {
     exam,
@@ -138,7 +158,8 @@ export const useExamAttempt = (examId, windowId, navigate) => {
     loading,
     setLoading,
     error,
-    setError
+    setError,
+    continueToNextPart
   };
 };
 

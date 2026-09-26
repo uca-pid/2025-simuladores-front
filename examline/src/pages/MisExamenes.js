@@ -166,7 +166,13 @@ const MisExamenes = () => {
                   <div className={`exam-card fade-in-up`} style={{animationDelay: `${index * 0.1}s`}}>
                     <div className="exam-card-header">
                       <h5 className="exam-title">{exam.titulo}</h5>
-                      <span
+                      {exam.partes?.length > 1 ? (
+                        <span className="exam-badge badge-multiple">
+                          <i className="fas fa-layer-group me-1"></i>
+                          <span className="badge-text">Multiparte ({exam.partes.length})</span>
+                        </span>
+                      ) : (
+                        <span
   className={`exam-badge ${
     exam.tipo === "programming"
       ? "badge-programming"
@@ -184,6 +190,7 @@ const MisExamenes = () => {
       : "Múltiple Choice"}
   </span>
 </span>
+                      )}
 
                     </div>
                     <div className="exam-card-body">
@@ -192,15 +199,22 @@ const MisExamenes = () => {
                           <i className="fas fa-hashtag"></i>
                           <span>Código: {exam.id}</span>
                         </div>
-                        {exam.tipo === 'programming' ? (
+                        {exam.partes?.length > 1 ? (
+                          <div className="exam-info-item">
+                            <i className="fas fa-question-circle"></i>
+                            <span>
+                              Preguntas: {exam.partes.reduce((sum, p) => sum + (p.preguntas?.length || 0), 0)}
+                            </span>
+                          </div>
+                        ) : exam.tipo === 'programming' ? (
                           <div className="exam-info-item">
                             <i className="fas fa-code"></i>
-                            <span>Lenguaje: {exam.lenguajeProgramacion === 'python' ? 'Python' : 'JavaScript'}</span>
+                            <span>Lenguaje: {(exam.partes?.[0]?.lenguajeProgramacion || exam.lenguajeProgramacion) === 'python' ? 'Python' : 'JavaScript'}</span>
                           </div>
                         ) : (
                           <div className="exam-info-item">
                             <i className="fas fa-question-circle"></i>
-                            <span>Preguntas: {exam.preguntas?.length || 0}</span>
+                            <span>Preguntas: {(exam.partes?.[0]?.preguntas || exam.preguntas)?.length || 0}</span>
                           </div>
                         )}
                       </div>

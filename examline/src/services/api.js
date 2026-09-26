@@ -233,6 +233,26 @@ export async function uploadEnunciado(file) {
   }
 }
 
+export async function uploadQuestionImage(file) {
+  try {
+    const token = localStorage.getItem('token');
+    const formData = new FormData();
+    formData.append('archivo', file);
+
+    const res = await fetch(`${API_BASE_URL}/exams/upload-question-image`, {
+      method: "POST",
+      headers: {
+        ...(token && { 'Authorization': `Bearer ${token}` })
+      },
+      body: formData,
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
 export async function uploadDataset(file) {
   try {
     const token = localStorage.getItem('token');
@@ -375,6 +395,36 @@ export async function startExamAttempt({ examId, examWindowId }) {
       method: "POST",
       headers: getAuthHeaders(),
       body: JSON.stringify({ examId, examWindowId }),
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
+// Avanza el intento a la siguiente parte (o lo finaliza si era la última).
+// `respuestas` solo es relevante para partes de multiple_choice.
+export async function advancePart(attemptId, respuestas = {}) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/exam-attempts/${attemptId}/advance-part`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ respuestas }),
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
+// Confirma el paso a la siguiente parte tras el estado "esperando_continuar".
+export async function continuePart(attemptId) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/exam-attempts/${attemptId}/continue-part`, {
+      method: "POST",
+      headers: getAuthHeaders(),
     });
 
     return await handleResponse(res);

@@ -5,6 +5,7 @@ import { useSEB, useExamAttempt, useExamFiles, useCodeCompiler, useExamFinish } 
 import Modal from '../components/Modal';
 import EnunciadoArchivoViewer from '../components/EnunciadoArchivoViewer';
 import CsvDatasetViewer from '../components/CsvDatasetViewer';
+import PartBreakScreen from '../components/PartBreakScreen';
 
 const ProgrammingExamView = () => {
   const { examId } = useParams();
@@ -34,8 +35,14 @@ const ProgrammingExamView = () => {
     loading,
     setLoading,
     error,
-    setError
+    setError,
+    continueToNextPart
   } = useExamAttempt(examId, windowId, navigate);
+
+  // Se setea cuando advance-part responde "esperando_continuar": la parte de
+  // programación ya se cerró (código guardado y calificado) y solo queda
+  // esperar a que el estudiante confirme el paso a la siguiente.
+  const [partBreak, setPartBreak] = useState(null);
 
   // Archivos del examen (código, tabs, caché, guardado)
   const {
@@ -267,6 +274,19 @@ const ProgrammingExamView = () => {
           No se pudo cargar el examen o el intento.
         </div>
       </div>
+    );
+  }
+
+  if (partBreak) {
+    return (
+      <PartBreakScreen
+        partNumber={partBreak.partNumber}
+        totalParts={partBreak.totalParts}
+        onContinue={async () => {
+          await continueToNextPart();
+          setPartBreak(null);
+        }}
+      />
     );
   }
 
@@ -2800,9 +2820,15 @@ const ProgrammingExamView = () => {
       <Modal
         show={showFinishModal}
         onClose={() => setShowFinishModal(false)}
-        onConfirm={() => {
+        onConfirm={async () => {
           setShowFinishModal(false);
-          finishExam();
+          const response = await finishExam();
+          if (response?.partStatus === 'esperando_continuar') {
+            setPartBreak({
+              partNumber: (exam?.currentPartIndex ?? 0) + 1,
+              totalParts: exam?.partes?.length
+            });
+          }
         }}
         title="Finalizar Examen"
         message="¿Estás seguro de que quieres finalizar el examen?"

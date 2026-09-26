@@ -1,5 +1,6 @@
 // src/components/QuestionCreator.jsx
 import React, { useState } from "react";
+import { uploadQuestionImage } from "../services/api";
 
 const QuestionCreator = ({ onAddQuestion }) => {
   const [tipoPregunta, setTipoPregunta] = useState("multiple_choice");
@@ -7,6 +8,10 @@ const QuestionCreator = ({ onAddQuestion }) => {
   const [opciones, setOpciones] = useState(["", ""]);
   const [correcta, setCorrecta] = useState(0);
   const [error, setError] = useState("");
+
+  // Imagen opcional, solo aplica a multiple_choice
+  const [imagenUrl, setImagenUrl] = useState(null);
+  const [isUploadingImagen, setIsUploadingImagen] = useState(false);
   
   // Estados adicionales para fill_in_blank
   const [respuestasCorrectas, setRespuestasCorrectas] = useState([""]);
@@ -85,6 +90,27 @@ const QuestionCreator = ({ onAddQuestion }) => {
     setTextoPregunta(textoPregunta + "—");
   };
 
+  const handleImagenChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingImagen(true);
+    try {
+      const { url } = await uploadQuestionImage(file);
+      setImagenUrl(url);
+    } catch (err) {
+      console.error(err);
+      setError(err.message || "No se pudo subir la imagen");
+    } finally {
+      setIsUploadingImagen(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleQuitarImagen = () => {
+    setImagenUrl(null);
+  };
+
   // Agregar pregunta al listado
   const handleAgregarPregunta = () => {
     if (!textoPregunta.trim()) {
@@ -142,7 +168,8 @@ const QuestionCreator = ({ onAddQuestion }) => {
       tipo: tipoPregunta,
       texto: textoPregunta,
       opciones: [],
-      correcta: correcta
+      correcta: correcta,
+      imagenUrl: tipoPregunta === 'multiple_choice' ? (imagenUrl || null) : null
     };
     
     if (tipoPregunta === "fill_in_blank") {
@@ -175,6 +202,7 @@ const QuestionCreator = ({ onAddQuestion }) => {
       setRespuestasMatching(["", ""]);
     }
     setCorrecta(0);
+    setImagenUrl(null);
     setError("");
   };
 
@@ -307,6 +335,49 @@ const QuestionCreator = ({ onAddQuestion }) => {
                   <i className="fas fa-plus me-2"></i>
                   Agregar opción
                 </button>
+              )}
+            </div>
+
+            <div className="mb-4">
+              <label className="form-label d-flex align-items-center gap-2">
+                <i className="fas fa-image text-muted"></i>
+                Imagen (Opcional)
+              </label>
+              <input
+                type="file"
+                className="form-control"
+                accept="image/*"
+                onChange={handleImagenChange}
+                disabled={isUploadingImagen}
+                style={{
+                  padding: '0.75rem 1rem',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '8px',
+                  fontSize: '1rem'
+                }}
+              />
+              {isUploadingImagen && (
+                <small className="text-muted d-block mt-2">
+                  <i className="fas fa-spinner fa-spin me-1"></i>
+                  Subiendo imagen...
+                </small>
+              )}
+              {!isUploadingImagen && imagenUrl && (
+                <div className="mt-2">
+                  <img
+                    src={imagenUrl}
+                    alt="Vista previa"
+                    style={{ maxHeight: '120px', borderRadius: '6px', border: '1px solid var(--border-color)', display: 'block', marginBottom: '0.5rem' }}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-danger"
+                    onClick={handleQuitarImagen}
+                  >
+                    <i className="fas fa-times me-1"></i>
+                    Quitar imagen
+                  </button>
+                </div>
               )}
             </div>
           </>

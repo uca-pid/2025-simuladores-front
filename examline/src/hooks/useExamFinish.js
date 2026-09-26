@@ -1,4 +1,4 @@
-import { saveSubmissionFiles, finishExamAttempt } from '../services/api';
+import { saveSubmissionFiles, advancePart } from '../services/api';
 
 /**
  * Hook personalizado para gestionar la finalización de un examen de programación.
@@ -83,24 +83,27 @@ export const useExamFinish = ({
       // Guardar archivos como versión de envío (submission)
       await saveSubmissionFiles(examId, submissionFiles);
 
-      // 🏁 PASO 2: Finalizar el examen con el archivo principal
-      // Obtener el contenido del archivo principal
-      const mainFileContent = fileCache[mainFileName] ||
-                             files.find(f => f.filename === mainFileName)?.content ||
-                             '';
+      // 🏁 PASO 2: Cerrar la parte de programación. advance-part la califica a
+      // partir del ExamFile principal ya guardado (vía /exam-files), no
+      // necesita el código en el body.
+      const response = await advancePart(attempt.id);
 
-      await finishExamAttempt(attempt.id, { codigoProgramacion: mainFileContent });
+      if (response.estado === 'finalizado') {
+        // Limpiar windowId del sessionStorage al completar el examen
+        const examKey = `exam_${examId}_windowId`;
+        sessionStorage.removeItem(examKey);
 
-      // Limpiar windowId del sessionStorage al completar el examen
-      const examKey = `exam_${examId}_windowId`;
-      sessionStorage.removeItem(examKey);
-
-      // Manejar cierre según si está en SEB o no
-      if (isInSEB) {
-        closeSEB();
+        // Manejar cierre según si está en SEB o no
+        if (isInSEB) {
+          closeSEB();
+        } else {
+          navigate('/student-exam');
+        }
       } else {
-        navigate('/student-exam');
+        setLoading(false);
       }
+
+      return response;
     } catch (err) {
       console.error('Error finishing exam:', err);
       setError(err.message || 'Error finalizando examen');
