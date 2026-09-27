@@ -75,26 +75,23 @@ const Principal = () => {
         <div className="modern-card-header">
           <h2 className="page-title mb-0">
             <i className="fas fa-rocket me-2"></i>
-            <span className="title-text">Acciones Rápidas</span>
+            <span className="title-text">Acciones</span>
           </h2>
         </div>
         <div className="modern-card-body">
           <div className="row g-3">
             <div className="col-md-4">
               <div className="action-card">
-                <div className="action-step-badge">
-                  <span className="step-number">1</span>
-                </div>
                 <div className="action-content">
                   <h5 className="action-title">
-                    <i className="fas fa-folder-open text-primary me-2"></i>
+                    <i className="fas fa-folder-open me-2" style={{ color: 'var(--accent-color)' }}></i>
                     Crear Exámenes
                   </h5>
                   <p className="action-description text-muted mb-3">
                     Mirá todos tus exámenes o creá nuevos
                   </p>
-                  <button 
-                    className="modern-btn modern-btn-primary w-100" 
+                  <button
+                    className="modern-btn modern-btn-primary w-100"
                     onClick={() => navigate("/mis-examenes")}
                   >
                     <i className="fas fa-folder-open me-2"></i>
@@ -105,19 +102,16 @@ const Principal = () => {
             </div>
             <div className="col-md-4">
               <div className="action-card">
-                <div className="action-step-badge secondary">
-                  <span className="step-number">2</span>
-                </div>
                 <div className="action-content">
                   <h5 className="action-title">
-                    <i className="fas fa-database text-primary me-2"></i>
+                    <i className="fas fa-database me-2" style={{ color: 'var(--accent-color)' }}></i>
                     Banco de Preguntas
                   </h5>
                   <p className="action-description text-muted mb-3">
                     Gestioná preguntas reutilizables para tus exámenes
                   </p>
                   <button
-                    className="modern-btn modern-btn-secondary w-100"
+                    className="modern-btn modern-btn-primary w-100"
                     onClick={() => navigate("/question-bank")}
                   >
                     <i className="fas fa-database me-2"></i>
@@ -128,19 +122,16 @@ const Principal = () => {
             </div>
             <div className="col-md-4">
               <div className="action-card">
-                <div className="action-step-badge secondary">
-                  <span className="step-number">3</span>
-                </div>
                 <div className="action-content">
                   <h5 className="action-title">
-                    <i className="fas fa-tasks text-success me-2"></i>
+                    <i className="fas fa-tasks me-2" style={{ color: 'var(--accent-color)' }}></i>
                     Gestionar y Corregir Ventanas de Exámenes
                   </h5>
                   <p className="action-description text-muted mb-3">
                     Creá ventanas de examen para inscribirse y corregí los exámenes
                   </p>
                   <button
-                    className="modern-btn modern-btn-secondary w-100"
+                    className="modern-btn modern-btn-primary w-100"
                     onClick={() => navigate("/exam-windows")}
                   >
                     <i className="fas fa-calendar-check me-2"></i>

@@ -76,7 +76,13 @@
 }
 
 .action-content {
-  padding-right: 3rem;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.action-content .modern-btn {
+  margin-top: auto;
 }
 
 .action-title {
