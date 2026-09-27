@@ -219,7 +219,7 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
               </span>
               {attempt.exam.tipo === 'programming' && (
                 <span className="badge bg-info">
-                  {attempt.exam.lenguajeProgramacion === 'python' ? '🐍 Python' : '⚡ JavaScript'}
+                  {attempt.exam.lenguajeProgramacion === 'python' ? '🐍 Python' : attempt.exam.lenguajeProgramacion === 'c' ? '🔧 C' : '⚡ JavaScript'}
                 </span>
               )}
             </div>

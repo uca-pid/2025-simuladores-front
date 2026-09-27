@@ -5,6 +5,9 @@ import QuestionCreator from "./QuestionCreator";
 import QuestionBankSelector from "./QuestionBankSelector";
 import { testSolutionPreview, uploadEnunciado, uploadDataset } from "../services/api";
 
+const LANGUAGE_EXTENSIONS = { python: '.py', javascript: '.js', c: '.c' };
+const getExtensionForLanguage = (lenguaje) => LANGUAGE_EXTENSIONS[lenguaje] || '.js';
+
 // `part` / `onChange` lift this part's whole local state up into ExamCreator's
 // `partes` array, so every setter below reads `part.<field>` and calls
 // `onChange({ ...part, <field>: value })` instead of owning local state.
@@ -83,7 +86,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
       return;
     }
 
-    const extension = part.lenguajeProgramacion === 'python' ? '.py' : '.js';
+    const extension = getExtensionForLanguage(part.lenguajeProgramacion);
     let filename = newReferenceFileName.trim();
 
     if (!filename.endsWith(extension)) {
@@ -422,6 +425,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
               >
                 <option value="python">Python</option>
                 <option value="javascript">JavaScript</option>
+                <option value="c">C</option>
               </select>
             </div>
 
@@ -1151,7 +1155,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                 <input
                   type="text"
                   className="form-control"
-                  placeholder={`Ej: utils${part.lenguajeProgramacion === 'python' ? '.py' : '.js'}`}
+                  placeholder={`Ej: utils${getExtensionForLanguage(part.lenguajeProgramacion)}`}
                   value={newReferenceFileName}
                   onChange={(e) => setNewReferenceFileName(e.target.value)}
                   onKeyPress={(e) => {
@@ -1162,7 +1166,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                   autoFocus
                 />
                 <small className="text-muted mt-2 d-block">
-                  Se agregará automáticamente la extensión .{part.lenguajeProgramacion === 'python' ? 'py' : 'js'} si no la incluyes
+                  Se agregará automáticamente la extensión {getExtensionForLanguage(part.lenguajeProgramacion)} si no la incluyes
                 </small>
               </div>
               <div className="modal-footer">

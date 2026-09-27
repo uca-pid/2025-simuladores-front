@@ -170,7 +170,7 @@ const ExamView = ({ examId: propExamId, onBack }) => {
                 <i className="fas fa-code text-success me-2"></i>
                 <strong>Lenguaje:</strong>
                 <span className="ms-2 badge bg-success">
-                  {parte.lenguajeProgramacion === 'python' ? 'Python' : 'JavaScript'}
+                  {parte.lenguajeProgramacion === 'python' ? 'Python' : parte.lenguajeProgramacion === 'c' ? 'C' : 'JavaScript'}
                 </span>
               </div>
             </div>

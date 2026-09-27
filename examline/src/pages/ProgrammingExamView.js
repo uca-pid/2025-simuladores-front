@@ -7,6 +7,9 @@ import EnunciadoArchivoViewer from '../components/EnunciadoArchivoViewer';
 import CsvDatasetViewer from '../components/CsvDatasetViewer';
 import PartBreakScreen from '../components/PartBreakScreen';
 
+const LANGUAGE_EXTENSIONS = { python: '.py', javascript: '.js', c: '.c' };
+const getExtensionForLanguage = (lenguaje) => LANGUAGE_EXTENSIONS[lenguaje] || '.js';
+
 const ProgrammingExamView = () => {
   const { examId } = useParams();
   const location = useLocation();
@@ -304,7 +307,7 @@ const ProgrammingExamView = () => {
             <div className="col">
               <h1 className="exam-title mb-0">{exam.titulo}</h1>
               <small className="exam-subtitle d-none d-sm-block">
-                {exam.lenguajeProgramacion === 'python' ? '🐍 Python' : '⚡ JavaScript'} • 
+                {exam.lenguajeProgramacion === 'python' ? '🐍 Python' : exam.lenguajeProgramacion === 'c' ? '🔧 C' : '⚡ JavaScript'} • 
                 {exam.intellisenseHabilitado ? ' ✨ Intellisense activo' : ' 🔒 Intellisense desactivado'}
                 {isInSEB && ' • 🔒 Modo Seguro (SEB)'}
               </small>
@@ -2387,13 +2390,13 @@ const ProgrammingExamView = () => {
                       newFileName.trim() && 
                       (/[<>:"/\\|?*]/.test(newFileName) || 
                        files.find(f => {
-                         const extension = exam?.lenguajeProgramacion === 'python' ? '.py' : '.js';
+                         const extension = getExtensionForLanguage(exam?.lenguajeProgramacion);
                          const fileName = newFileName.endsWith(extension) ? newFileName : `${newFileName}${extension}`;
                          return f.filename.toLowerCase() === fileName.toLowerCase();
                        })) 
                       ? 'is-invalid' : ''
                     }`}
-                    placeholder={`nombre.${exam?.lenguajeProgramacion === 'python' ? 'py' : 'js'}`}
+                    placeholder={`nombre${getExtensionForLanguage(exam?.lenguajeProgramacion)}`}
                     value={newFileName}
                     onChange={(e) => setNewFileName(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && createNewFile()}
@@ -2405,7 +2408,7 @@ const ProgrammingExamView = () => {
                       !newFileName.trim() || 
                       /[<>:"/\\|?*]/.test(newFileName) ||
                       files.find(f => {
-                        const extension = exam?.lenguajeProgramacion === 'python' ? '.py' : '.js';
+                        const extension = getExtensionForLanguage(exam?.lenguajeProgramacion);
                         const fileName = newFileName.endsWith(extension) ? newFileName : `${newFileName}${extension}`;
                         return f.filename.toLowerCase() === fileName.toLowerCase();
                       })
@@ -2423,7 +2426,7 @@ const ProgrammingExamView = () => {
                         Caracteres no permitidos: {"< > : \" / \\ | ? *"}
                       </span>
                     ) : files.find(f => {
-                      const extension = exam?.lenguajeProgramacion === 'python' ? '.py' : '.js';
+                      const extension = getExtensionForLanguage(exam?.lenguajeProgramacion);
                       const fileName = newFileName.endsWith(extension) ? newFileName : `${newFileName}${extension}`;
                       return f.filename.toLowerCase() === fileName.toLowerCase();
                     }) ? (

@@ -5,6 +5,11 @@ import {
   deleteExamAttemptFile
 } from '../services/api';
 
+const MAIN_FILE_NAMES = { python: 'main.py', javascript: 'main.js', c: 'main.c' };
+const mainFileNameForLanguage = (lenguaje) => MAIN_FILE_NAMES[lenguaje] || 'main.js';
+const LANGUAGE_EXTENSIONS = { python: '.py', javascript: '.js', c: '.c' };
+const extensionForLanguage = (lenguaje) => LANGUAGE_EXTENSIONS[lenguaje] || '.js';
+
 /**
  * Extrae los bloques "protegidos" (no editables) de un texto, delimitados por
  * comentarios marcadores `SOLO LECTURA` / `FIN SOLO LECTURA` (en Python `#`, en JS `//`).
@@ -88,7 +93,7 @@ export const useExamFiles = (examId, exam, attempt, setError) => {
   // 🔒 Función para obtener el nombre del archivo principal según el lenguaje
   const getMainFileName = useCallback(() => {
     if (!exam) return null;
-    return exam.lenguajeProgramacion === 'python' ? 'main.py' : 'main.js';
+    return mainFileNameForLanguage(exam.lenguajeProgramacion);
   }, [exam]);
 
   // 🔒 Verificar si un archivo es el archivo principal
@@ -122,7 +127,7 @@ export const useExamFiles = (examId, exam, attempt, setError) => {
       if (sortedFiles.length === 0) {
         // 🔒 IMPORTANTE: El archivo principal siempre es main.py (Python) o main.js (JavaScript)
         // Este archivo no se puede eliminar y es el que se evalúa con los test cases
-        const defaultFileName = `main.${exam?.lenguajeProgramacion === 'python' ? 'py' : 'js'}`;
+        const defaultFileName = mainFileNameForLanguage(exam?.lenguajeProgramacion);
         const defaultContent = exam?.codigoInicial || '';
 
         setCurrentFileName(defaultFileName);
@@ -344,7 +349,7 @@ export const useExamFiles = (examId, exam, attempt, setError) => {
         if (remainingFiles.length > 0) {
           await loadFile(remainingFiles[0].filename);
         } else {
-          const defaultFileName = `main.${exam?.lenguajeProgramacion === 'python' ? 'py' : 'js'}`;
+          const defaultFileName = mainFileNameForLanguage(exam?.lenguajeProgramacion);
           setCurrentFileName(defaultFileName);
           setCode('');
         }
@@ -368,7 +373,7 @@ export const useExamFiles = (examId, exam, attempt, setError) => {
     const invalidChars = /[<>:"/\\|?*]/;
     if (invalidChars.test(newFileName)) return;
 
-    const extension = exam?.lenguajeProgramacion === 'python' ? '.py' : '.js';
+    const extension = extensionForLanguage(exam?.lenguajeProgramacion);
     const fileName = newFileName.endsWith(extension) ? newFileName : `${newFileName}${extension}`;
 
     if (files.find(f => f.filename.toLowerCase() === fileName.toLowerCase())) return;

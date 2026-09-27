@@ -11,6 +11,9 @@ import { createExam, updateExam, getExamById } from "../services/api";
 
 const DRAFT_KEY = 'examCreatorDraft';
 
+const MAIN_FILE_NAMES = { python: 'main.py', javascript: 'main.js', c: 'main.c' };
+const mainFileNameForLanguage = (lenguaje) => MAIN_FILE_NAMES[lenguaje] || 'main.js';
+
 let localIdCounter = 0;
 const nextLocalId = () => {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
@@ -54,7 +57,7 @@ const mapApiPartToInternal = (parte) => {
     };
   }
 
-  const filename = parte.lenguajeProgramacion === 'python' ? 'main.py' : 'main.js';
+  const filename = mainFileNameForLanguage(parte.lenguajeProgramacion);
   return {
     ...makeDefaultPart('programming'),
     lenguajeProgramacion: parte.lenguajeProgramacion || 'python',

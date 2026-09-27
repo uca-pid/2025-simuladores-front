@@ -4,6 +4,9 @@ import { useManualGrading } from '../hooks/useManualGrading';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../styles/base.css';
 
+const MAIN_FILE_NAMES = { python: 'main.py', javascript: 'main.js', c: 'main.c' };
+const getMainFileName = (lenguaje) => MAIN_FILE_NAMES[lenguaje] || 'main.js';
+
 export default function ManualGradingModal({ attemptId, onClose, onSave }) {
   const {
     loading,
@@ -32,7 +35,7 @@ export default function ManualGradingModal({ attemptId, onClose, onSave }) {
 
     // 🔒 IMPORTANTE: Cargar por defecto el archivo main en versión manual
     // Este es el archivo que se usó para la corrección automática
-    const mainFileName = attempt.exam.lenguajeProgramacion === 'python' ? 'main.py' : 'main.js';
+    const mainFileName = getMainFileName(attempt.exam.lenguajeProgramacion);
 
     // Intentar encontrar el archivo main en versión manual
     let targetVersion = 'manual';
@@ -238,7 +241,7 @@ export default function ManualGradingModal({ attemptId, onClose, onSave }) {
                         textAlign: 'left'
                       }}>
                         <i className="fas fa-info-circle me-1"></i>
-                        Calculado sobre <strong>{attempt.exam.lenguajeProgramacion === 'python' ? 'main.py' : 'main.js'}</strong> (versión manual guardada)
+                        Calculado sobre <strong>{getMainFileName(attempt.exam.lenguajeProgramacion)}</strong> (versión manual guardada)
                       </div>
                     )}
                   </div>
