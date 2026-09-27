@@ -4,6 +4,7 @@
 :root {
   --primary-color: #1E2955;
   --secondary-color: #172147;
+  --accent-color: #3B82F6;
   --success-color: #10b981;
   --warning-color: #f59e0b;
   --danger-color: #ef4444;
@@ -540,8 +541,8 @@ body {
   border-radius: 20px;
   font-size: 0.75rem;
   font-weight: 500;
-  background: rgba(16, 185, 129, 0.1);
-  color: var(--success-color);
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--accent-color, #3B82F6);
 }
 
 .exam-card-body {

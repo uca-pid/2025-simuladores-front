@@ -37,9 +37,15 @@ const MisExamenes = () => {
   const handleCrearExamen = () => navigate("/exam-creator");
   const handleVerExamen = (examId) => navigate(`/examen/${examId}`);
 
+  // Tipo real del examen: multiparte si tiene más de 1 parte, sino el tipo de su única parte
+  const getExamCategory = (exam) => {
+    if (exam.partes?.length > 1) return "multiparte";
+    return exam.partes?.[0]?.tipo || exam.tipo;
+  };
+
   // Filtrar exámenes
   const filteredExams = exams.filter((exam) => {
-    const matchesType = filterType === "all" || exam.tipo === filterType;
+    const matchesType = filterType === "all" || getExamCategory(exam) === filterType;
     const matchesSearch = exam.titulo.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesType && matchesSearch;
   });
@@ -108,6 +114,7 @@ const MisExamenes = () => {
                 <option value="all">Todos los tipos</option>
                 <option value="multiple_choice">Múltiple Choice</option>
                 <option value="programming">Programación</option>
+                <option value="multiparte">Multiparte</option>
               </select>
             </div>
           </div>
@@ -199,24 +206,6 @@ const MisExamenes = () => {
                           <i className="fas fa-hashtag"></i>
                           <span>Código: {exam.id}</span>
                         </div>
-                        {exam.partes?.length > 1 ? (
-                          <div className="exam-info-item">
-                            <i className="fas fa-question-circle"></i>
-                            <span>
-                              Preguntas: {exam.partes.reduce((sum, p) => sum + (p.preguntas?.length || 0), 0)}
-                            </span>
-                          </div>
-                        ) : exam.tipo === 'programming' ? (
-                          <div className="exam-info-item">
-                            <i className="fas fa-code"></i>
-                            <span>Lenguaje: {(exam.partes?.[0]?.lenguajeProgramacion || exam.lenguajeProgramacion) === 'python' ? 'Python' : 'JavaScript'}</span>
-                          </div>
-                        ) : (
-                          <div className="exam-info-item">
-                            <i className="fas fa-question-circle"></i>
-                            <span>Preguntas: {(exam.partes?.[0]?.preguntas || exam.preguntas)?.length || 0}</span>
-                          </div>
-                        )}
                       </div>
                       <button
                         className="modern-btn modern-btn-primary w-100 view-exam-btn"
@@ -224,7 +213,7 @@ const MisExamenes = () => {
                       >
                         <i className="fas fa-eye me-2"></i>
                         <span className="btn-text">
-                          {exam.tipo === 'programming' ? 'Ver examen' : 'Ver preguntas'}
+                          Ver examen
                         </span>
                       </button>
                     </div>
