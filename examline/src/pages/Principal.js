@@ -42,8 +42,10 @@ const Principal = () => {
                     <div className="step-content">
                       <h5 className="step-title">1. Crear Exámenes</h5>
                       <p className="step-description">
-                        Hacé clic en <strong>"Ir a Mis Exámenes"</strong> para ver todos tus exámenes o crear uno nuevo. Puedes crear dos tipos de examenes: 
-                        <strong> Múltiple Choice</strong> o <strong> Programación</strong>.
+                        Hacé clic en <strong>"Ir a Mis Exámenes"</strong> para ver todos tus exámenes, crear uno nuevo, editarlo o eliminarlo.
+                        Un examen puede tener una sola parte (<strong>Múltiple Choice</strong> o <strong>Programación</strong>) o combinar varias
+                        partes de distinto tipo en un mismo examen, con una pausa entre partes para que el alumno pueda descansar antes de continuar.
+                        Podés reutilizar preguntas ya cargadas desde el <strong>Banco de Preguntas</strong>.
                       </p>
                     </div>
                   </div>
