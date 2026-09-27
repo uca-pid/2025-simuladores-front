@@ -1,13 +1,13 @@
 // src/pages/ExamCreator.jsx
 import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./ExamCreator.css";
 import { useModal } from "../hooks";
 import BackToMainButton from "../components/BackToMainButton";
 import Modal from "../components/Modal";
 import ExamPartBuilder from "../components/ExamPartBuilder";
-import { createExam } from "../services/api";
+import { createExam, updateExam, getExamById } from "../services/api";
 
 const DRAFT_KEY = 'examCreatorDraft';
 
@@ -43,11 +43,46 @@ const makeDefaultPart = (tipo = "multiple_choice") => ({
 
 const TIPO_LABEL = { multiple_choice: "Preguntas", programming: "Programación" };
 
+// Convierte una parte tal como la devuelve la API (GET /exams/:id) al shape
+// interno del wizard, sintetizando los campos de UI local-only que la API no
+// devuelve (referenceFiles/currentReferenceFile/saveReferenceSolution/etc.).
+const mapApiPartToInternal = (parte) => {
+  if (parte.tipo === 'multiple_choice') {
+    return {
+      ...makeDefaultPart('multiple_choice'),
+      preguntas: parte.preguntas || [],
+    };
+  }
+
+  const filename = parte.lenguajeProgramacion === 'python' ? 'main.py' : 'main.js';
+  return {
+    ...makeDefaultPart('programming'),
+    lenguajeProgramacion: parte.lenguajeProgramacion || 'python',
+    intellisenseHabilitado: !!parte.intellisenseHabilitado,
+    enunciadoTipo: parte.enunciadoTipo || 'texto',
+    enunciadoProgramacion: parte.enunciadoProgramacion || '',
+    enunciadoUrl: parte.enunciadoUrl || '',
+    enunciadoArchivoNombre: parte.enunciadoArchivoNombre || '',
+    datasetFiles: parte.datasetFiles || [],
+    codigoInicial: parte.codigoInicial || '',
+    testCases: parte.testCases && parte.testCases.length > 0
+      ? parte.testCases
+      : [{ description: "", input: "", expectedOutput: "" }],
+    referenceFiles: [{ filename, content: parte.solucionReferencia || '' }],
+    currentReferenceFile: filename,
+    saveReferenceSolution: !!parte.solucionReferencia,
+  };
+};
+
 const ExamCreator = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get('editId');
+  const isEditMode = !!editId;
   const { modal, showModal, closeModal } = useModal();
 
   const loadDraft = () => {
+    if (isEditMode) return null;
     try {
       const saved = localStorage.getItem(DRAFT_KEY);
       return saved ? JSON.parse(saved) : null;
@@ -69,6 +104,8 @@ const ExamCreator = () => {
   const [isPublishing, setIsPublishing] = useState(false);
   const [hasDraft, setHasDraft] = useState(!!draft);
   const [newPartTipo, setNewPartTipo] = useState("multiple_choice");
+  const [isLoadingExam, setIsLoadingExam] = useState(isEditMode);
+  const [loadExamError, setLoadExamError] = useState("");
 
   // Wizard: los profesores pueden moverse libremente entre los 3 pasos
   const [currentStep, setCurrentStep] = useState(1);
@@ -83,6 +120,8 @@ const ExamCreator = () => {
   const [showDeletePartModal, setShowDeletePartModal] = useState(false);
 
   useEffect(() => {
+    if (isEditMode) return; // no autoguardar borrador mientras se edita un examen existente
+
     const draftData = {
       titulo,
       ordenAleatorio,
@@ -100,7 +139,41 @@ const ExamCreator = () => {
       localStorage.setItem(DRAFT_KEY, JSON.stringify(draftData));
       setHasDraft(true);
     }
-  }, [titulo, ordenAleatorio, partes]);
+  }, [titulo, ordenAleatorio, partes, isEditMode]);
+
+  useEffect(() => {
+    if (!editId) return;
+
+    let cancelled = false;
+    const loadExam = async () => {
+      try {
+        setIsLoadingExam(true);
+        setLoadExamError("");
+        const exam = await getExamById(editId);
+        if (cancelled) return;
+
+        setTitulo(exam.titulo || "");
+        setOrdenAleatorio(!!exam.ordenAleatorio);
+        const mappedPartes = (exam.partes && exam.partes.length > 0)
+          ? exam.partes
+              .slice()
+              .sort((a, b) => (a.orden || 0) - (b.orden || 0))
+              .map(mapApiPartToInternal)
+          : [makeDefaultPart()];
+        setPartes(mappedPartes);
+        setSelectedPartId(mappedPartes[0].localId);
+      } catch (err) {
+        console.error('Error cargando examen para editar:', err);
+        if (!cancelled) setLoadExamError(err.message || 'Error al cargar el examen');
+      } finally {
+        if (!cancelled) setIsLoadingExam(false);
+      }
+    };
+
+    loadExam();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editId]);
 
   const handleDiscardDraft = () => {
     showModal(
@@ -225,6 +298,27 @@ const ExamCreator = () => {
         examData.referenceFiles = firstProgrammingPart.referenceFiles;
       }
 
+      if (isEditMode) {
+        const updated = await updateExam(editId, examData);
+        if (updated?.error) {
+          setIsPublishing(false);
+          showModal(
+            'warning',
+            'Contenido no modificado',
+            `${updated.error} El título y el orden aleatorio sí se guardaron correctamente.`,
+            () => {
+              closeModal();
+              navigate("/mis-examenes");
+            },
+            false,
+            'Entendido'
+          );
+          return;
+        }
+        navigate("/mis-examenes");
+        return;
+      }
+
       await createExam(examData);
 
       localStorage.removeItem(DRAFT_KEY);
@@ -308,19 +402,21 @@ const ExamCreator = () => {
           <div className="exam-creator-header">
             <div className="exam-creator-title-section">
               <h1 className="page-title mb-1">
-                <i className="fas fa-plus-circle me-2" style={{ color: 'var(--primary-color)' }}></i>
-                <span className="title-text">Crear Examen</span>
-                {hasDraft && (
+                <i className={`fas ${isEditMode ? 'fa-edit' : 'fa-plus-circle'} me-2`} style={{ color: 'var(--primary-color)' }}></i>
+                <span className="title-text">{isEditMode ? 'Editar Examen' : 'Crear Examen'}</span>
+                {hasDraft && !isEditMode && (
                   <span className="badge bg-info ms-2" style={{ fontSize: '0.6em', verticalAlign: 'middle' }}>
                     <i className="fas fa-save me-1"></i>
                     Borrador guardado
                   </span>
                 )}
               </h1>
-              <p className="page-subtitle mb-0">Diseña un nuevo examen con preguntas personalizadas</p>
+              <p className="page-subtitle mb-0">
+                {isEditMode ? 'Modifica los datos de este examen' : 'Diseña un nuevo examen con preguntas personalizadas'}
+              </p>
             </div>
             <div className="exam-creator-actions" style={{ display: 'flex', gap: '0.5rem' }}>
-              {hasDraft && (
+              {hasDraft && !isEditMode && (
                 <button
                   className="modern-btn modern-btn-danger compact-btn"
                   onClick={handleDiscardDraft}
@@ -340,6 +436,26 @@ const ExamCreator = () => {
         </div>
       </div>
 
+      {isLoadingExam && (
+        <div className="modern-card mb-4">
+          <div className="modern-card-body text-center py-5">
+            <div className="spinner-border text-primary mb-3" role="status"></div>
+            <p className="mb-0">Cargando examen...</p>
+          </div>
+        </div>
+      )}
+
+      {!isLoadingExam && loadExamError && (
+        <div className="modern-card mb-4">
+          <div className="modern-card-body text-center py-5">
+            <i className="fas fa-exclamation-triangle text-danger mb-3" style={{ fontSize: '2rem' }}></i>
+            <p className="mb-0">{loadExamError}</p>
+          </div>
+        </div>
+      )}
+
+      {!isLoadingExam && !loadExamError && (
+      <>
       {/* Stepper del wizard: navegación libre entre pasos */}
       <div className="modern-card mb-4">
         <div className="modern-card-body p-0">
@@ -389,32 +505,6 @@ const ExamCreator = () => {
                 }}
               />
             </div>
-
-            {hasMultipleChoicePart && (
-              <div className="mb-0">
-                <label className="form-label d-flex align-items-center gap-2">
-                  <i className="fas fa-random text-muted"></i>
-                  Orden Aleatorio de Preguntas
-                </label>
-                <div className="form-check form-switch mt-2">
-                  <input
-                    className="form-check-input"
-                    type="checkbox"
-                    id="ordenAleatorioSwitch"
-                    checked={ordenAleatorio}
-                    onChange={(e) => setOrdenAleatorio(e.target.checked)}
-                  />
-                  <label className="form-check-label" htmlFor="ordenAleatorioSwitch">
-                    {ordenAleatorio ? "Las preguntas aparecerán en orden aleatorio para cada estudiante" : "Las preguntas aparecerán en el orden definido"}
-                  </label>
-                </div>
-                <small className="form-text text-muted">
-                  {ordenAleatorio
-                    ? "✓ Cada estudiante verá las preguntas en un orden diferente"
-                    : "Las preguntas siempre aparecerán en el mismo orden"}
-                </small>
-              </div>
-            )}
           </div>
           <div className="modern-card-body pt-0 d-flex justify-content-end">
             <button
@@ -440,7 +530,33 @@ const ExamCreator = () => {
               </h3>
             </div>
             <div className="modern-card-body">
-              <div className="d-flex flex-wrap gap-2 mb-3">
+              <label className="form-label d-flex align-items-center gap-2 mb-1">
+                <i className="fas fa-plus-circle text-muted"></i>
+                Tipo de la nueva parte a agregar:
+              </label>
+              <div className="d-flex gap-2 align-items-center mb-3">
+                <select
+                  className="form-select"
+                  value={newPartTipo}
+                  onChange={(e) => setNewPartTipo(e.target.value)}
+                  disabled={isPublishing}
+                  style={{ maxWidth: '250px' }}
+                >
+                  <option value="multiple_choice">Preguntas</option>
+                  <option value="programming">Programación</option>
+                </select>
+                <button
+                  type="button"
+                  className="modern-btn modern-btn-secondary"
+                  onClick={handleAddPart}
+                  disabled={isPublishing}
+                >
+                  <i className="fas fa-plus me-2"></i>
+                  Agregar Parte
+                </button>
+              </div>
+
+              <div className="d-flex flex-column gap-2 mb-3">
                 {partes.map((p, idx) => (
                   <div
                     key={p.localId}
@@ -454,7 +570,7 @@ const ExamCreator = () => {
                   >
                     <span
                       onClick={() => setSelectedPartId(p.localId)}
-                      style={{ fontWeight: selectedPartId === p.localId ? 'bold' : 'normal', cursor: 'pointer' }}
+                      style={{ fontWeight: selectedPartId === p.localId ? 'bold' : 'normal', cursor: 'pointer', flex: 1 }}
                     >
                       <i className={`fas ${p.tipo === 'multiple_choice' ? 'fa-question-circle' : 'fa-code'} me-2`}></i>
                       Parte {idx + 1}
@@ -502,31 +618,31 @@ const ExamCreator = () => {
                 ))}
               </div>
 
-              <label className="form-label d-flex align-items-center gap-2 mb-1">
-                <i className="fas fa-plus-circle text-muted"></i>
-                Tipo de la nueva parte a agregar:
-              </label>
-              <div className="d-flex gap-2 align-items-center">
-                <select
-                  className="form-select"
-                  value={newPartTipo}
-                  onChange={(e) => setNewPartTipo(e.target.value)}
-                  disabled={isPublishing}
-                  style={{ maxWidth: '250px' }}
-                >
-                  <option value="multiple_choice">Preguntas</option>
-                  <option value="programming">Programación</option>
-                </select>
-                <button
-                  type="button"
-                  className="modern-btn modern-btn-secondary"
-                  onClick={handleAddPart}
-                  disabled={isPublishing}
-                >
-                  <i className="fas fa-plus me-2"></i>
-                  Agregar Parte
-                </button>
-              </div>
+              {hasMultipleChoicePart && (
+                <div className="mb-0 mt-3 pt-3" style={{ borderTop: '1px solid var(--border-color)' }}>
+                  <label className="form-label d-flex align-items-center gap-2">
+                    <i className="fas fa-random text-muted"></i>
+                    Orden Aleatorio de Preguntas
+                  </label>
+                  <div className="form-check form-switch mt-2">
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      id="ordenAleatorioSwitch"
+                      checked={ordenAleatorio}
+                      onChange={(e) => setOrdenAleatorio(e.target.checked)}
+                    />
+                    <label className="form-check-label" htmlFor="ordenAleatorioSwitch">
+                      {ordenAleatorio ? "Las preguntas aparecerán en orden aleatorio para cada estudiante" : "Las preguntas aparecerán en el orden definido"}
+                    </label>
+                  </div>
+                  <small className="form-text text-muted">
+                    {ordenAleatorio
+                      ? "✓ Cada estudiante verá las preguntas en un orden diferente (aplica solo a las partes de opción múltiple)"
+                      : "Las preguntas siempre aparecerán en el mismo orden"}
+                  </small>
+                </div>
+              )}
             </div>
           </div>
 
@@ -619,18 +735,20 @@ const ExamCreator = () => {
                 {isPublishing ? (
                   <>
                     <div className="spinner-border spinner-border-sm me-2" role="status"></div>
-                    <span className="button-text">Publicando...</span>
+                    <span className="button-text">{isEditMode ? 'Guardando...' : 'Publicando...'}</span>
                   </>
                 ) : (
                   <>
                     <i className="fas fa-paper-plane me-2"></i>
-                    <span className="button-text">Publicar Examen</span>
+                    <span className="button-text">{isEditMode ? 'Guardar Cambios' : 'Publicar Examen'}</span>
                   </>
                 )}
               </button>
             </div>
           </div>
         </>
+      )}
+      </>
       )}
 
       {/* Modal Component */}

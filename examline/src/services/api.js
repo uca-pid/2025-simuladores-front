@@ -306,6 +306,39 @@ export async function getExamById(examId, windowId = null) {
   }
 }
 
+export async function updateExam(examId, payload) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/exams/${examId}`, {
+      method: "PUT",
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    // El caso 409 (contenido rechazado por intentos existentes) es una
+    // respuesta parcial válida que el llamador debe inspeccionar, no un error.
+    if (res.status === 409) {
+      return await res.json();
+    }
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
+export async function deleteExam(examId) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/exams/${examId}`, {
+      method: "DELETE",
+      headers: getAuthHeaders(),
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
 // Exam window endpoints
 export async function getExamWindowsProfesor() {
   try {

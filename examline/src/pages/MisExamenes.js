@@ -2,7 +2,9 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { useAuth } from "../contexts/AuthContext";
-import { getExams } from "../services/api";
+import { getExams, deleteExam } from "../services/api";
+import { useModal } from "../hooks";
+import Modal from "../components/Modal";
 
 const MisExamenes = () => {
   const [exams, setExams] = useState([]);
@@ -12,6 +14,8 @@ const MisExamenes = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { modal, showModal, closeModal } = useModal();
+  const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
     const fetchExams = async () => {
@@ -36,6 +40,30 @@ const MisExamenes = () => {
 
   const handleCrearExamen = () => navigate("/exam-creator");
   const handleVerExamen = (examId) => navigate(`/examen/${examId}`);
+  const handleEditarExamen = (examId) => navigate(`/exam-creator?editId=${examId}`);
+
+  const handleEliminarExamen = (exam) => {
+    showModal(
+      'confirm',
+      'Eliminar Examen',
+      `¿Estás seguro de que deseas eliminar el examen "${exam.titulo}"? Esta acción no se puede deshacer.`,
+      async () => {
+        try {
+          setDeletingId(exam.id);
+          await deleteExam(exam.id);
+          setExams((prev) => prev.filter((e) => e.id !== exam.id));
+          closeModal();
+        } catch (err) {
+          console.error("Error deleting exam:", err);
+          showModal('error', 'Error', err.message || 'Error al eliminar el examen', null, false);
+        } finally {
+          setDeletingId(null);
+        }
+      },
+      true,
+      'Eliminar'
+    );
+  };
 
   // Tipo real del examen: multiparte si tiene más de 1 parte, sino el tipo de su única parte
   const getExamCategory = (exam) => {
@@ -207,15 +235,30 @@ const MisExamenes = () => {
                           <span>Código: {exam.id}</span>
                         </div>
                       </div>
-                      <button
-                        className="modern-btn modern-btn-primary w-100 view-exam-btn"
-                        onClick={() => handleVerExamen(exam.id)}
-                      >
-                        <i className="fas fa-eye me-2"></i>
-                        <span className="btn-text">
-                          Ver examen
-                        </span>
-                      </button>
+                      <div className="d-flex gap-2">
+                        <button
+                          className="modern-btn modern-btn-primary modern-btn-sm flex-fill view-exam-btn"
+                          onClick={() => handleVerExamen(exam.id)}
+                        >
+                          <i className="fas fa-eye me-2"></i>
+                          <span className="btn-text">Ver</span>
+                        </button>
+                        <button
+                          className="modern-btn modern-btn-secondary modern-btn-sm flex-fill"
+                          onClick={() => handleEditarExamen(exam.id)}
+                        >
+                          <i className="fas fa-edit me-2"></i>
+                          <span className="btn-text">Editar</span>
+                        </button>
+                        <button
+                          className="modern-btn modern-btn-danger modern-btn-sm flex-fill"
+                          onClick={() => handleEliminarExamen(exam)}
+                          disabled={deletingId === exam.id}
+                        >
+                          <i className="fas fa-trash me-2"></i>
+                          <span className="btn-text">Eliminar</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -224,6 +267,18 @@ const MisExamenes = () => {
           )}
         </div>
       </div>
+
+      <Modal
+        show={modal.show}
+        onClose={closeModal}
+        onConfirm={modal.onConfirm}
+        title={modal.title}
+        message={modal.message}
+        type={modal.type}
+        showCancel={modal.showCancel}
+        confirmText={modal.confirmText || ((modal.type === 'warning') ? 'Confirmar' : 'Entendido')}
+        cancelText="Cancelar"
+      />
     </div>
   );
 };
