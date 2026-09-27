@@ -363,13 +363,13 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
                   <div className="mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2" style={{
                     padding: '0.75rem 1rem',
                     background: fileVersion === 'manual' ? 'rgba(99, 102, 241, 0.08)' : 'rgba(16, 185, 129, 0.08)',
-                    border: `1px solid ${fileVersion === 'manual' ? '#6366f1' : '#10b981'}`,
+                    border: `1px solid ${fileVersion === 'manual' ? '#1E2955' : '#10b981'}`,
                     borderRadius: '0.5rem',
-                    borderLeft: `4px solid ${fileVersion === 'manual' ? '#6366f1' : '#10b981'}`
+                    borderLeft: `4px solid ${fileVersion === 'manual' ? '#1E2955' : '#10b981'}`
                   }}>
                     <small style={{ color: '#64748b', fontWeight: '500' }}>
                       <i className={`fas ${fileVersion === 'manual' ? 'fa-save' : 'fa-paper-plane'} me-2`} 
-                         style={{ color: fileVersion === 'manual' ? '#6366f1' : '#10b981' }}></i>
+                         style={{ color: fileVersion === 'manual' ? '#1E2955' : '#10b981' }}></i>
                       {fileVersion === 'manual' 
                         ? `${currentFiles.length} archivo${currentFiles.length !== 1 ? 's' : ''} guardado${currentFiles.length !== 1 ? 's' : ''} manualmente (Ctrl+S)`
                         : `${currentFiles.length} archivo${currentFiles.length !== 1 ? 's' : ''} al enviar el examen`
@@ -442,7 +442,7 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
                                 border: selectedFileIndex === index ? 'none' : '1px solid #e2e8f0',
                                 background: selectedFileIndex === index 
                                   ? (fileVersion === 'manual' 
-                                      ? 'var(--primary-color, #6366f1)' 
+                                      ? 'var(--primary-color, #1E2955)' 
                                       : 'linear-gradient(135deg, var(--success-color, #10b981), #059669)')
                                   : 'white',
                                 color: selectedFileIndex === index ? 'white' : '#64748b',
@@ -462,8 +462,8 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
                               onMouseEnter={(e) => {
                                 if (selectedFileIndex !== index) {
                                   e.target.style.background = '#f8fafc';
-                                  e.target.style.borderColor = fileVersion === 'manual' ? 'var(--primary-color, #6366f1)' : 'var(--success-color, #10b981)';
-                                  e.target.style.color = fileVersion === 'manual' ? 'var(--primary-color, #6366f1)' : 'var(--success-color, #10b981)';
+                                  e.target.style.borderColor = fileVersion === 'manual' ? 'var(--primary-color, #1E2955)' : 'var(--success-color, #10b981)';
+                                  e.target.style.color = fileVersion === 'manual' ? 'var(--primary-color, #1E2955)' : 'var(--success-color, #10b981)';
                                 }
                               }}
                               onMouseLeave={(e) => {
@@ -514,9 +514,9 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
                                 disabled={selectedFileIndex === 0}
                                 style={{
                                   padding: '0.5rem 0.75rem',
-                                  border: selectedFileIndex === 0 ? '1px solid #e2e8f0' : '1px solid #6366f1',
+                                  border: selectedFileIndex === 0 ? '1px solid #e2e8f0' : '1px solid #1E2955',
                                   background: selectedFileIndex === 0 ? '#f8fafc' : 'white',
-                                  color: selectedFileIndex === 0 ? '#94a3b8' : '#6366f1',
+                                  color: selectedFileIndex === 0 ? '#94a3b8' : '#1E2955',
                                   borderRadius: '0.375rem',
                                   cursor: selectedFileIndex === 0 ? 'not-allowed' : 'pointer',
                                   transition: 'all 0.2s ease',
@@ -532,9 +532,9 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
                                 disabled={selectedFileIndex === currentFiles.length - 1}
                                 style={{
                                   padding: '0.5rem 0.75rem',
-                                  border: selectedFileIndex === currentFiles.length - 1 ? '1px solid #e2e8f0' : '1px solid #6366f1',
+                                  border: selectedFileIndex === currentFiles.length - 1 ? '1px solid #e2e8f0' : '1px solid #1E2955',
                                   background: selectedFileIndex === currentFiles.length - 1 ? '#f8fafc' : 'white',
-                                  color: selectedFileIndex === currentFiles.length - 1 ? '#94a3b8' : '#6366f1',
+                                  color: selectedFileIndex === currentFiles.length - 1 ? '#94a3b8' : '#1E2955',
                                   borderRadius: '0.375rem',
                                   cursor: selectedFileIndex === currentFiles.length - 1 ? 'not-allowed' : 'pointer',
                                   transition: 'all 0.2s ease',
@@ -571,7 +571,7 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
                                   border: selectedFileIndex === index ? 'none' : '1px solid #e2e8f0',
                                   background: selectedFileIndex === index 
                                     ? (fileVersion === 'manual' 
-                                        ? 'var(--primary-color, #6366f1)' 
+                                        ? 'var(--primary-color, #1E2955)' 
                                         : 'linear-gradient(135deg, var(--success-color, #10b981), #059669)')
                                     : 'white',
                                   color: selectedFileIndex === index ? 'white' : '#64748b',
@@ -612,7 +612,7 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
                                 fontSize: '1.1rem'
                               }}>
                                 <i className={`fas ${fileVersion === 'manual' ? 'fa-save' : 'fa-paper-plane'} me-2`}
-                                   style={{ color: fileVersion === 'manual' ? 'var(--primary-color, #6366f1)' : 'var(--success-color, #10b981)' }}></i>
+                                   style={{ color: fileVersion === 'manual' ? 'var(--primary-color, #1E2955)' : 'var(--success-color, #10b981)' }}></i>
                                 {currentFiles[selectedFileIndex].filename}
                               </h5>
                               <small className="text-muted">
@@ -620,7 +620,7 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
                                 Última modificación: {new Date(currentFiles[selectedFileIndex].updatedAt).toLocaleString()}
                                 <span className={`ms-3 badge ${fileVersion === 'manual' ? 'bg-primary' : 'bg-success'}`}
                                       style={{
-                                        background: fileVersion === 'manual' ? 'var(--primary-color, #6366f1)' : 'var(--success-color, #10b981)',
+                                        background: fileVersion === 'manual' ? 'var(--primary-color, #1E2955)' : 'var(--success-color, #10b981)',
                                         color: 'white'
                                       }}>
                                   {fileVersion === 'manual' ? 'Guardado Manual' : 'Al Enviar'}
@@ -629,7 +629,7 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
                             </div>
                             <span style={{
                               background: fileVersion === 'manual' 
-                                ? 'var(--primary-color, #6366f1)' 
+                                ? 'var(--primary-color, #1E2955)' 
                                 : 'linear-gradient(135deg, var(--success-color, #10b981), #059669)',
                               color: 'white',
                               padding: '0.25rem 0.75rem',
@@ -1429,7 +1429,7 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
         
         /* Estados de focus y hover mejorados */
         button:focus {
-          outline: 2px solid var(--primary-color, #6366f1);
+          outline: 2px solid var(--primary-color, #1E2955);
           outline-offset: -2px;
         }
         

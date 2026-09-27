@@ -19,7 +19,7 @@
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  background: linear-gradient(90deg, #1E2955, #172147);
   transform: scaleX(0);
   transform-origin: left;
   transition: transform 0.3s ease;
@@ -28,7 +28,7 @@
 .action-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
-  border-color: #6366f1;
+  border-color: #1E2955;
 }
 
 .action-card:hover::before {
@@ -41,7 +41,7 @@
   right: 1rem;
   width: 36px;
   height: 36px;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: linear-gradient(135deg, #1E2955, #172147);
   border-radius: 50%;
   display: flex;
   align-items: center;

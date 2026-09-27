@@ -112,7 +112,7 @@ const Registro = () => {
 }
   };  
   return (
-    <div className="d-flex align-items-center justify-content-center min-vh-100 py-4" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+    <div className="d-flex align-items-center justify-content-center min-vh-100 py-4" style={{ background: 'linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%)' }}>
       <div className="modern-card registro-card" style={{ maxWidth: "800px", width: "100%" }}>
         <div className="row g-0">
           {/* Columna izquierda: Logo y título */}

@@ -55,7 +55,7 @@
 }
 
 .responsive-modal-content.border-confirm {
-  border-top-color: #667eea;
+  border-top-color: var(--primary-color);
 }
 
 .responsive-modal-body {
@@ -147,13 +147,13 @@
 }
 
 .responsive-btn-confirm {
-  background: linear-gradient(45deg, #667eea, #764ba2);
+  background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
   color: white;
 }
 
 .responsive-btn-confirm:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 12px rgba(30, 41, 85, 0.4);
 }
 
 /* Tablet styles */

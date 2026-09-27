@@ -794,7 +794,7 @@ const ProgrammingExamView = () => {
           height: 100vh;
           display: flex;
           flex-direction: column;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
           font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
@@ -808,7 +808,7 @@ const ProgrammingExamView = () => {
         .exam-logo {
           width: 48px;
           height: 48px;
-          background: linear-gradient(45deg, #667eea, #764ba2);
+          background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
           border-radius: 12px;
           display: flex;
           align-items: center;

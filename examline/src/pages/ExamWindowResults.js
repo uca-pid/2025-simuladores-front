@@ -305,7 +305,7 @@ export default function ExamWindowResultsPage() {
       {/* Sección de Intentos y Calificaciones */}
       <div className="modern-card mb-4">
         <div className="modern-card-header" style={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+          background: 'linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%)'
         }}>
           <h3 className="modern-card-title mb-0" style={{ color: 'white' }}>
             <i className="fas fa-user-graduate me-2"></i>

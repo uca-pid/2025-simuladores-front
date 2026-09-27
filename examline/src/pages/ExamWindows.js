@@ -603,7 +603,7 @@ export default function ExamWindowsPage() {
                 {window.sinTiempo ? (
                   <div className="exam-info-item">
                     <i className="fas fa-infinity"></i>
-                    <span><strong>Tipo:</strong> <span style={{ color: '#7c3aed', fontWeight: 'bold' }}>Sin límite de tiempo</span></span>
+                    <span><strong>Tipo:</strong> <span style={{ color: 'var(--primary-color)', fontWeight: 'bold' }}>Sin límite de tiempo</span></span>
                   </div>
                 ) : (
                   <>
@@ -1148,6 +1148,13 @@ export default function ExamWindowsPage() {
                               <i className={`fas ${formData.usaSEB ? 'fa-shield-alt' : 'fa-globe'}`}></i>
                             </div>
                           </div>
+                          {formData.usaSEB && (
+                            <div className="alert alert-warning mt-3 mb-0 py-2 px-3" style={{ fontSize: '0.85rem' }}>
+                              <i className="fas fa-exclamation-triangle me-2"></i>
+                              Los estudiantes necesitarán tener <strong>Safe Exam Browser</strong> instalado en su computadora
+                              para poder rendir este examen: no podrán ingresar desde un navegador normal (Chrome, Firefox, etc.).
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1413,8 +1420,8 @@ export default function ExamWindowsPage() {
                     {/* Toggle para tipo de ventana */}
                     <div className="mb-4">
                       <div className="card" style={{ 
-                        backgroundColor: formData.sinTiempo ? '#f0f4ff' : '#f8f9fa', 
-                        borderColor: formData.sinTiempo ? '#4f46e5' : '#e9ecef',
+                        backgroundColor: formData.sinTiempo ? '#f0f2f8' : '#f8f9fa',
+                        borderColor: formData.sinTiempo ? 'var(--primary-color)' : '#e9ecef',
                         borderWidth: '2px',
                         transition: 'all 0.3s ease'
                       }}>
@@ -1446,8 +1453,8 @@ export default function ExamWindowsPage() {
                                   style={{ 
                                     width: '3rem', 
                                     height: '1.5rem',
-                                    backgroundColor: formData.sinTiempo ? '#4f46e5' : '#6c757d',
-                                    borderColor: formData.sinTiempo ? '#4f46e5' : '#6c757d'
+                                    backgroundColor: formData.sinTiempo ? 'var(--primary-color)' : '#6c757d',
+                                    borderColor: formData.sinTiempo ? 'var(--primary-color)' : '#6c757d'
                                   }}
                                 />
                               </div>

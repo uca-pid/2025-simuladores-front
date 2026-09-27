@@ -29,7 +29,7 @@ const Modal = ({
       case 'warning':
         return <i className={`${iconClass} fa-exclamation-triangle`} style={{...iconStyle, color: 'var(--warning-color)'}}></i>;
       case 'confirm':
-        return <i className={`${iconClass} fa-question-circle`} style={{...iconStyle, color: '#667eea'}}></i>;
+        return <i className={`${iconClass} fa-question-circle`} style={{...iconStyle, color: 'var(--primary-color)'}}></i>;
       default:
         return <i className={`${iconClass} fa-info-circle`} style={{...iconStyle, color: 'var(--info-color)'}}></i>;
     }

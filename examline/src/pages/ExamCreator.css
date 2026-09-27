@@ -1,3 +1,93 @@
+/* ExamCreator Wizard Stepper */
+.exam-wizard-steps {
+  display: flex;
+  width: 100%;
+}
+
+.exam-wizard-step-button {
+  flex: 1;
+  border: none;
+  padding: 0.875rem 0.5rem;
+  background: transparent;
+  border-radius: 0;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #64748b;
+  min-height: 60px;
+  cursor: pointer;
+  text-align: center;
+}
+
+.exam-wizard-step-button:first-child {
+  border-radius: 12px 0 0 12px;
+}
+
+.exam-wizard-step-button:nth-child(2) {
+  border-left: 1px solid rgba(226, 232, 240, 0.5);
+  border-right: 1px solid rgba(226, 232, 240, 0.5);
+}
+
+.exam-wizard-step-button:last-child {
+  border-radius: 0 12px 12px 0;
+}
+
+.exam-wizard-step-button.active {
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  color: white;
+  font-weight: 600;
+}
+
+.exam-wizard-step-button:hover:not(.active) {
+  background: #f8fafc;
+  color: #334155;
+}
+
+.exam-wizard-step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: rgba(100, 116, 139, 0.15);
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+.exam-wizard-step-button.active .exam-wizard-step-number {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.exam-wizard-step-label {
+  white-space: nowrap;
+}
+
+.exam-summary-part-item {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.exam-summary-part-item:last-child {
+  border-bottom: none;
+}
+
+@media (max-width: 576px) {
+  .exam-wizard-step-button {
+    font-size: 0.75rem;
+    gap: 0.3rem;
+    padding: 0.75rem 0.25rem;
+  }
+
+  .exam-wizard-step-label {
+    white-space: normal;
+  }
+}
+
 /* ExamCreator Page Responsive Styles */
 .exam-creator-header {
   display: flex;

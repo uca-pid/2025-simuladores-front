@@ -1,5 +1,5 @@
 // src/pages/ExamCreator.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./ExamCreator.css";
@@ -70,6 +70,14 @@ const ExamCreator = () => {
   const [hasDraft, setHasDraft] = useState(!!draft);
   const [newPartTipo, setNewPartTipo] = useState("multiple_choice");
 
+  // Wizard: los profesores pueden moverse libremente entre los 3 pasos
+  const [currentStep, setCurrentStep] = useState(1);
+  const STEPS = [
+    { id: 1, label: "Datos generales" },
+    { id: 2, label: "Partes del examen" },
+    { id: 3, label: "Revisar y publicar" },
+  ];
+
   // Modales de confirmación de borrado de parte
   const [partToDelete, setPartToDelete] = useState(null);
   const [showDeletePartModal, setShowDeletePartModal] = useState(false);
@@ -113,9 +121,11 @@ const ExamCreator = () => {
     );
   };
 
-  const handlePartChange = (updatedPart) => {
+  // useCallback keeps a stable reference so it doesn't defeat ExamPartBuilder's
+  // memoization (see ExamPartBuilder.js) on unrelated re-renders of this page.
+  const handlePartChange = useCallback((updatedPart) => {
     setPartes(prev => prev.map(p => p.localId === updatedPart.localId ? updatedPart : p));
-  };
+  }, []);
 
   const handleAddPart = () => {
     const part = makeDefaultPart(newPartTipo);
@@ -153,6 +163,28 @@ const ExamCreator = () => {
     });
     setShowDeletePartModal(false);
     setPartToDelete(null);
+  };
+
+  // Cambiar el tipo de una parte ya existente. Preguntas y configuración de
+  // programación no comparten campos, así que el cambio descarta el contenido
+  // actual de la parte; por eso se confirma antes de aplicarlo.
+  const requestChangePartType = (localId, newTipo) => {
+    const part = partes.find(p => p.localId === localId);
+    if (!part || part.tipo === newTipo) return;
+
+    showModal(
+      'warning',
+      'Cambiar tipo de parte',
+      `¿Seguro que deseas cambiar esta parte a "${TIPO_LABEL[newTipo]}"? Se perderá todo el contenido actual de la parte (preguntas o configuración de programación), ya que ambos tipos no comparten los mismos campos.`,
+      () => {
+        setPartes(prev => prev.map(p =>
+          p.localId === localId ? { ...makeDefaultPart(newTipo), localId } : p
+        ));
+        closeModal();
+      },
+      true,
+      'Cambiar tipo'
+    );
   };
 
   const proceedWithPublishing = async () => {
@@ -308,180 +340,298 @@ const ExamCreator = () => {
         </div>
       </div>
 
-      {/* Información del examen */}
+      {/* Stepper del wizard: navegación libre entre pasos */}
       <div className="modern-card mb-4">
-        <div className="modern-card-header">
-          <h3 className="modern-card-title">
-            <i className="fas fa-edit me-2"></i>
-            Información del Examen
-          </h3>
-        </div>
-        <div className="modern-card-body">
-          <div className="mb-3">
-            <label className="form-label d-flex align-items-center gap-2">
-              <i className="fas fa-heading text-muted"></i>
-              Título del Examen
-            </label>
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Ingresa el título del examen"
-              value={titulo}
-              onChange={(e) => setTitulo(e.target.value)}
-              disabled={isPublishing}
-              style={{
-                padding: '0.75rem 1rem',
-                border: '1px solid var(--border-color)',
-                borderRadius: '8px',
-                fontSize: '1rem'
-              }}
-            />
-          </div>
-
-          {hasMultipleChoicePart && (
-            <div className="mb-0">
-              <label className="form-label d-flex align-items-center gap-2">
-                <i className="fas fa-random text-muted"></i>
-                Orden Aleatorio de Preguntas
-              </label>
-              <div className="form-check form-switch mt-2">
-                <input
-                  className="form-check-input"
-                  type="checkbox"
-                  id="ordenAleatorioSwitch"
-                  checked={ordenAleatorio}
-                  onChange={(e) => setOrdenAleatorio(e.target.checked)}
-                />
-                <label className="form-check-label" htmlFor="ordenAleatorioSwitch">
-                  {ordenAleatorio ? "Las preguntas aparecerán en orden aleatorio para cada estudiante" : "Las preguntas aparecerán en el orden definido"}
-                </label>
-              </div>
-              <small className="form-text text-muted">
-                {ordenAleatorio
-                  ? "✓ Cada estudiante verá las preguntas en un orden diferente"
-                  : "Las preguntas siempre aparecerán en el mismo orden"}
-              </small>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Partes del examen */}
-      <div className="modern-card mb-4">
-        <div className="modern-card-header">
-          <h3 className="modern-card-title">
-            <i className="fas fa-layer-group me-2"></i>
-            Partes del Examen
-          </h3>
-        </div>
-        <div className="modern-card-body">
-          <div className="d-flex flex-wrap gap-2 mb-3">
-            {partes.map((p, idx) => (
-              <div
-                key={p.localId}
-                className="d-flex align-items-center gap-1"
-                style={{
-                  border: `2px solid ${selectedPartId === p.localId ? 'var(--primary-color)' : 'var(--border-color)'}`,
-                  borderRadius: '8px',
-                  padding: '0.4rem 0.6rem',
-                  backgroundColor: selectedPartId === p.localId ? 'rgba(124, 58, 237, 0.08)' : 'transparent',
-                  cursor: 'pointer'
-                }}
+        <div className="modern-card-body p-0">
+          <div className="exam-wizard-steps">
+            {STEPS.map((step) => (
+              <button
+                key={step.id}
+                type="button"
+                className={`exam-wizard-step-button ${currentStep === step.id ? 'active' : ''}`}
+                onClick={() => setCurrentStep(step.id)}
               >
-                <span onClick={() => setSelectedPartId(p.localId)} style={{ fontWeight: selectedPartId === p.localId ? 'bold' : 'normal' }}>
-                  <i className={`fas ${p.tipo === 'multiple_choice' ? 'fa-question-circle' : 'fa-code'} me-2`}></i>
-                  Parte {idx + 1}: {TIPO_LABEL[p.tipo]}
-                </span>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-link p-1"
-                  disabled={idx === 0 || isPublishing}
-                  onClick={() => handleMovePart(p.localId, -1)}
-                  title="Mover arriba"
-                >
-                  <i className="fas fa-arrow-up"></i>
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-link p-1"
-                  disabled={idx === partes.length - 1 || isPublishing}
-                  onClick={() => handleMovePart(p.localId, 1)}
-                  title="Mover abajo"
-                >
-                  <i className="fas fa-arrow-down"></i>
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-link text-danger p-1"
-                  disabled={isPublishing}
-                  onClick={() => requestDeletePart(p.localId)}
-                  title="Eliminar parte"
-                >
-                  <i className="fas fa-trash"></i>
-                </button>
-              </div>
+                <span className="exam-wizard-step-number">{step.id}</span>
+                <span className="exam-wizard-step-label">{step.label}</span>
+              </button>
             ))}
           </div>
+        </div>
+      </div>
 
-          <div className="d-flex gap-2 align-items-center">
-            <select
-              className="form-select"
-              value={newPartTipo}
-              onChange={(e) => setNewPartTipo(e.target.value)}
-              disabled={isPublishing}
-              style={{ maxWidth: '250px' }}
-            >
-              <option value="multiple_choice">Preguntas</option>
-              <option value="programming">Programación</option>
-            </select>
+      {/* Paso 1: Datos generales */}
+      {currentStep === 1 && (
+        <div className="modern-card mb-4">
+          <div className="modern-card-header">
+            <h3 className="modern-card-title">
+              <i className="fas fa-edit me-2"></i>
+              Información del Examen
+            </h3>
+          </div>
+          <div className="modern-card-body">
+            <div className="mb-3">
+              <label className="form-label d-flex align-items-center gap-2">
+                <i className="fas fa-heading text-muted"></i>
+                Título del Examen
+              </label>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Ingresa el título del examen"
+                value={titulo}
+                onChange={(e) => setTitulo(e.target.value)}
+                disabled={isPublishing}
+                style={{
+                  padding: '0.75rem 1rem',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '8px',
+                  fontSize: '1rem'
+                }}
+              />
+            </div>
+
+            {hasMultipleChoicePart && (
+              <div className="mb-0">
+                <label className="form-label d-flex align-items-center gap-2">
+                  <i className="fas fa-random text-muted"></i>
+                  Orden Aleatorio de Preguntas
+                </label>
+                <div className="form-check form-switch mt-2">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    id="ordenAleatorioSwitch"
+                    checked={ordenAleatorio}
+                    onChange={(e) => setOrdenAleatorio(e.target.checked)}
+                  />
+                  <label className="form-check-label" htmlFor="ordenAleatorioSwitch">
+                    {ordenAleatorio ? "Las preguntas aparecerán en orden aleatorio para cada estudiante" : "Las preguntas aparecerán en el orden definido"}
+                  </label>
+                </div>
+                <small className="form-text text-muted">
+                  {ordenAleatorio
+                    ? "✓ Cada estudiante verá las preguntas en un orden diferente"
+                    : "Las preguntas siempre aparecerán en el mismo orden"}
+                </small>
+              </div>
+            )}
+          </div>
+          <div className="modern-card-body pt-0 d-flex justify-content-end">
             <button
               type="button"
-              className="modern-btn modern-btn-secondary"
-              onClick={handleAddPart}
-              disabled={isPublishing}
+              className="modern-btn modern-btn-primary"
+              onClick={() => setCurrentStep(2)}
             >
-              <i className="fas fa-plus me-2"></i>
-              Agregar Parte
+              Siguiente: Partes del examen
+              <i className="fas fa-arrow-right ms-2"></i>
             </button>
           </div>
         </div>
-      </div>
-
-      {selectedPart && (
-        <ExamPartBuilder
-          key={selectedPart.localId}
-          part={selectedPart}
-          onChange={handlePartChange}
-          isPublishing={isPublishing}
-          showModal={showModal}
-          partLabel={`Parte ${partes.findIndex(p => p.localId === selectedPart.localId) + 1}`}
-        />
       )}
 
-      {/* Botón de publicar examen - al final */}
-      <div className="modern-card mt-5">
-        <div className="modern-card-body">
-          <div className="text-center">
-            <button
-              className="modern-btn modern-btn-primary"
-              onClick={handlePublicarExamen}
-              disabled={isPublishing}
-            >
-              {isPublishing ? (
-                <>
-                  <div className="spinner-border spinner-border-sm me-2" role="status"></div>
-                  <span className="button-text">Publicando...</span>
-                </>
-              ) : (
-                <>
-                  <i className="fas fa-paper-plane me-2"></i>
-                  <span className="button-text">Publicar Examen</span>
-                </>
-              )}
-            </button>
+      {/* Paso 2: Partes del examen */}
+      {currentStep === 2 && (
+        <>
+          <div className="modern-card mb-4">
+            <div className="modern-card-header">
+              <h3 className="modern-card-title">
+                <i className="fas fa-layer-group me-2"></i>
+                Partes del Examen
+              </h3>
+            </div>
+            <div className="modern-card-body">
+              <div className="d-flex flex-wrap gap-2 mb-3">
+                {partes.map((p, idx) => (
+                  <div
+                    key={p.localId}
+                    className="d-flex align-items-center gap-1"
+                    style={{
+                      border: `2px solid ${selectedPartId === p.localId ? 'var(--primary-color)' : 'var(--border-color)'}`,
+                      borderRadius: '8px',
+                      padding: '0.4rem 0.6rem',
+                      backgroundColor: selectedPartId === p.localId ? 'rgba(124, 58, 237, 0.08)' : 'transparent',
+                    }}
+                  >
+                    <span
+                      onClick={() => setSelectedPartId(p.localId)}
+                      style={{ fontWeight: selectedPartId === p.localId ? 'bold' : 'normal', cursor: 'pointer' }}
+                    >
+                      <i className={`fas ${p.tipo === 'multiple_choice' ? 'fa-question-circle' : 'fa-code'} me-2`}></i>
+                      Parte {idx + 1}
+                    </span>
+                    <select
+                      className="form-select form-select-sm"
+                      value={p.tipo}
+                      disabled={isPublishing}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e) => requestChangePartType(p.localId, e.target.value)}
+                      title="Cambiar el tipo de esta parte"
+                      style={{ width: 'auto', padding: '0.15rem 1.5rem 0.15rem 0.4rem', fontSize: '0.85rem' }}
+                    >
+                      <option value="multiple_choice">Preguntas</option>
+                      <option value="programming">Programación</option>
+                    </select>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-link p-1"
+                      disabled={idx === 0 || isPublishing}
+                      onClick={() => handleMovePart(p.localId, -1)}
+                      title="Mover arriba"
+                    >
+                      <i className="fas fa-arrow-up"></i>
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-link p-1"
+                      disabled={idx === partes.length - 1 || isPublishing}
+                      onClick={() => handleMovePart(p.localId, 1)}
+                      title="Mover abajo"
+                    >
+                      <i className="fas fa-arrow-down"></i>
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-link text-danger p-1"
+                      disabled={isPublishing}
+                      onClick={() => requestDeletePart(p.localId)}
+                      title="Eliminar parte"
+                    >
+                      <i className="fas fa-trash"></i>
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <label className="form-label d-flex align-items-center gap-2 mb-1">
+                <i className="fas fa-plus-circle text-muted"></i>
+                Tipo de la nueva parte a agregar:
+              </label>
+              <div className="d-flex gap-2 align-items-center">
+                <select
+                  className="form-select"
+                  value={newPartTipo}
+                  onChange={(e) => setNewPartTipo(e.target.value)}
+                  disabled={isPublishing}
+                  style={{ maxWidth: '250px' }}
+                >
+                  <option value="multiple_choice">Preguntas</option>
+                  <option value="programming">Programación</option>
+                </select>
+                <button
+                  type="button"
+                  className="modern-btn modern-btn-secondary"
+                  onClick={handleAddPart}
+                  disabled={isPublishing}
+                >
+                  <i className="fas fa-plus me-2"></i>
+                  Agregar Parte
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+
+          {selectedPart && (
+            <ExamPartBuilder
+              key={selectedPart.localId}
+              part={selectedPart}
+              onChange={handlePartChange}
+              isPublishing={isPublishing}
+              showModal={showModal}
+              partLabel={`Parte ${partes.findIndex(p => p.localId === selectedPart.localId) + 1}`}
+            />
+          )}
+
+          <div className="modern-card mt-4">
+            <div className="modern-card-body d-flex justify-content-between">
+              <button
+                type="button"
+                className="modern-btn modern-btn-secondary"
+                onClick={() => setCurrentStep(1)}
+              >
+                <i className="fas fa-arrow-left me-2"></i>
+                Atrás: Datos generales
+              </button>
+              <button
+                type="button"
+                className="modern-btn modern-btn-primary"
+                onClick={() => setCurrentStep(3)}
+              >
+                Siguiente: Revisar y publicar
+                <i className="fas fa-arrow-right ms-2"></i>
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Paso 3: Revisar y publicar */}
+      {currentStep === 3 && (
+        <>
+          <div className="modern-card mb-4">
+            <div className="modern-card-header">
+              <h3 className="modern-card-title">
+                <i className="fas fa-clipboard-check me-2"></i>
+                Resumen del Examen
+              </h3>
+            </div>
+            <div className="modern-card-body">
+              <div className="mb-3">
+                <strong>Título:</strong> {titulo || <span className="text-muted fst-italic">Sin título</span>}
+              </div>
+              <div className="mb-3">
+                <strong>Orden aleatorio de preguntas:</strong> {ordenAleatorio ? 'Sí' : 'No'}
+              </div>
+              <div className="mb-2">
+                <strong>Partes ({partes.length}):</strong>
+              </div>
+              <ul className="list-unstyled mb-0">
+                {partes.map((p, idx) => (
+                  <li key={p.localId} className="exam-summary-part-item">
+                    <i className={`fas ${p.tipo === 'multiple_choice' ? 'fa-question-circle' : 'fa-code'} me-2`}></i>
+                    <strong>Parte {idx + 1}:</strong> {TIPO_LABEL[p.tipo]}
+                    {p.tipo === 'multiple_choice' ? (
+                      <span className="ms-2 text-muted">— {p.preguntas.length} pregunta{p.preguntas.length !== 1 ? 's' : ''}</span>
+                    ) : (
+                      <span className="ms-2 text-muted">— {p.testCases.length} test case{p.testCases.length !== 1 ? 's' : ''} ({p.lenguajeProgramacion})</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          <div className="modern-card mb-4">
+            <div className="modern-card-body d-flex justify-content-between align-items-center flex-wrap gap-3">
+              <button
+                type="button"
+                className="modern-btn modern-btn-secondary"
+                onClick={() => setCurrentStep(2)}
+                disabled={isPublishing}
+              >
+                <i className="fas fa-arrow-left me-2"></i>
+                Atrás: Partes del examen
+              </button>
+              <button
+                className="modern-btn modern-btn-primary"
+                onClick={handlePublicarExamen}
+                disabled={isPublishing}
+              >
+                {isPublishing ? (
+                  <>
+                    <div className="spinner-border spinner-border-sm me-2" role="status"></div>
+                    <span className="button-text">Publicando...</span>
+                  </>
+                ) : (
+                  <>
+                    <i className="fas fa-paper-plane me-2"></i>
+                    <span className="button-text">Publicar Examen</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Modal Component */}
       <Modal
@@ -492,7 +642,7 @@ const ExamCreator = () => {
         message={modal.message}
         type={modal.type}
         showCancel={modal.showCancel}
-        confirmText={(modal.type === 'warning') ? 'Confirmar' : 'Entendido'}
+        confirmText={modal.confirmText || ((modal.type === 'warning') ? 'Confirmar' : 'Entendido')}
         cancelText="Cancelar"
       />
 

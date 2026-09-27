@@ -2,8 +2,8 @@
 
 /* Variables CSS para colores consistentes */
 :root {
-  --primary-color: #6366f1;
-  --secondary-color: #8b5cf6;
+  --primary-color: #1E2955;
+  --secondary-color: #172147;
   --success-color: #10b981;
   --warning-color: #f59e0b;
   --danger-color: #ef4444;
@@ -26,7 +26,7 @@
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background-color: #e2e8f0;
   color: var(--text-color-2);
   line-height: 1.6;
@@ -616,7 +616,7 @@ body {
 
 .modern-btn:focus {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+  box-shadow: 0 0 0 3px rgba(30, 41, 85, 0.2);
 }
 
 .modern-btn-primary {
@@ -626,7 +626,7 @@ body {
 
 .modern-btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 4px 12px rgba(30, 41, 85, 0.3);
 }
 
 .modern-btn-secondary {

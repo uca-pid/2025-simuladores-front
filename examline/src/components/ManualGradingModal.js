@@ -699,7 +699,7 @@ export default function ManualGradingModal({ attemptId, onClose, onSave }) {
                               display: 'flex',
                               alignItems: 'center'
                             }}>
-                              <i className="fas fa-list-check me-2" style={{ color: '#6366f1' }}></i>
+                              <i className="fas fa-list-check me-2" style={{ color: '#1E2955' }}></i>
                               Resultados por Test:
                             </h6>
                             <div style={{ display: 'grid', gap: '12px' }}>
@@ -894,7 +894,7 @@ export default function ManualGradingModal({ attemptId, onClose, onSave }) {
                               display: 'flex',
                               alignItems: 'center'
                             }}>
-                              <i className="fas fa-terminal me-2" style={{ color: '#6366f1' }}></i>
+                              <i className="fas fa-terminal me-2" style={{ color: '#1E2955' }}></i>
                               Salida del Programa:
                             </h6>
                             <div style={{

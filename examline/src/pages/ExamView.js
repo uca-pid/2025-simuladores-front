@@ -251,8 +251,8 @@ const ExamView = ({ examId: propExamId, onBack }) => {
                     key={index}
                     className="card mb-3"
                     style={{
-                      border: '1px solid #6366f1',
-                      borderLeft: '4px solid #6366f1'
+                      border: '1px solid #1E2955',
+                      borderLeft: '4px solid #1E2955'
                     }}
                   >
                     <div
@@ -262,7 +262,7 @@ const ExamView = ({ examId: propExamId, onBack }) => {
                       }}
                     >
                       <div className="d-flex align-items-center gap-2">
-                        <span style={{ fontSize: '1.5rem', color: '#6366f1' }}>
+                        <span style={{ fontSize: '1.5rem', color: '#1E2955' }}>
                           🧪
                         </span>
                         <strong>{test.description || `Test Case ${index + 1}`}</strong>

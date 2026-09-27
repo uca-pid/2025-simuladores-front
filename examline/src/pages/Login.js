@@ -65,7 +65,7 @@ const Login = () => {
       <div
         className="d-flex align-items-center justify-content-center min-vh-100"
         style={{
-          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+          background: "linear-gradient(135deg, #1E2955 0%, #172147 50%, #020617 100%)",
         }}
       >
         <div
@@ -98,12 +98,40 @@ const Login = () => {
     <div
       className="d-flex align-items-center justify-content-center min-vh-100 py-3"
       style={{
-        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        background: "linear-gradient(135deg, #1E2955 0%, #172147 50%, #020617 100%)",
+        position: "relative",
+        overflow: "hidden",
       }}
     >
       <div
+        style={{
+          position: "absolute",
+          top: "-120px",
+          left: "-120px",
+          width: "360px",
+          height: "360px",
+          borderRadius: "50%",
+          filter: "blur(80px)",
+          background: "rgba(59,130,246,0.15)",
+          pointerEvents: "none",
+        }}
+      ></div>
+      <div
+        style={{
+          position: "absolute",
+          bottom: "-140px",
+          right: "-140px",
+          width: "400px",
+          height: "400px",
+          borderRadius: "50%",
+          filter: "blur(80px)",
+          background: "rgba(245,158,11,0.1)",
+          pointerEvents: "none",
+        }}
+      ></div>
+      <div
         className="modern-card login-card"
-        style={{ maxWidth: "420px", width: "100%" }}
+        style={{ maxWidth: "420px", width: "100%", position: "relative", zIndex: 1 }}
       >
         <div className="modern-card-body p-5 text-center">
           <div className="mb-4">

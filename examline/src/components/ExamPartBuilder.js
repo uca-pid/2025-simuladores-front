@@ -1,5 +1,5 @@
 // src/components/ExamPartBuilder.jsx
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, memo } from "react";
 import Editor from '@monaco-editor/react';
 import QuestionCreator from "./QuestionCreator";
 import QuestionBankSelector from "./QuestionBankSelector";
@@ -8,7 +8,7 @@ import { testSolutionPreview, uploadEnunciado, uploadDataset } from "../services
 // `part` / `onChange` lift this part's whole local state up into ExamCreator's
 // `partes` array, so every setter below reads `part.<field>` and calls
 // `onChange({ ...part, <field>: value })` instead of owning local state.
-const ExamPartBuilder = ({ part, onChange, isPublishing, showModal, partLabel }) => {
+const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, partLabel }) => {
   const [showBankSelector, setShowBankSelector] = useState(false);
   const [showNewReferenceFileModal, setShowNewReferenceFileModal] = useState(false);
   const [newReferenceFileName, setNewReferenceFileName] = useState('');
@@ -1239,5 +1239,10 @@ const ExamPartBuilder = ({ part, onChange, isPublishing, showModal, partLabel })
     </>
   );
 };
+
+// Memoized so a sibling modal's state (e.g. ExamCreator's delete-part confirm)
+// doesn't force this component (with its heavy Monaco editors) to re-render,
+// which is what made the confirm modal feel slow to appear.
+const ExamPartBuilder = memo(ExamPartBuilderComponent);
 
 export default ExamPartBuilder;
