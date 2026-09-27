@@ -4,6 +4,8 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import "./ExamView.css";
 import Editor from '@monaco-editor/react';
 import BackToMainButton from "../components/BackToMainButton";
+import EnunciadoArchivoViewer from "../components/EnunciadoArchivoViewer";
+import CsvDatasetViewer from "../components/CsvDatasetViewer";
 import { useAuth } from "../contexts/AuthContext";
 import { getExamById, getReferenceFiles } from "../services/api";
 
@@ -28,9 +30,10 @@ const ExamView = ({ examId: propExamId, onBack }) => {
         const data = await getExamById(examId);
         setExam(data);
         setError(null);
-        
-        // Si el usuario es el profesor del examen y es de programación, cargar archivos de referencia
-        if (data && data.tipo === 'programming' && user && data.profesorId === user.userId) {
+
+        // Si el usuario es el profesor del examen y tiene alguna parte de programación, cargar archivos de referencia
+        const tieneParteProgramacion = data?.partes?.some(p => p.tipo === 'programming');
+        if (data && tieneParteProgramacion && user && data.profesorId === user.userId) {
           try {
             setLoadingReferenceFiles(true);
             const files = await getReferenceFiles(examId);
@@ -131,53 +134,56 @@ const ExamView = ({ examId: propExamId, onBack }) => {
             <div className="col-md-6 mb-3">
               <div className="exam-info-item">
                 <i className="fas fa-tag text-primary me-2"></i>
-                <strong>Tipo:</strong> 
-                <span className={`ms-2 badge ${exam.tipo === 'programming' ? 'bg-primary' : 'bg-secondary'}`}>
-                  {exam.tipo === 'programming' ? 'Programación' : 'Múltiple Choice'}
+                <strong>Tipo:</strong>
+                <span className="ms-2 badge bg-primary">
+                  {exam.partes?.length > 1 ? `Multiparte (${exam.partes.length})` : 'Parte única'}
                 </span>
               </div>
             </div>
-            {exam.tipo !== 'programming' && (
-              <div className="col-md-6 mb-3">
-                <div className="exam-info-item">
-                  <i className="fas fa-random text-info me-2"></i>
-                  <strong>Orden de preguntas:</strong> 
-                  <span className={`ms-2 badge ${exam.ordenAleatorio ? 'bg-info' : 'bg-secondary'}`}>
-                    {exam.ordenAleatorio ? 'Aleatorio' : 'Fijo'}
-                  </span>
-                </div>
+            <div className="col-md-6 mb-3">
+              <div className="exam-info-item">
+                <i className="fas fa-random text-info me-2"></i>
+                <strong>Orden de preguntas:</strong>
+                <span className={`ms-2 badge ${exam.ordenAleatorio ? 'bg-info' : 'bg-secondary'}`}>
+                  {exam.ordenAleatorio ? 'Aleatorio' : 'Fijo'}
+                </span>
               </div>
-            )}
-            {exam.tipo === 'programming' && (
-              <>
-                <div className="col-md-6 mb-3">
-                  <div className="exam-info-item">
-                    <i className="fas fa-code text-success me-2"></i>
-                    <strong>Lenguaje:</strong> 
-                    <span className="ms-2 badge bg-success">
-                      {exam.lenguajeProgramacion === 'python' ? 'Python' : 'JavaScript'}
-                    </span>
-                  </div>
-                </div>
-                <div className="col-md-6 mb-3">
-                  <div className="exam-info-item">
-                    <i className="fas fa-lightbulb text-warning me-2"></i>
-                    <strong>Intellisense:</strong> 
-                    <span className={`ms-2 badge ${exam.intellisenseHabilitado ? 'bg-warning text-dark' : 'bg-secondary'}`}>
-                      {exam.intellisenseHabilitado ? 'Habilitado' : 'Deshabilitado'}
-                    </span>
-                  </div>
-                </div>
-              </>
-            )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Contenido del examen según el tipo */}
-      {exam.tipo === 'programming' ? (
-        /* Vista para exámenes de programación */
+      {/* Contenido del examen: una sección por cada parte */}
+      {(exam.partes || []).map((parte, parteIndex) => (
+      <div key={parte.id || parteIndex} className="mb-4">
+        {exam.partes.length > 1 && (
+          <h4 className="mb-3" style={{ color: 'var(--primary-color)' }}>
+            Parte {parteIndex + 1}: {parte.tipo === 'programming' ? 'Programación' : 'Opción Múltiple'}
+          </h4>
+        )}
+        {parte.tipo === 'programming' ? (
+        /* Vista para partes de programación */
         <div>
+          <div className="row mb-3">
+            <div className="col-md-6 mb-3">
+              <div className="exam-info-item">
+                <i className="fas fa-code text-success me-2"></i>
+                <strong>Lenguaje:</strong>
+                <span className="ms-2 badge bg-success">
+                  {parte.lenguajeProgramacion === 'python' ? 'Python' : 'JavaScript'}
+                </span>
+              </div>
+            </div>
+            <div className="col-md-6 mb-3">
+              <div className="exam-info-item">
+                <i className="fas fa-lightbulb text-warning me-2"></i>
+                <strong>Intellisense:</strong>
+                <span className={`ms-2 badge ${parte.intellisenseHabilitado ? 'bg-warning text-dark' : 'bg-secondary'}`}>
+                  {parte.intellisenseHabilitado ? 'Habilitado' : 'Deshabilitado'}
+                </span>
+              </div>
+            </div>
+          </div>
           {/* Enunciado del problema */}
           <div className="modern-card mb-4">
             <div className="modern-card-header">
@@ -187,26 +193,49 @@ const ExamView = ({ examId: propExamId, onBack }) => {
               </h3>
             </div>
             <div className="modern-card-body">
-              <div className="programming-statement">
-                <pre style={{
-                  whiteSpace: 'pre-wrap',
-                  fontFamily: 'system-ui, -apple-system, sans-serif',
-                  fontSize: '1rem',
-                  lineHeight: '1.6',
-                  margin: 0,
-                  padding: '1rem',
-                  backgroundColor: '#f8f9fa',
-                  borderRadius: '0.5rem',
-                  border: '1px solid #dee2e6'
-                }}>
-                  {exam.enunciadoProgramacion || 'No hay enunciado definido'}
-                </pre>
-              </div>
+              {parte.enunciadoTipo === 'archivo' && parte.enunciadoUrl ? (
+                <EnunciadoArchivoViewer url={parte.enunciadoUrl} nombre={parte.enunciadoArchivoNombre} />
+              ) : (
+                <div className="programming-statement">
+                  <pre style={{
+                    whiteSpace: 'pre-wrap',
+                    fontFamily: 'system-ui, -apple-system, sans-serif',
+                    fontSize: '1rem',
+                    lineHeight: '1.6',
+                    margin: 0,
+                    padding: '1rem',
+                    backgroundColor: '#f8f9fa',
+                    borderRadius: '0.5rem',
+                    border: '1px solid #dee2e6'
+                  }}>
+                    {parte.enunciadoProgramacion || 'No hay enunciado definido'}
+                  </pre>
+                </div>
+              )}
             </div>
           </div>
 
+          {/* Datasets CSV/TXT */}
+          {Array.isArray(parte.datasetFiles) && parte.datasetFiles.length > 0 && (
+            <div className="modern-card mb-4">
+              <div className="modern-card-header">
+                <h3 className="modern-card-title">
+                  <i className="fas fa-table me-2"></i>
+                  Datasets ({parte.datasetFiles.length})
+                </h3>
+              </div>
+              <div className="modern-card-body">
+                {parte.datasetFiles.map((f) => (
+                  <div key={f.nombre} className="mb-3">
+                    <CsvDatasetViewer url={f.url} nombre={f.nombre} standalone />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Código inicial */}
-          {exam.codigoInicial && (
+          {parte.codigoInicial && (
             <div className="modern-card mb-4">
               <div className="modern-card-header">
                 <h3 className="modern-card-title">
@@ -229,7 +258,7 @@ const ExamView = ({ examId: propExamId, onBack }) => {
                     border: '1px solid #333',
                     overflow: 'auto'
                   }}>
-                    {exam.codigoInicial}
+                    {parte.codigoInicial}
                   </pre>
                 </div>
               </div>
@@ -237,7 +266,7 @@ const ExamView = ({ examId: propExamId, onBack }) => {
           )}
 
           {/* Test Cases estilo ExamResults (sin distinción público/privado) */}
-          {exam.testCases && exam.testCases.length > 0 && (
+          {parte.testCases && parte.testCases.length > 0 && (
             <div className="modern-card mb-4">
               <div className="modern-card-header">
                 <h3 className="modern-card-title">
@@ -246,7 +275,7 @@ const ExamView = ({ examId: propExamId, onBack }) => {
                 </h3>
               </div>
               <div className="modern-card-body">
-                {exam.testCases.map((test, index) => (
+                {parte.testCases.map((test, index) => (
                   <div
                     key={index}
                     className="card mb-3"
@@ -258,7 +287,7 @@ const ExamView = ({ examId: propExamId, onBack }) => {
                     <div
                       className="card-header d-flex justify-content-between align-items-center"
                       style={{
-                        backgroundColor: 'rgba(99, 102, 241, 0.08)'
+                        backgroundColor: 'rgba(30, 41, 85, 0.08)'
                       }}
                     >
                       <div className="d-flex align-items-center gap-2">
@@ -315,18 +344,39 @@ const ExamView = ({ examId: propExamId, onBack }) => {
               </div>
             </div>
           )}
+
+          {/* Solución de referencia guardada para esta parte (single-file, wizard) */}
+          {parte.solucionReferencia && user && exam.profesorId === user.userId && (
+            <div className="modern-card mb-4">
+              <div className="modern-card-header">
+                <h3 className="modern-card-title">
+                  <i className="fas fa-star me-2" style={{ color: '#ffd700' }}></i>
+                  Solución de Referencia de esta Parte
+                </h3>
+              </div>
+              <div className="modern-card-body">
+                <Editor
+                  height="300px"
+                  language={parte.lenguajeProgramacion}
+                  value={parte.solucionReferencia}
+                  theme="vs-dark"
+                  options={{ readOnly: true, automaticLayout: true, fontSize: 14, lineNumbers: 'on', wordWrap: 'on' }}
+                />
+              </div>
+            </div>
+          )}
         </div>
       ) : (
-        /* Vista para exámenes de múltiple choice */
+        /* Vista para partes de múltiple choice */
         <div className="modern-card">
           <div className="modern-card-header">
             <h3 className="modern-card-title">
               <i className="fas fa-question-circle me-2"></i>
-              Preguntas del Examen ({exam.preguntas?.length || 0})
+              Preguntas de la Parte ({parte.preguntas?.length || 0})
             </h3>
           </div>
           <div className="modern-card-body">
-            {!exam.preguntas || exam.preguntas.length === 0 ? (
+            {!parte.preguntas || parte.preguntas.length === 0 ? (
               <div className="empty-state">
                 <div className="empty-icon">
                   <i className="fas fa-question-circle"></i>
@@ -338,7 +388,7 @@ const ExamView = ({ examId: propExamId, onBack }) => {
               </div>
             ) : (
               <div className="exam-questions-grid">
-                {exam.preguntas.map((p, i) => (
+                {parte.preguntas.map((p, i) => (
                   <div key={i} className="exam-question-card-wrapper">
                     <div className="exam-card fade-in-up" style={{animationDelay: `${i * 0.1}s`}}>
                       <div className="exam-card-header">
@@ -369,6 +419,15 @@ const ExamView = ({ examId: propExamId, onBack }) => {
                         <div className="question-text">
                           <strong>{p.texto || "Sin texto"}</strong>
                         </div>
+                        {p.imagenUrl && (
+                          <div className="mb-3">
+                            <img
+                              src={p.imagenUrl}
+                              alt={`Imagen de la pregunta ${i + 1}`}
+                              style={{ maxWidth: '100%', maxHeight: '300px', borderRadius: '0.5rem', border: '1px solid #dee2e6' }}
+                            />
+                          </div>
+                        )}
                         <div className="exam-info">
                           {p.tipo === 'matching' ? (
                             p.opciones?.slice(0, p.correcta).map((concepto, j) => {
@@ -445,9 +504,11 @@ const ExamView = ({ examId: propExamId, onBack }) => {
           </div>
         </div>
       )}
+      </div>
+      ))}
 
       {/* Solución de Referencia - Solo visible para el profesor */}
-      {exam.tipo === 'programming' && user && exam.profesorId === user.userId && (
+      {exam.partes?.some(p => p.tipo === 'programming') && user && exam.profesorId === user.userId && (
         <div className="modern-card mt-4">
           <div className="modern-card-header">
             <h3 className="modern-card-title">
@@ -532,7 +593,7 @@ const ExamView = ({ examId: propExamId, onBack }) => {
                   {/* Editor Monaco (read-only) */}
                   <Editor
                     height="400px"
-                    language={exam.lenguajeProgramacion}
+                    language={exam.partes?.find(p => p.tipo === 'programming')?.lenguajeProgramacion}
                     value={referenceFiles.find(f => f.filename === currentReferenceFile)?.content || ''}
                     theme="vs-dark"
                     options={{
