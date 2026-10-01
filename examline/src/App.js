@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, useSearchParams } from "react-router-dom";
 import { AuthProvider , useAuth } from "./contexts/AuthContext";
 import { ProfessorRoute, StudentRoute, AuthenticatedRoute } from "./components/ProtectedRoute";
 import ScrollToTop from "./components/ScrollToTop";
@@ -15,6 +15,7 @@ import ExamAttempt from "./pages/ExamAttempt";
 import ExamResults from "./pages/ExamResults";
 import ProgrammingExamView from "./pages/ProgrammingExamView";
 import ExamWindows from "./pages/ExamWindows";
+import ExamPreview from "./pages/ExamPreview";
 import StudentInscriptions from "./pages/StudentInscriptions";
 import ExamWindowResults from "./pages/ExamWindowResults";
 import SEBExamLauncher from "./pages/SEBExamLauncher";
@@ -26,9 +27,22 @@ import "./styles/base.css";
 // Wrapper para login/registro: redirige si ya está logueado
 function AuthRedirect({ children }) {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const previewExamId = searchParams.get("previewExamId");
+  const previewPath = /^\d+$/.test(previewExamId || "")
+    ? `/exam-preview/${previewExamId}`
+    : null;
 
   if (user) {
-    return user.rol === "professor" ? <Navigate to="/principal" /> : <Navigate to="/student-exam" />;
+    if (previewPath) {
+      return user.rol === "professor" || user.rol === "system"
+        ? <Navigate to={previewPath} replace />
+        : children;
+    }
+
+    return user.rol === "professor"
+      ? <Navigate to={previewPath || "/principal"} replace />
+      : <Navigate to="/student-exam" replace />;
   }
 
   return children;
@@ -101,6 +115,9 @@ function App() {
             <ProfessorRoute>
               <ExamWindows />
             </ProfessorRoute>
+          } />
+          <Route path="/exam-preview/:examId" element={
+            <ExamPreview />
           } />
           <Route path="/question-bank" element={
             <ProfessorRoute>

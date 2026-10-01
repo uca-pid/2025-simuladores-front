@@ -1,0 +1,133 @@
+.exam-preview-page {
+  min-height: 100vh;
+  padding: 24px clamp(16px, 4vw, 56px) 48px;
+  background: #f4f6f8;
+  color: #202a33;
+}
+
+.exam-preview-notice {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 16px;
+  border: 1px solid #a8d5c2;
+  border-radius: 6px;
+  background: #eaf6f0;
+  color: #17543c;
+  font-size: 0.9rem;
+}
+
+.exam-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 28px 0 22px;
+  border-bottom: 1px solid #d7dde2;
+}
+
+.exam-preview-header h1 {
+  margin: 0 0 6px;
+  font-size: 1.8rem;
+  font-weight: 650;
+}
+
+.exam-preview-header p {
+  margin: 0;
+  color: #5c6975;
+}
+
+.exam-preview-questions,
+.exam-preview-programming {
+  display: grid;
+  gap: 18px;
+  max-width: 980px;
+  margin: 24px auto 0;
+}
+
+.preview-question,
+.preview-panel {
+  padding: 22px;
+  border: 1px solid #d7dde2;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.preview-question-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  color: #4c5b67;
+  font-size: 0.85rem;
+}
+
+.preview-question-heading span:last-child {
+  color: #176b69;
+}
+
+.preview-question h2,
+.preview-panel h2 {
+  margin: 0 0 18px;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.preview-answer-list,
+.preview-matching-list {
+  display: grid;
+  gap: 10px;
+}
+
+.preview-answer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid #d7dde2;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.preview-answer.selected {
+  border-color: #287c75;
+  background: #edf7f4;
+}
+
+.preview-answer input {
+  accent-color: #287c75;
+}
+
+.preview-matching-list label {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) minmax(180px, 1fr);
+  align-items: center;
+  gap: 14px;
+}
+
+.preview-statement {
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+
+@media (max-width: 600px) {
+  .exam-preview-notice,
+  .exam-preview-header {
+    flex-direction: column;
+  }
+
+  .exam-preview-header {
+    align-items: stretch;
+  }
+
+  .preview-question,
+  .preview-panel {
+    padding: 16px;
+  }
+
+  .preview-matching-list label {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}

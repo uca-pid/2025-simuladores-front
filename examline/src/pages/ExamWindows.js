@@ -256,10 +256,16 @@ export default function ExamWindowsPage() {
     try {
       const response = await fetch(`${API_BASE_URL}/exam-start/test-download`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` })
+        },
         body: JSON.stringify(formData)
       });
       const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'No se pudo generar la configuración SEB');
+      }
       if (data.sebUrl) {
         const link = document.createElement("a");
         link.href = data.sebUrl;
@@ -269,7 +275,7 @@ export default function ExamWindowsPage() {
       }
     } catch (err) {
       console.error("Error probando configuración SEB:", err);
-      alert("Error al generar la prueba de SEB");
+      alert(err.message || "Error al generar la prueba de SEB");
     }
   };
 
@@ -1305,7 +1311,10 @@ export default function ExamWindowsPage() {
                                     id="kioskMode"
                                     name="kioskMode"
                                     checked={formData.kioskMode ? true : false}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, kioskMode: e.target.checked ? 1 : 0 }))}
+                                    onChange={(e) => {
+                                      const mode = e.target.checked ? 1 : 0;
+                                      setFormData(prev => ({ ...prev, kioskMode: mode, sebKioskMode: mode }));
+                                    }}
                                     disabled={!!editingWindow && editingWindow.estado === 'en_curso'}
                                     style={{ 
                                       width: '3rem', 
@@ -1344,12 +1353,13 @@ export default function ExamWindowsPage() {
                           type="button"
                           className="btn btn-primary"
                           onClick={() => handleTestSEBConfig()}
+                          disabled={!formData.examId || isSavingWindow}
                           style={{ fontWeight: '600', padding: '0.75rem 1.5rem', borderRadius: '8px' }}
                         >
                           <i className="fas fa-play me-2"></i>Probar Configuración Actual de SEB
                         </button>
                         <div style={{ fontSize: '0.85rem', color: '#6c757d', marginTop: '0.5rem' }}>
-                          Genera un archivo .seb de prueba con la configuración exacta seleccionada arriba para que puedas validarla.
+                          Abre SEB con esta configuración y muestra directamente el examen seleccionado en modo de vista previa.
                         </div>
                       </div>
                     )}

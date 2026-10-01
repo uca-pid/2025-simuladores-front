@@ -245,6 +245,15 @@ export async function getExamById(examId, windowId = null) {
   }
 }
 
+export async function getSEBPreviewExam(examId, previewToken) {
+  const res = await fetch(`${API_BASE_URL}/exam-start/preview/${examId}`, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${previewToken}` },
+  });
+
+  return await handleResponse(res);
+}
+
 // Exam window endpoints
 export async function getExamWindowsProfesor() {
   try {

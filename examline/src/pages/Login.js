@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useSEB } from "../hooks";
 import { loginUser } from "../services/api";
@@ -15,6 +15,9 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isOnCooldown, setIsOnCooldown] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const previewExamId = searchParams.get("previewExamId");
+  const isPreviewLogin = /^\d+$/.test(previewExamId || "");
   const { login } = useAuth();
   const { isInSEB: isSEB, closeSEB } = useSEB();
 
@@ -41,7 +44,7 @@ const Login = () => {
       login(data.token, data.user);
 
       if (data.user.rol === "professor") {
-        navigate("/principal");
+        navigate(isPreviewLogin ? `/exam-preview/${previewExamId}` : "/principal");
       } else {
         navigate("/student-exam");
       }
@@ -60,7 +63,7 @@ const Login = () => {
     }
   };
 
-  if (isSEB) {
+  if (isSEB && !isPreviewLogin) {
     return (
       <div
         className="d-flex align-items-center justify-content-center min-vh-100"
