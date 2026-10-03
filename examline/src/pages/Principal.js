@@ -87,10 +87,10 @@ const Principal = () => {
                 <div className="action-content">
                   <h5 className="action-title">
                     <i className="fas fa-folder-open me-2" style={{ color: 'var(--accent-color)' }}></i>
-                    Crear Exámenes
+                    Mis Exámenes
                   </h5>
                   <p className="action-description text-muted mb-3">
-                    Mirá todos tus exámenes o creá nuevos
+                    Creá, mirá, editá y eliminá exámenes
                   </p>
                   <button
                     className="modern-btn modern-btn-primary w-100"
@@ -110,7 +110,7 @@ const Principal = () => {
                     Banco de Preguntas
                   </h5>
                   <p className="action-description text-muted mb-3">
-                    Gestioná preguntas reutilizables para tus exámenes
+                    Creá preguntas reutilizables para tus exámenes
                   </p>
                   <button
                     className="modern-btn modern-btn-primary w-100"
@@ -127,7 +127,7 @@ const Principal = () => {
                 <div className="action-content">
                   <h5 className="action-title">
                     <i className="fas fa-tasks me-2" style={{ color: 'var(--accent-color)' }}></i>
-                    Gestionar y Corregir Ventanas de Exámenes
+                    Ventanas de Exámenes
                   </h5>
                   <p className="action-description text-muted mb-3">
                     Creá ventanas de examen para inscribirse y corregí los exámenes

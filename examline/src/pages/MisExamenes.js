@@ -10,7 +10,6 @@ const MisExamenes = () => {
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [filterType, setFilterType] = useState("all"); // all, multiple_choice, programming
   const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -65,18 +64,10 @@ const MisExamenes = () => {
     );
   };
 
-  // Tipo real del examen: multiparte si tiene más de 1 parte, sino el tipo de su única parte
-  const getExamCategory = (exam) => {
-    if (exam.partes?.length > 1) return "multiparte";
-    return exam.partes?.[0]?.tipo || exam.tipo;
-  };
-
   // Filtrar exámenes
-  const filteredExams = exams.filter((exam) => {
-    const matchesType = filterType === "all" || getExamCategory(exam) === filterType;
-    const matchesSearch = exam.titulo.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesType && matchesSearch;
-  });
+  const filteredExams = exams.filter((exam) =>
+    exam.titulo.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="container-fluid container-lg py-5 px-3 px-md-4">
@@ -115,36 +106,20 @@ const MisExamenes = () => {
         </div>
       </div>
 
-      {/* Filtros y búsqueda */}
+      {/* Búsqueda */}
       <div className="modern-card mb-4">
         <div className="modern-card-body">
-          <div className="row g-3">
-            <div className="col-md-8">
-              <div className="input-group">
-                <span className="input-group-text">
-                  <i className="fas fa-search"></i>
-                </span>
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="Buscar examen por nombre..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="col-md-4">
-              <select
-                className="form-select"
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
-              >
-                <option value="all">Todos los tipos</option>
-                <option value="multiple_choice">Múltiple Choice</option>
-                <option value="programming">Programación</option>
-                <option value="multiparte">Multiparte</option>
-              </select>
-            </div>
+          <div className="input-group">
+            <span className="input-group-text">
+              <i className="fas fa-search"></i>
+            </span>
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Buscar examen por nombre..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
         </div>
       </div>
@@ -175,16 +150,16 @@ const MisExamenes = () => {
                 <i className="fas fa-file-alt"></i>
               </div>
               <h4 className="empty-title">
-                {searchTerm || filterType !== "all" 
-                  ? "No se encontraron exámenes" 
+                {searchTerm
+                  ? "No se encontraron exámenes"
                   : "No hay exámenes creados"}
               </h4>
               <p className="empty-subtitle">
-                {searchTerm || filterType !== "all"
-                  ? "Intenta ajustar los filtros de búsqueda"
+                {searchTerm
+                  ? "Intenta ajustar la búsqueda"
                   : "Comienza creando tu primer examen"}
               </p>
-              {!searchTerm && filterType === "all" && (
+              {!searchTerm && (
                 <button 
                   className="modern-btn modern-btn-primary"
                   onClick={handleCrearExamen}
