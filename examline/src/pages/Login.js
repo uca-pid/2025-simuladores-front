@@ -3,13 +3,17 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useSEB } from "../hooks";
 import { loginUser } from "../services/api";
+import PasswordInput from "../components/PasswordInput";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "../styles/shared.css";
+
+const EMAIL_REGEX = /^[A-Za-zÑñ0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-zÑñ0-9-]+(\.[A-Za-zÑñ0-9-]+)+$/;
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false); // 🔹 agregado
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
   const [validated, setValidated] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -18,13 +22,29 @@ const Login = () => {
   const { login } = useAuth();
   const { isInSEB: isSEB, closeSEB } = useSEB();
 
+  const validateEmail = (value) => {
+    if (!value.trim()) return "Debe ingresar un email.";
+    if (!EMAIL_REGEX.test(value)) return "El email no es válido.";
+    return "";
+  };
+
+  const validatePassword = (value) => {
+    if (!value) return "Debe ingresar su contraseña.";
+    return "";
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const form = e.currentTarget;
 
     if (isLoading || isOnCooldown) return;
 
-    if (!form.checkValidity()) {
+    const emailErr = validateEmail(email);
+    const passwordErr = validatePassword(password);
+    setEmailError(emailErr);
+    setPasswordError(passwordErr);
+
+    if (!form.checkValidity() || emailErr || passwordErr) {
       setValidated(true);
       return;
     }
@@ -49,7 +69,8 @@ const Login = () => {
       console.error(err);
       // Mostrar mensaje específico para error 401
       if (err.status === 401) {
-        setError("Contraseña incorrecta");
+        // Mensaje genérico: no revelar si falló el email o la contraseña
+        setError("Email o contraseña incorrectos");
       } else {
         setError(err.message || "Error al iniciar sesión");
       }
@@ -133,20 +154,20 @@ const Login = () => {
         className="modern-card login-card"
         style={{ maxWidth: "420px", width: "100%", position: "relative", zIndex: 1 }}
       >
-        <div className="modern-card-body p-5 text-center">
-          <div className="mb-4">
+        <div className="modern-card-body p-4 text-center">
+          <div className="mb-3">
             <img
               src="/logo.png"
               alt="ExamLine"
-              className="mb-3"
-              style={{ width: "120px", height: "auto" }}
+              className="mb-2"
+              style={{ width: "100px", height: "auto" }}
             />
             <h1 className="page-title mb-2">Bienvenido</h1>
             <p className="page-subtitle">Ingresa a tu cuenta de Examline</p>
           </div>
 
           {error && (
-            <div className="error-message mb-4">
+            <div className="error-message mb-3">
               <i className="fas fa-exclamation-triangle"></i>
               {error}
             </div>
@@ -158,7 +179,7 @@ const Login = () => {
             onSubmit={handleSubmit}
           >
             {/* Email */}
-            <div className="mb-4 text-start">
+            <div className="mb-3 text-start">
               <label
                 htmlFor="email"
                 className="form-label d-flex align-items-center gap-2"
@@ -168,11 +189,15 @@ const Login = () => {
               </label>
               <input
                 type="email"
-                className="form-control"
+                className={`form-control ${validated && emailError ? "is-invalid" : ""}`}
                 id="email"
+                autoComplete="email"
                 required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (validated) setEmailError(validateEmail(e.target.value));
+                }}
                 placeholder="Ingresa tu email"
                 disabled={isLoading || isOnCooldown}
                 style={{
@@ -185,47 +210,26 @@ const Login = () => {
                   opacity: isLoading ? 0.7 : 1,
                 }}
               />
-              <div className="invalid-feedback">Ingrese un email válido</div>
+              {validated && emailError && (
+                <div className="invalid-feedback d-block">{emailError}</div>
+              )}
             </div>
 
-            {/* Contraseña con toggle arriba a la derecha */}
-            <div className="mb-4 text-start d-flex flex-column">
-              <div className="d-flex justify-content-between align-items-center mb-1">
-                <label
-                  htmlFor="password"
-                  className="form-label d-flex align-items-center gap-2 mb-0"
-                >
-                  <i className="fas fa-lock text-muted"></i>
-                  Contraseña
-                </label>
-
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="btn btn-link p-0"
-                  disabled={isLoading || isOnCooldown}
-                  style={{
-                    fontSize: "0.9rem",
-                    pointerEvents: isLoading || isOnCooldown ? "none" : "auto",
-                    opacity: isLoading || isOnCooldown ? 0.6 : 1,
-                  }}
-                >
-                  <i className={`fas ${showPassword ? "fa-eye-slash" : "fa-eye"} me-1`}></i>
-                  {showPassword ? "Ocultar" : "Mostrar"}
-                </button>
-
-              </div>
-
-              <input
-                type={showPassword ? "text" : "password"}
-                className="form-control"
+            {/* Contraseña */}
+            <div className="mb-2 text-start d-flex flex-column">
+              <PasswordInput
                 id="password"
+                label="Contraseña"
                 required
+                className={validated && passwordError ? "is-invalid" : ""}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (validated) setPasswordError(validatePassword(e.target.value));
+                }}
                 placeholder="Ingresa tu contraseña"
                 disabled={isLoading || isOnCooldown}
-                style={{
+                inputStyle={{
                   padding: "0.75rem 1rem",
                   border: "1px solid var(--border-color)",
                   borderRadius: "8px",
@@ -235,11 +239,30 @@ const Login = () => {
                   opacity: isLoading ? 0.7 : 1,
                 }}
               />
-              <div className="invalid-feedback">Ingrese su contraseña</div>
+              {validated && passwordError && (
+                <div className="invalid-feedback d-block">{passwordError}</div>
+              )}
+            </div>
+
+            <div className="mb-3 text-end">
+              <Link
+                to="/forgot-password"
+                onClick={(e) => {
+                  if (isLoading || isOnCooldown) e.preventDefault();
+                }}
+                style={{
+                  color: isLoading || isOnCooldown ? "gray" : "var(--primary-color)",
+                  textDecoration: "none",
+                  fontSize: "0.85rem",
+                  cursor: isLoading || isOnCooldown ? "not-allowed" : "pointer",
+                }}
+              >
+                ¿Olvidaste tu contraseña?
+              </Link>
             </div>
 
             {/* Botón de login */}
-            <div className="d-grid mb-4">
+            <div className="d-grid mb-3">
               <button
                 type="submit"
                 className="modern-btn modern-btn-primary modern-btn-lg login-submit-btn"

@@ -4,6 +4,8 @@ import { ProfessorRoute, StudentRoute, AuthenticatedRoute } from "./components/P
 import ScrollToTop from "./components/ScrollToTop";
 import Login from "./pages/Login";
 import Registro from "./pages/Registro";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Principal from "./pages/Principal";
 import MisExamenes from "./pages/MisExamenes";
 import ExamCreator from "./pages/ExamCreator";
@@ -49,6 +51,16 @@ function App() {
           <Route path="/registro" element={
             <AuthRedirect>
               <Registro />
+            </AuthRedirect>
+          } />
+          <Route path="/forgot-password" element={
+            <AuthRedirect>
+              <ForgotPassword />
+            </AuthRedirect>
+          } />
+          <Route path="/reset-password/:token" element={
+            <AuthRedirect>
+              <ResetPassword />
             </AuthRedirect>
           } />
 

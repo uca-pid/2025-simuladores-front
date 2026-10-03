@@ -5,18 +5,20 @@ import "../styles/shared.css";
 import { useAuth } from "../contexts/AuthContext";
 import { signupUser, loginUser } from "../services/api";
 import { validatePasswordStrength } from "../utils/password";
+import PasswordInput from "../components/PasswordInput";
 
 const Registro = () => {
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [isProfessor, setIsProfessor] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
 
   const [nombreError, setNombreError] = useState("");
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [confirmPasswordError, setConfirmPasswordError] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isOnCooldown, setIsOnCooldown] = useState(false);
@@ -40,9 +42,15 @@ const Registro = () => {
 
   const validatePassword = (password) => {
     if (!password) return "Debe ingresar una contraseña.";
-    
+
     const validation = validatePasswordStrength(password);
     return validation.isValid ? "" : validation.message;
+  };
+
+  const validateConfirmPassword = (value, original) => {
+    if (!value) return "Debe confirmar la contraseña.";
+    if (value !== original) return "Las contraseñas no coinciden.";
+    return "";
   };
 
   // ---------------- Submit ----------------
@@ -57,12 +65,14 @@ const Registro = () => {
     const nombreErr = validateName(nombre);
     const emailErr = validateEmail(email);
     const passwordErr = validatePassword(password);
+    const confirmPasswordErr = validateConfirmPassword(confirmPassword, password);
 
     setNombreError(nombreErr);
     setEmailError(emailErr);
     setPasswordError(passwordErr);
+    setConfirmPasswordError(confirmPasswordErr);
 
-    if (nombreErr || emailErr || passwordErr) return;
+    if (nombreErr || emailErr || passwordErr || confirmPasswordErr) return;
 
     setIsLoading(true);
     setError("");
@@ -92,13 +102,14 @@ const Registro = () => {
 } catch (err) {
   console.error("Error en registro:", err);
 
-  // ✅ si usás fetch + la solución que te pasé en api.js
   if (err.status === 400) {
-    setError(err.data?.error || "El email ya está registrado.");
+    setError(err.message || "El email ya está registrado.");
+  } else if (err.status === 429) {
+    setError(err.message || "Demasiados intentos. Intentá de nuevo en unos minutos.");
   } else if (err.status === 500) {
     setError("Error en el servidor. Inténtalo más tarde.");
   } else if (err.status) {
-    setError("Error desconocido al registrarse.");
+    setError(err.message || "Error desconocido al registrarse.");
   } else {
     setError("No se pudo conectar al servidor. Revisa tu conexión.");
   }
@@ -112,32 +123,54 @@ const Registro = () => {
 }
   };  
   return (
-    <div className="d-flex align-items-center justify-content-center min-vh-100 py-4" style={{ background: 'linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%)' }}>
-      <div className="modern-card registro-card" style={{ maxWidth: "800px", width: "100%" }}>
+    <div
+      className="d-flex align-items-center justify-content-center min-vh-100 py-3"
+      style={{
+        background: "linear-gradient(135deg, #1E2955 0%, #172147 50%, #020617 100%)",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          top: "-120px",
+          left: "-120px",
+          width: "360px",
+          height: "360px",
+          borderRadius: "50%",
+          filter: "blur(80px)",
+          background: "rgba(59,130,246,0.15)",
+          pointerEvents: "none",
+        }}
+      ></div>
+      <div
+        style={{
+          position: "absolute",
+          bottom: "-140px",
+          right: "-140px",
+          width: "400px",
+          height: "400px",
+          borderRadius: "50%",
+          filter: "blur(80px)",
+          background: "rgba(245,158,11,0.1)",
+          pointerEvents: "none",
+        }}
+      ></div>
+      <div className="modern-card registro-card" style={{ maxWidth: "800px", width: "100%", position: "relative", zIndex: 1 }}>
         <div className="row g-0">
           {/* Columna izquierda: Logo y título */}
-          <div className="col-md-4 d-flex flex-column justify-content-center align-items-center p-4" style={{ background: 'white' }}>
-            <img src="/logo.png" alt="ExamLine" className="mb-3" style={{ width: "120px", height: "auto" }} />
-            <h3 className="fw-bold text-center mb-2" style={{ fontSize: '1.4rem' }}>Únete a Examline</h3>
-            <p className="text-center px-2" style={{ fontSize: '0.9rem', color: 'var(--text-color-1)' }}>Crea tu cuenta y gestiona exámenes</p>
-            <div className="mt-3">
-              <div className="d-flex align-items-center gap-2 mb-1" style={{ color: 'var(--success-color)' }}>
-                <i className="fas fa-check-circle" style={{ fontSize: '0.8rem' }}></i>
-                <small style={{ fontSize: '0.8rem' }}>Gestión de exámenes</small>
-              </div>
-              <div className="d-flex align-items-center gap-2 mb-1" style={{ color: 'var(--success-color)' }}>
-                <i className="fas fa-check-circle" style={{ fontSize: '0.8rem' }}></i>
-                <small style={{ fontSize: '0.8rem' }}>Interfaz moderna</small>
-              </div>
-              <div className="d-flex align-items-center gap-2" style={{ color: 'var(--success-color)' }}>
-                <i className="fas fa-check-circle" style={{ fontSize: '0.8rem' }}></i>
-                <small style={{ fontSize: '0.8rem' }}>Para profes y estudiantes</small>
-              </div>
+          <div className="col-md-4 d-flex flex-row flex-md-column justify-content-center align-items-center gap-3 gap-md-0 p-3 p-md-4" style={{ background: 'white' }}>
+            <img src="/logo.png" alt="ExamLine" className="d-md-none" style={{ width: "48px", height: "auto" }} />
+            <img src="/logo.png" alt="ExamLine" className="mb-3 d-none d-md-block" style={{ width: "120px", height: "auto" }} />
+            <div className="d-md-none">
+              <h3 className="fw-bold mb-0" style={{ fontSize: '1.1rem' }}>Crea tu cuenta de Examline</h3>
             </div>
+            <h3 className="fw-bold text-center mb-0 d-none d-md-block" style={{ fontSize: '1.4rem' }}>Crea tu cuenta de Examline</h3>
           </div>
 
           {/* Columna derecha: Formulario */}
-          <div className="col-md-8 p-4" style={{ background: '#f8fafc' }}>
+          <div className="col-md-8 p-3" style={{ background: '#f8fafc' }}>
             {error && (
               <div className="error-message mb-4">
                 <i className="fas fa-exclamation-triangle"></i>
@@ -146,7 +179,7 @@ const Registro = () => {
             )}
             <form onSubmit={handleSubmit} noValidate>
               {/* Nombre */}
-              <div className="mb-3 text-start">
+              <div className="mb-2 text-start">
                 <label htmlFor="nombre" className="form-label d-flex align-items-center gap-2" style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>
                   <i className="fas fa-user text-muted"></i>
                   Nombre Completo
@@ -155,6 +188,7 @@ const Registro = () => {
                   type="text"
                   className={`form-control ${nombreError ? "is-invalid" : ""}`}
                   id="nombre"
+                  autoComplete="name"
                   placeholder="Ingresa tu nombre completo"
                   value={nombre}
                   onChange={(e) => {
@@ -179,7 +213,7 @@ const Registro = () => {
               </div>
 
               {/* Email */}
-              <div className="mb-3 text-start">
+              <div className="mb-2 text-start">
                 <label htmlFor="email" className="form-label d-flex align-items-center gap-2" style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>
                   <i className="fas fa-envelope text-muted"></i>
                   Correo Electrónico
@@ -188,6 +222,7 @@ const Registro = () => {
                   type="email"
                   className={`form-control ${emailError ? "is-invalid" : ""}`}
                   id="email"
+                  autoComplete="email"
                   placeholder="ejemplo@dominio.com"
                   value={email}
                   onChange={(e) => {
@@ -212,39 +247,24 @@ const Registro = () => {
               </div>
 
               {/* Contraseña */}
-              <div className="mb-3 text-start d-flex flex-column">
-                <div className="d-flex justify-content-between align-items-center mb-1">
-                  <label
-                    htmlFor="password"
-                    className="form-label d-flex align-items-center gap-2 mb-0"
-                    style={{ fontSize: '0.9rem' }}
-                  >
-                    <i className="fas fa-lock text-muted"></i>
-                    Contraseña
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="btn btn-link p-0"
-                    disabled={isLoading || isOnCooldown}
-                    style={{ fontSize: '0.85rem', pointerEvents: isLoading || isOnCooldown ? 'none' : 'auto', opacity: isLoading || isOnCooldown ? 0.6 : 1 }}
-                  >
-                    <i className={`fas ${showPassword ? "fa-eye-slash" : "fa-eye"} me-1`}></i>
-                    {showPassword ? "Ocultar" : "Mostrar"}
-                  </button>
-                </div>
-                <input
-                  type={showPassword ? "text" : "password"}
-                  className={`form-control ${passwordError ? "is-invalid" : ""}`}
+              <div className="mb-2 text-start d-flex flex-column">
+                <PasswordInput
                   id="password"
+                  label="Contraseña"
+                  autoComplete="new-password"
+                  labelStyle={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}
+                  className={passwordError ? "is-invalid" : ""}
                   placeholder="Crea una contraseña segura"
                   value={password}
                   onChange={(e) => {
                     setPassword(e.target.value);
                     setPasswordError(validatePassword(e.target.value));
+                    if (confirmPassword) {
+                      setConfirmPasswordError(validateConfirmPassword(confirmPassword, e.target.value));
+                    }
                   }}
                   disabled={isLoading || isOnCooldown}
-                  style={{
+                  inputStyle={{
                     padding: '0.6rem 0.8rem',
                     border: '1px solid var(--border-color)',
                     borderRadius: '6px',
@@ -260,43 +280,88 @@ const Registro = () => {
                 >
                   8+ caracteres, mayúscula, minúscula, número y carácter especial.
                 </div>
-                {passwordError && <div className="invalid-feedback">{passwordError}</div>}
+                {passwordError && <div className="invalid-feedback d-block">{passwordError}</div>}
+              </div>
+
+              {/* Confirmar Contraseña */}
+              <div className="mb-2 text-start d-flex flex-column">
+                <PasswordInput
+                  id="confirmPassword"
+                  label="Confirmar Contraseña"
+                  autoComplete="new-password"
+                  labelStyle={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}
+                  className={confirmPasswordError ? "is-invalid" : ""}
+                  placeholder="Repite la contraseña"
+                  value={confirmPassword}
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value);
+                    setConfirmPasswordError(validateConfirmPassword(e.target.value, password));
+                  }}
+                  disabled={isLoading || isOnCooldown}
+                  inputStyle={{
+                    padding: '0.6rem 0.8rem',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '6px',
+                    fontSize: '0.9rem',
+                    backgroundColor: isLoading ? '#e9ecef' : 'white',
+                    cursor: isLoading ? 'not-allowed' : 'text',
+                    opacity: isLoading ? 0.7 : 1,
+                  }}
+                />
+                {confirmPasswordError && <div className="invalid-feedback d-block">{confirmPasswordError}</div>}
               </div>
 
 
-              {/* Switch de rol */}
-              <div className="mb-3">
-                <div className="d-flex align-items-center gap-2 p-2" style={{ 
-                  background: isProfessor ? 'rgba(99, 102, 241, 0.1)' : 'rgba(16, 185, 129, 0.1)', 
-                  border: '1px solid ' + (isProfessor ? 'rgba(99, 102, 241, 0.2)' : 'rgba(16, 185, 129, 0.2)'),
-                  borderRadius: '6px',
-                  transition: 'all 0.3s ease'
-                }}>
-                  <div className="d-flex align-items-center" style={{ color: isProfessor ? 'var(--primary-color)' : 'var(--success-color)' }}>
-                    <i className={isProfessor ? "fas fa-chalkboard-teacher" : "fas fa-user-graduate"} style={{ fontSize: '1rem' }}></i>
-                  </div>
-                  <div className="flex-grow-1">
-                    <div className="form-check form-switch">
-                      <input
-                        className="form-check-input"
-                        type="checkbox"
-                        id="isProfessor"
-                        checked={isProfessor}
-                        onChange={() => setIsProfessor(!isProfessor)}
-                        disabled={isLoading || isOnCooldown}
-                        style={{ transform: 'scale(1.1)' }}
-                      />
-                      <label className="form-check-label" htmlFor="isProfessor" style={{ fontSize: '0.9rem', fontWeight: '500' }}>
-                        {isProfessor ? "Profesor" : "Estudiante"}
-                      </label>
+              {/* Selector de rol */}
+              <div className="mb-2 text-start">
+                <label className="form-label d-flex align-items-center gap-2" style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>
+                  <i className="fas fa-id-badge text-muted"></i>
+                  ¿Cómo vas a usar Examline?
+                </label>
+                <div className="d-flex gap-2" role="radiogroup" aria-label="Rol de usuario">
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={!isProfessor}
+                    onClick={() => setIsProfessor(false)}
+                    disabled={isLoading || isOnCooldown}
+                    className="flex-fill text-start p-2"
+                    style={{
+                      background: !isProfessor ? 'rgba(30, 41, 85, 0.08)' : 'transparent',
+                      border: '1.5px solid ' + (!isProfessor ? 'var(--primary-color)' : 'var(--border-color)'),
+                      borderRadius: '8px',
+                      cursor: isLoading || isOnCooldown ? 'not-allowed' : 'pointer',
+                      color: !isProfessor ? 'var(--primary-color)' : 'var(--text-color-3)',
+                    }}
+                  >
+                    <div className="d-flex align-items-center gap-2" style={{ fontSize: '0.9rem', fontWeight: '600' }}>
+                      <i className="fas fa-user-graduate"></i>
+                      Estudiante
                     </div>
-                    <small style={{ color: 'var(--text-color-3)', fontSize: '0.75rem' }}>
-                      {isProfessor 
-                        ? "Crear y gestionar exámenes" 
-                        : "Tomar exámenes asignados"
-                      }
-                    </small>
-                  </div>
+                    <small style={{ fontSize: '0.75rem', opacity: 0.85 }}>Rendir exámenes</small>
+                  </button>
+
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={isProfessor}
+                    onClick={() => setIsProfessor(true)}
+                    disabled={isLoading || isOnCooldown}
+                    className="flex-fill text-start p-2"
+                    style={{
+                      background: isProfessor ? 'rgba(30, 41, 85, 0.08)' : 'transparent',
+                      border: '1.5px solid ' + (isProfessor ? 'var(--primary-color)' : 'var(--border-color)'),
+                      borderRadius: '8px',
+                      cursor: isLoading || isOnCooldown ? 'not-allowed' : 'pointer',
+                      color: isProfessor ? 'var(--primary-color)' : 'var(--text-color-3)',
+                    }}
+                  >
+                    <div className="d-flex align-items-center gap-2" style={{ fontSize: '0.9rem', fontWeight: '600' }}>
+                      <i className="fas fa-chalkboard-teacher"></i>
+                      Profesor
+                    </div>
+                    <small style={{ fontSize: '0.75rem', opacity: 0.85 }}>Crear y corregir exámenes</small>
+                  </button>
                 </div>
               </div>
 

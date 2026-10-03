@@ -103,6 +103,37 @@ export async function signupUser({ nombre, email, password, rol = "student" }) {
   }
 }
 
+export async function forgotPassword({ email }) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/users/forgot-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
+export async function resetPassword({ token, password, email }) {
+  try {
+    // Mismo esquema de doble hash que login/signup
+    const hashedPassword = hashPassword(password, email);
+
+    const res = await fetch(`${API_BASE_URL}/users/reset-password/${token}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: hashedPassword }),
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
 export async function refreshToken() {
   try {
     const res = await fetch(`${API_BASE_URL}/users/refresh-token`, {
