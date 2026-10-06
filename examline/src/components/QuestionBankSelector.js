@@ -78,9 +78,13 @@ const QuestionBankSelector = ({ show, onClose, onSelectQuestions }) => {
       .filter(q => selectedIds.includes(q.id))
       .map(q => ({
         tipo: q.tipo || "multiple_choice",
+        dificultad: q.dificultad || "media",
         texto: q.texto,
         opciones: q.opciones,
-        correcta: q.correcta
+        correcta: q.correcta,
+        correctas: q.correctas ?? null,
+        imagenUrl: q.imagenUrl || null,
+        puntos: 1
       }));
     
     onSelectQuestions(selectedQuestions);

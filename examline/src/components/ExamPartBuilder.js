@@ -8,6 +8,22 @@ import { testSolutionPreview, uploadEnunciado, uploadDataset } from "../services
 const LANGUAGE_EXTENSIONS = { python: '.py', javascript: '.js', c: '.c' };
 const getExtensionForLanguage = (lenguaje) => LANGUAGE_EXTENSIONS[lenguaje] || '.js';
 
+const TIPO_BADGE = {
+  multiple_choice: { label: 'Múltiple', color: '#007bff', icon: 'fa-list-ul' },
+  true_false: { label: 'V/F', color: '#28a745', icon: 'fa-check-double' },
+  fill_in_blank: { label: 'Completar', color: '#ffc107', icon: 'fa-fill-drip' },
+  matching: { label: 'Unir', color: '#9c27b0', icon: 'fa-arrows-alt-h' },
+  short_answer: { label: 'Resp. Corta', color: '#17a2b8', icon: 'fa-font' },
+  numeric: { label: 'Numérica', color: '#fd7e14', icon: 'fa-calculator' },
+  essay: { label: 'Desarrollo', color: '#6c757d', icon: 'fa-pen-fancy' },
+  file_upload: { label: 'Archivo', color: '#20c997', icon: 'fa-paperclip' },
+};
+const DIFICULTAD_BADGE = {
+  facil: { label: 'Fácil', color: '#28a745' },
+  media: { label: 'Media', color: '#fd7e14' },
+  dificil: { label: 'Difícil', color: '#dc3545' },
+};
+
 // `part` / `onChange` lift this part's whole local state up into ExamCreator's
 // `partes` array, so every setter below reads `part.<field>` and calls
 // `onChange({ ...part, <field>: value })` instead of owning local state.
@@ -34,6 +50,14 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
 
   const handleRemoveQuestion = (index) => {
     update({ preguntas: part.preguntas.filter((_, i) => i !== index) });
+  };
+
+  const handleMoveQuestion = (index, direction) => {
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= part.preguntas.length) return;
+    const nuevasPreguntas = [...part.preguntas];
+    [nuevasPreguntas[index], nuevasPreguntas[newIndex]] = [nuevasPreguntas[newIndex], nuevasPreguntas[index]];
+    update({ preguntas: nuevasPreguntas });
   };
 
   // ---- Programming: enunciado / dataset ----
@@ -259,6 +283,92 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
           <QuestionCreator onAddQuestion={handleAddQuestion} />
         </div>
 
+        {part.preguntas.length > 0 && (() => {
+          const conteoPorDificultad = { facil: 0, media: 0, dificil: 0 };
+          part.preguntas.forEach(p => { conteoPorDificultad[p.dificultad || 'media']++; });
+          const poolActivo = part.cantidadFaciles != null || part.cantidadMedias != null || part.cantidadDificiles != null;
+
+          const setCantidad = (nivel, valorStr) => {
+            const valor = valorStr === '' ? 0 : Math.max(0, parseInt(valorStr, 10) || 0);
+            update({ [nivel]: valor });
+          };
+
+          return (
+            <div className="modern-card mb-4">
+              <div className="modern-card-header">
+                <h3 className="modern-card-title">
+                  <i className="fas fa-random me-2"></i>
+                  Pool aleatorio balanceado (opcional)
+                </h3>
+              </div>
+              <div className="modern-card-body">
+                <div className="form-check form-switch mb-3">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    id={`pool-toggle-${part.localId}`}
+                    checked={poolActivo}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        update({ cantidadFaciles: 0, cantidadMedias: 0, cantidadDificiles: 0 });
+                      } else {
+                        update({ cantidadFaciles: null, cantidadMedias: null, cantidadDificiles: null });
+                      }
+                    }}
+                  />
+                  <label className="form-check-label" htmlFor={`pool-toggle-${part.localId}`}>
+                    Sortear un subconjunto de estas preguntas para cada alumno (en vez de usarlas todas)
+                  </label>
+                </div>
+
+                {poolActivo && (
+                  <>
+                    <div className="alert alert-info mb-3">
+                      <i className="fas fa-info-circle me-2"></i>
+                      Definí cuántas preguntas de cada dificultad le va a tocar a <strong>cada alumno</strong>, sorteadas del pool de abajo.
+                      Todos reciben la misma cantidad de cada nivel, así nadie tiene ventaja por azar.
+                    </div>
+                    <div className="row g-3">
+                      {[
+                        { key: 'cantidadFaciles', nivel: 'facil', label: 'Fáciles' },
+                        { key: 'cantidadMedias', nivel: 'media', label: 'Medias' },
+                        { key: 'cantidadDificiles', nivel: 'dificil', label: 'Difíciles' },
+                      ].map(({ key, nivel, label }) => (
+                        <div className="col-md-4" key={key}>
+                          <label className="form-label d-flex align-items-center gap-2">
+                            <span
+                              className="badge"
+                              style={{ backgroundColor: DIFICULTAD_BADGE[nivel].color, color: 'white' }}
+                            >
+                              {label}
+                            </span>
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            max={conteoPorDificultad[nivel]}
+                            className={`form-control ${(part[key] || 0) > conteoPorDificultad[nivel] ? 'is-invalid' : ''}`}
+                            value={part[key] ?? 0}
+                            onChange={(e) => setCantidad(key, e.target.value)}
+                          />
+                          <small className="form-text text-muted">
+                            Pool disponible: {conteoPorDificultad[nivel]}
+                          </small>
+                          {(part[key] || 0) > conteoPorDificultad[nivel] && (
+                            <div className="invalid-feedback d-block">
+                              Pediste más de las que hay en el pool ({conteoPorDificultad[nivel]})
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
         <div className="modern-card">
           <div className="modern-card-header">
             <h3 className="modern-card-title">
@@ -290,30 +400,70 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                           <span
                             className="badge"
                             style={{
-                              backgroundColor: p.tipo === 'true_false' ? '#28a745' : p.tipo === 'fill_in_blank' ? '#ffc107' : p.tipo === 'matching' ? '#9c27b0' : '#007bff',
+                              backgroundColor: (TIPO_BADGE[p.tipo] || TIPO_BADGE.multiple_choice).color,
                               color: 'white',
                               padding: '0.25rem 0.5rem',
                               fontSize: '0.7rem',
                               borderRadius: '4px'
                             }}
                           >
-                            <i className={`fas ${p.tipo === 'true_false' ? 'fa-check-double' : p.tipo === 'fill_in_blank' ? 'fa-fill-drip' : p.tipo === 'matching' ? 'fa-arrows-alt-h' : 'fa-list-ul'} me-1`}></i>
-                            {p.tipo === 'true_false' ? 'V/F' : p.tipo === 'fill_in_blank' ? 'Completar' : p.tipo === 'matching' ? 'Unir' : 'Múltiple'}
+                            <i className={`fas ${(TIPO_BADGE[p.tipo] || TIPO_BADGE.multiple_choice).icon} me-1`}></i>
+                            {(TIPO_BADGE[p.tipo] || TIPO_BADGE.multiple_choice).label}
+                          </span>
+                          <span
+                            className="badge"
+                            style={{
+                              backgroundColor: (DIFICULTAD_BADGE[p.dificultad] || DIFICULTAD_BADGE.media).color,
+                              color: 'white',
+                              padding: '0.25rem 0.5rem',
+                              fontSize: '0.7rem',
+                              borderRadius: '4px'
+                            }}
+                          >
+                            {(DIFICULTAD_BADGE[p.dificultad] || DIFICULTAD_BADGE.media).label}
+                          </span>
+                          <span
+                            className="badge"
+                            style={{ backgroundColor: '#495057', color: 'white', padding: '0.25rem 0.5rem', fontSize: '0.7rem', borderRadius: '4px' }}
+                            title="Puntaje de esta pregunta"
+                          >
+                            <i className="fas fa-star me-1"></i>
+                            {p.puntos ?? 1} pt{(p.puntos ?? 1) !== 1 ? 's' : ''}
                           </span>
                           <span className="exam-badge">
                             <i className="fas fa-check-circle"></i>
                             <span className="badge-text">Lista</span>
                           </span>
                         </div>
-                        <button
-                          className="btn btn-sm btn-outline-danger"
-                          onClick={() => handleRemoveQuestion(idx)}
-                          disabled={isPublishing}
-                          title="Eliminar pregunta"
-                          style={{ padding: '0.25rem 0.5rem' }}
-                        >
-                          <i className="fas fa-trash"></i>
-                        </button>
+                        <div className="d-flex align-items-center gap-1">
+                          <button
+                            className="btn btn-sm btn-outline-secondary"
+                            onClick={() => handleMoveQuestion(idx, -1)}
+                            disabled={isPublishing || idx === 0}
+                            title="Mover arriba"
+                            style={{ padding: '0.25rem 0.5rem' }}
+                          >
+                            <i className="fas fa-arrow-up"></i>
+                          </button>
+                          <button
+                            className="btn btn-sm btn-outline-secondary"
+                            onClick={() => handleMoveQuestion(idx, 1)}
+                            disabled={isPublishing || idx === part.preguntas.length - 1}
+                            title="Mover abajo"
+                            style={{ padding: '0.25rem 0.5rem' }}
+                          >
+                            <i className="fas fa-arrow-down"></i>
+                          </button>
+                          <button
+                            className="btn btn-sm btn-outline-danger"
+                            onClick={() => handleRemoveQuestion(idx)}
+                            disabled={isPublishing}
+                            title="Eliminar pregunta"
+                            style={{ padding: '0.25rem 0.5rem' }}
+                          >
+                            <i className="fas fa-trash"></i>
+                          </button>
+                        </div>
                       </div>
                       <div className="exam-card-body">
                         <div className="question-text mb-3">

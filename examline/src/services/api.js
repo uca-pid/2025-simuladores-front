@@ -284,6 +284,26 @@ export async function uploadQuestionImage(file) {
   }
 }
 
+export async function uploadAnswerFile(file) {
+  try {
+    const token = localStorage.getItem('token');
+    const formData = new FormData();
+    formData.append('archivo', file);
+
+    const res = await fetch(`${API_BASE_URL}/exam-attempts/upload-answer-file`, {
+      method: "POST",
+      headers: {
+        ...(token && { 'Authorization': `Bearer ${token}` })
+      },
+      body: formData,
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
 export async function uploadDataset(file) {
   try {
     const token = localStorage.getItem('token');

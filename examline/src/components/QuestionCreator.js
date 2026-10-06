@@ -4,6 +4,8 @@ import { uploadQuestionImage } from "../services/api";
 
 const QuestionCreator = ({ onAddQuestion }) => {
   const [tipoPregunta, setTipoPregunta] = useState("multiple_choice");
+  const [dificultad, setDificultad] = useState("media");
+  const [puntos, setPuntos] = useState("1");
   const [textoPregunta, setTextoPregunta] = useState("");
   const [opciones, setOpciones] = useState(["", ""]);
   const [correcta, setCorrecta] = useState(0);
@@ -12,14 +14,26 @@ const QuestionCreator = ({ onAddQuestion }) => {
   // Imagen opcional, solo aplica a multiple_choice
   const [imagenUrl, setImagenUrl] = useState(null);
   const [isUploadingImagen, setIsUploadingImagen] = useState(false);
-  
+
   // Estados adicionales para fill_in_blank
   const [respuestasCorrectas, setRespuestasCorrectas] = useState([""]);
   const [distractores, setDistractores] = useState([]);
-  
+
   // Estados adicionales para matching
   const [conceptos, setConceptos] = useState(["", ""]);
   const [respuestasMatching, setRespuestasMatching] = useState(["", ""]);
+
+  // Estados adicionales para short_answer (respuesta corta auto-corregible)
+  const [respuestasAceptadas, setRespuestasAceptadas] = useState([""]);
+
+  // Estados adicionales para numeric (numérica con tolerancia)
+  const [valorNumericoCorrecto, setValorNumericoCorrecto] = useState("");
+  const [toleranciaNumerica, setToleranciaNumerica] = useState("0");
+
+  // Estado adicional para multiple_response (selección múltiple / checkbox):
+  // reutiliza `opciones` (mismo editor de lista que multiple_choice), pero la
+  // respuesta correcta es un conjunto de índices en vez de uno solo.
+  const [correctasSeleccionadas, setCorrectasSeleccionadas] = useState([]);
 
   // Efecto para ajustar opciones cuando cambia el tipo de pregunta
   React.useEffect(() => {
@@ -34,6 +48,14 @@ const QuestionCreator = ({ onAddQuestion }) => {
       setConceptos(["", ""]);
       setRespuestasMatching(["", ""]);
       setCorrecta(0);
+    } else if (tipoPregunta === "short_answer") {
+      setRespuestasAceptadas([""]);
+    } else if (tipoPregunta === "numeric") {
+      setValorNumericoCorrecto("");
+      setToleranciaNumerica("0");
+    } else if (tipoPregunta === "multiple_response") {
+      setOpciones(["", ""]);
+      setCorrectasSeleccionadas([]);
     } else if (tipoPregunta === "multiple_choice" && opciones.length === 2 && opciones[0] === "Verdadero" && opciones[1] === "Falso") {
       // Si volvemos de true_false a multiple_choice, resetear opciones
       setOpciones(["", ""]);
@@ -41,6 +63,19 @@ const QuestionCreator = ({ onAddQuestion }) => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tipoPregunta]);
+
+  // Funciones para respuestas aceptadas de short_answer
+  const handleAgregarRespuestaAceptada = () => {
+    if (respuestasAceptadas.length < 10) {
+      setRespuestasAceptadas([...respuestasAceptadas, ""]);
+    }
+  };
+
+  const handleEliminarRespuestaAceptada = (index) => {
+    if (respuestasAceptadas.length > 1) {
+      setRespuestasAceptadas(respuestasAceptadas.filter((_, i) => i !== index));
+    }
+  };
 
   // Agregar opción nueva
   const handleAgregarOpcion = () => {
@@ -58,6 +93,12 @@ const QuestionCreator = ({ onAddQuestion }) => {
       if (correcta >= nuevasOpciones.length) {
         setCorrecta(nuevasOpciones.length - 1);
       }
+      // Re-mapear índices de selección múltiple (quitar el eliminado y correr los siguientes)
+      setCorrectasSeleccionadas(prev =>
+        prev
+          .filter(i => i !== index)
+          .map(i => (i > index ? i - 1 : i))
+      );
     }
   };
   
@@ -117,17 +158,27 @@ const QuestionCreator = ({ onAddQuestion }) => {
       setError("Ingrese el texto de la pregunta");
       return;
     }
-    
-    if (tipoPregunta === "multiple_choice") {
+
+    if (puntos.trim() === "" || isNaN(Number(puntos)) || Number(puntos) <= 0) {
+      setError("El puntaje debe ser un número mayor a 0");
+      return;
+    }
+
+    if (tipoPregunta === "multiple_choice" || tipoPregunta === "multiple_response") {
       if (opciones.length < 2) {
         setError("La pregunta debe tener al menos 2 opciones");
         return;
       }
-      
+
       if (opciones.some(o => !o.trim())) {
         setError("Complete todas las opciones antes de agregar la pregunta");
         return;
       }
+    }
+
+    if (tipoPregunta === "multiple_response" && correctasSeleccionadas.length === 0) {
+      setError("Marque al menos una opción como correcta");
+      return;
     }
     
     if (tipoPregunta === "fill_in_blank") {
@@ -163,15 +214,35 @@ const QuestionCreator = ({ onAddQuestion }) => {
       }
     }
 
+    if (tipoPregunta === "short_answer") {
+      if (respuestasAceptadas.every(r => !r.trim())) {
+        setError("Ingrese al menos una respuesta aceptada");
+        return;
+      }
+    }
+
+    if (tipoPregunta === "numeric") {
+      if (valorNumericoCorrecto.trim() === "" || isNaN(Number(valorNumericoCorrecto))) {
+        setError("Ingrese el valor numérico correcto");
+        return;
+      }
+      if (toleranciaNumerica.trim() !== "" && isNaN(Number(toleranciaNumerica))) {
+        setError("La tolerancia debe ser un número");
+        return;
+      }
+    }
+
     // Preparar datos según el tipo de pregunta
     let preguntaData = {
       tipo: tipoPregunta,
+      dificultad,
+      puntos: Number(puntos),
       texto: textoPregunta,
       opciones: [],
       correcta: correcta,
-      imagenUrl: tipoPregunta === 'multiple_choice' ? (imagenUrl || null) : null
+      imagenUrl: (tipoPregunta === 'multiple_choice' || tipoPregunta === 'multiple_response') ? (imagenUrl || null) : null
     };
-    
+
     if (tipoPregunta === "fill_in_blank") {
       // Combinar respuestas correctas y distractores
       // Las primeras N opciones son las correctas en orden
@@ -182,11 +253,24 @@ const QuestionCreator = ({ onAddQuestion }) => {
       // Primera mitad: conceptos, segunda mitad: respuestas
       preguntaData.opciones = [...conceptos, ...respuestasMatching];
       preguntaData.correcta = conceptos.length; // Indica cuántos son conceptos (el resto son respuestas)
+    } else if (tipoPregunta === "short_answer") {
+      preguntaData.opciones = respuestasAceptadas.filter(r => r.trim());
+      preguntaData.correcta = null;
+    } else if (tipoPregunta === "numeric") {
+      preguntaData.opciones = [valorNumericoCorrecto.trim(), toleranciaNumerica.trim() || "0"];
+      preguntaData.correcta = null;
+    } else if (tipoPregunta === "essay" || tipoPregunta === "file_upload") {
+      preguntaData.opciones = [];
+      preguntaData.correcta = null;
+    } else if (tipoPregunta === "multiple_response") {
+      preguntaData.opciones = [...opciones];
+      preguntaData.correcta = null;
+      preguntaData.correctas = [...correctasSeleccionadas].sort((a, b) => a - b);
     } else {
       preguntaData.opciones = [...opciones];
       preguntaData.correcta = correcta;
     }
-    
+
     // Llamar al callback del padre con la nueva pregunta
     onAddQuestion(preguntaData);
 
@@ -194,15 +278,24 @@ const QuestionCreator = ({ onAddQuestion }) => {
     setTextoPregunta("");
     if (tipoPregunta === "multiple_choice") {
       setOpciones(["", ""]);
+    } else if (tipoPregunta === "multiple_response") {
+      setOpciones(["", ""]);
+      setCorrectasSeleccionadas([]);
     } else if (tipoPregunta === "fill_in_blank") {
       setRespuestasCorrectas([""]);
       setDistractores([]);
     } else if (tipoPregunta === "matching") {
       setConceptos(["", ""]);
       setRespuestasMatching(["", ""]);
+    } else if (tipoPregunta === "short_answer") {
+      setRespuestasAceptadas([""]);
+    } else if (tipoPregunta === "numeric") {
+      setValorNumericoCorrecto("");
+      setToleranciaNumerica("0");
     }
     setCorrecta(0);
     setImagenUrl(null);
+    setPuntos("1");
     setError("");
   };
 
@@ -239,10 +332,67 @@ const QuestionCreator = ({ onAddQuestion }) => {
             }}
           >
             <option value="multiple_choice">Opción Múltiple</option>
+            <option value="multiple_response">Selección Múltiple (varias correctas)</option>
             <option value="true_false">Verdadero / Falso</option>
             <option value="fill_in_blank">Completar Espacios</option>
             <option value="matching">Unir con Flechas (Matching)</option>
+            <option value="short_answer">Respuesta Corta</option>
+            <option value="numeric">Numérica (con tolerancia)</option>
+            <option value="essay">Desarrollo / Ensayo</option>
+            <option value="file_upload">Adjuntar Archivo</option>
           </select>
+        </div>
+
+        <div className="mb-4">
+          <label className="form-label d-flex align-items-center gap-2">
+            <i className="fas fa-signal text-muted"></i>
+            Dificultad
+          </label>
+          <select
+            className="form-select"
+            value={dificultad}
+            onChange={(e) => setDificultad(e.target.value)}
+            style={{
+              padding: '0.75rem 1rem',
+              border: '1px solid var(--border-color)',
+              borderRadius: '8px',
+              fontSize: '1rem'
+            }}
+          >
+            <option value="facil">Fácil</option>
+            <option value="media">Media</option>
+            <option value="dificil">Difícil</option>
+          </select>
+          <small className="form-text text-muted mt-1 d-block">
+            <i className="fas fa-info-circle me-1"></i>
+            Se usa para sortear un pool de preguntas balanceado entre alumnos (opcional, ver configuración de la parte).
+          </small>
+        </div>
+
+        <div className="mb-4">
+          <label className="form-label d-flex align-items-center gap-2">
+            <i className="fas fa-star text-muted"></i>
+            Puntaje de esta pregunta
+          </label>
+          <input
+            type="number"
+            min="0.1"
+            step="0.5"
+            className="form-control"
+            value={puntos}
+            onChange={(e) => setPuntos(e.target.value)}
+            style={{
+              padding: '0.75rem 1rem',
+              border: '1px solid var(--border-color)',
+              borderRadius: '8px',
+              fontSize: '1rem',
+              maxWidth: '150px'
+            }}
+          />
+          <small className="form-text text-muted mt-1 d-block">
+            <i className="fas fa-info-circle me-1"></i>
+            Cuánto vale esta pregunta frente al resto (por defecto 1, todas valen igual).
+          </small>
         </div>
 
         <div className="mb-4">
@@ -285,7 +435,7 @@ const QuestionCreator = ({ onAddQuestion }) => {
           )}
         </div>
 
-        {tipoPregunta === "multiple_choice" && (
+        {(tipoPregunta === "multiple_choice" || tipoPregunta === "multiple_response") && (
           <>
             <div className="mb-4">
               <label className="form-label d-flex align-items-center gap-2">
@@ -338,6 +488,36 @@ const QuestionCreator = ({ onAddQuestion }) => {
               )}
             </div>
 
+            {tipoPregunta === "multiple_response" && (
+              <div className="mb-4">
+                <label className="form-label d-flex align-items-center gap-2">
+                  <i className="fas fa-check-square text-success"></i>
+                  Marcá todas las opciones correctas
+                </label>
+                <div className="exam-creator-options-list">
+                  {opciones.map((op, i) => (
+                    <div key={i} className="form-check mb-1">
+                      <input
+                        className="form-check-input"
+                        type="checkbox"
+                        id={`correcta-multiple-${i}`}
+                        checked={correctasSeleccionadas.includes(i)}
+                        onChange={(e) => {
+                          setCorrectasSeleccionadas(prev =>
+                            e.target.checked ? [...prev, i] : prev.filter(idx => idx !== i)
+                          );
+                        }}
+                      />
+                      <label className="form-check-label" htmlFor={`correcta-multiple-${i}`}>
+                        {op.trim() || `Opción ${i + 1}`}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {tipoPregunta === "multiple_choice" && (
             <div className="mb-4">
               <label className="form-label d-flex align-items-center gap-2">
                 <i className="fas fa-image text-muted"></i>
@@ -380,6 +560,7 @@ const QuestionCreator = ({ onAddQuestion }) => {
                 </div>
               )}
             </div>
+            )}
           </>
         )}
 
@@ -388,6 +569,115 @@ const QuestionCreator = ({ onAddQuestion }) => {
             <div className="alert alert-info">
               <i className="fas fa-info-circle me-2"></i>
               Las opciones para preguntas de Verdadero/Falso están predefinidas.
+            </div>
+          </div>
+        )}
+
+        {tipoPregunta === "short_answer" && (
+          <div className="mb-4">
+            <div className="alert alert-info">
+              <i className="fas fa-info-circle me-2"></i>
+              Se corrige automáticamente comparando el texto del alumno (sin importar mayúsculas ni espacios) contra las respuestas aceptadas.
+            </div>
+            <label className="form-label d-flex align-items-center gap-2">
+              <i className="fas fa-check-circle text-success me-2"></i>
+              Respuestas aceptadas
+            </label>
+            <div className="exam-creator-options-list">
+              {respuestasAceptadas.map((respuesta, i) => (
+                <div key={i} className="exam-creator-option-item mb-2 d-flex gap-2">
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder={`Respuesta aceptada ${i + 1}`}
+                    value={respuesta}
+                    onChange={(e) => {
+                      const nuevas = [...respuestasAceptadas];
+                      nuevas[i] = e.target.value;
+                      setRespuestasAceptadas(nuevas);
+                    }}
+                    style={{ padding: '0.6rem 0.8rem', border: '1px solid var(--border-color)', borderRadius: '6px', fontSize: '0.9rem' }}
+                  />
+                  {respuestasAceptadas.length > 1 && (
+                    <button
+                      type="button"
+                      className="btn btn-outline-danger btn-sm"
+                      onClick={() => handleEliminarRespuestaAceptada(i)}
+                      title="Eliminar respuesta"
+                      style={{ minWidth: '40px' }}
+                    >
+                      <i className="fas fa-trash"></i>
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            {respuestasAceptadas.length < 10 && (
+              <button
+                type="button"
+                className="btn btn-outline-success btn-sm mt-2"
+                onClick={handleAgregarRespuestaAceptada}
+              >
+                <i className="fas fa-plus me-2"></i>
+                Agregar respuesta aceptada
+              </button>
+            )}
+          </div>
+        )}
+
+        {tipoPregunta === "numeric" && (
+          <div className="mb-4">
+            <div className="alert alert-info">
+              <i className="fas fa-info-circle me-2"></i>
+              Se corrige automáticamente aceptando cualquier valor dentro del margen de tolerancia.
+            </div>
+            <div className="row g-3">
+              <div className="col-md-6">
+                <label className="form-label d-flex align-items-center gap-2">
+                  <i className="fas fa-check-circle text-success me-2"></i>
+                  Valor correcto
+                </label>
+                <input
+                  type="number"
+                  className="form-control"
+                  placeholder="Ej: 4.5"
+                  value={valorNumericoCorrecto}
+                  onChange={(e) => setValorNumericoCorrecto(e.target.value)}
+                  style={{ padding: '0.75rem 1rem', border: '1px solid var(--border-color)', borderRadius: '8px', fontSize: '1rem' }}
+                />
+              </div>
+              <div className="col-md-6">
+                <label className="form-label d-flex align-items-center gap-2">
+                  <i className="fas fa-arrows-alt-h text-muted me-2"></i>
+                  Tolerancia (±)
+                </label>
+                <input
+                  type="number"
+                  className="form-control"
+                  placeholder="Ej: 0.1 (0 = exacto)"
+                  value={toleranciaNumerica}
+                  onChange={(e) => setToleranciaNumerica(e.target.value)}
+                  style={{ padding: '0.75rem 1rem', border: '1px solid var(--border-color)', borderRadius: '8px', fontSize: '1rem' }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {tipoPregunta === "essay" && (
+          <div className="mb-4">
+            <div className="alert alert-info">
+              <i className="fas fa-info-circle me-2"></i>
+              El alumno responde con texto libre. No tiene corrección automática: la calificás manualmente al corregir el examen.
+            </div>
+          </div>
+        )}
+
+        {tipoPregunta === "file_upload" && (
+          <div className="mb-4">
+            <div className="alert alert-info">
+              <i className="fas fa-info-circle me-2"></i>
+              El alumno adjunta un archivo como respuesta (ej. foto de un diagrama hecho a mano). No tiene corrección automática: la calificás manualmente al corregir el examen.
             </div>
           </div>
         )}
@@ -783,7 +1073,7 @@ const QuestionCreator = ({ onAddQuestion }) => {
           </>
         )}
 
-        {tipoPregunta !== "fill_in_blank" && tipoPregunta !== "matching" && (
+        {(tipoPregunta === "multiple_choice" || tipoPregunta === "true_false") && (
           <div className="mb-4">
             <label className="form-label d-flex align-items-center gap-2">
               <i className="fas fa-check-circle text-muted"></i>
@@ -802,7 +1092,7 @@ const QuestionCreator = ({ onAddQuestion }) => {
             >
               {opciones.map((opcion, i) => (
                 <option key={i} value={i}>
-                  {tipoPregunta === "true_false" ? opcion : `Opción ${i + 1}`}
+                  {tipoPregunta === "true_false" ? opcion : (opcion.trim() ? `${i + 1}. ${opcion}` : `Opción ${i + 1} (vacía)`)}
                 </option>
               ))}
             </select>

@@ -165,7 +165,10 @@ export const useMultipleChoiceAttempt = (examId, windowId, navigate, { propExamI
                 [opcionesConIndice[i], opcionesConIndice[j]] = [opcionesConIndice[j], opcionesConIndice[i]];
               }
               randomized[index] = opcionesConIndice;
-            } else if (pregunta.opciones && Array.isArray(pregunta.opciones)) {
+            } else if (
+              pregunta.opciones && Array.isArray(pregunta.opciones) &&
+              !['short_answer', 'numeric', 'essay', 'file_upload'].includes(pregunta.tipo)
+            ) {
               const opcionesConIndice = pregunta.opciones.map((texto, i) => ({
                 texto,
                 originalIndex: i
@@ -224,10 +227,19 @@ export const useMultipleChoiceAttempt = (examId, windowId, navigate, { propExamI
         respuestasFinales[preguntaId] = respuesta.map(randomIndex =>
           randomizedOptions[preguntaIndex][randomIndex].originalIndex
         );
+      } else if (pregunta.tipo === 'multiple_response' && Array.isArray(respuesta)) {
+        // Array de índices (posiciones randomizadas) marcados por el alumno -> índices originales
+        respuestasFinales[preguntaId] = respuesta.map(randomIndex =>
+          randomizedOptions[preguntaIndex][randomIndex].originalIndex
+        );
       } else if (pregunta.tipo === 'matching' && Array.isArray(respuesta)) {
         respuestasFinales[preguntaId] = respuesta.map(randomizedAnswerIndex =>
           randomizedMatchingAnswers[preguntaIndex][randomizedAnswerIndex].originalIndex
         );
+      } else if (['short_answer', 'numeric', 'essay', 'file_upload'].includes(pregunta.tipo)) {
+        // Texto libre / valor numérico / URL de archivo: se envía tal cual, sin
+        // traducir índices de opciones randomizadas (no aplica a estos tipos).
+        respuestasFinales[preguntaId] = respuesta;
       } else {
         if (randomizedOptions[preguntaIndex]) {
           respuestasFinales[preguntaId] = randomizedOptions[preguntaIndex][respuesta].originalIndex;

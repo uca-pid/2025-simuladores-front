@@ -54,6 +54,9 @@ const mapApiPartToInternal = (parte) => {
     return {
       ...makeDefaultPart('multiple_choice'),
       preguntas: parte.preguntas || [],
+      cantidadFaciles: parte.cantidadFaciles ?? null,
+      cantidadMedias: parte.cantidadMedias ?? null,
+      cantidadDificiles: parte.cantidadDificiles ?? null,
     };
   }
 
@@ -271,7 +274,14 @@ const ExamCreator = () => {
         ordenAleatorio,
         partes: partes.map((p, idx) => {
           if (p.tipo === 'multiple_choice') {
-            return { orden: idx + 1, tipo: 'multiple_choice', preguntas: p.preguntas };
+            return {
+              orden: idx + 1,
+              tipo: 'multiple_choice',
+              preguntas: p.preguntas,
+              cantidadFaciles: p.cantidadFaciles,
+              cantidadMedias: p.cantidadMedias,
+              cantidadDificiles: p.cantidadDificiles,
+            };
           }
           return {
             orden: idx + 1,

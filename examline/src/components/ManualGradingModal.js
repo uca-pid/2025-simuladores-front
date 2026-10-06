@@ -929,8 +929,8 @@ export default function ManualGradingModal({ attemptId, onClose, onSave }) {
             </>
           )}
 
-          {/* Para exámenes múltiple choice */}
-          {attempt.exam.tipo === 'multiple_choice' && (
+          {/* Para exámenes múltiple choice (incluye todas las partes no-programación) */}
+          {attempt.exam.partes?.some(p => p.tipo === 'multiple_choice') && (
             <div className="modern-card mb-3">
               <div className="modern-card-header">
                 <h5 className="modern-card-title mb-0">
@@ -939,40 +939,143 @@ export default function ManualGradingModal({ attemptId, onClose, onSave }) {
                 </h5>
               </div>
               <div className="modern-card-body">
-                {attempt.exam.preguntas.map((pregunta, idx) => {
-                  const respuestaEstudiante = attempt.respuestas[idx]; // ✅ usar índice
-                  const esCorrecta = respuestaEstudiante === pregunta.correcta;
+                {attempt.exam.partes
+                  .filter(p => p.tipo === 'multiple_choice')
+                  .flatMap(p => p.preguntas)
+                  .map((pregunta, idx) => {
+                    const respuestaRow = attempt.respuestas?.find(r => r.preguntaId === pregunta.id);
+                    const respuestaEstudiante = respuestaRow?.valor;
+                    const sinResponder = respuestaRow === undefined || respuestaEstudiante === null || respuestaEstudiante === undefined;
+                    const esManual = pregunta.tipo === 'essay' || pregunta.tipo === 'file_upload';
 
-                  return (
-                    <div key={pregunta.id} className="mb-3 p-3 border rounded">
-                      <div className="d-flex justify-content-between align-items-start mb-2">
-                        <h6 className="mb-1">Pregunta {idx + 1}</h6>
-                        <span className={`badge ${esCorrecta ? 'bg-success' : 'bg-danger'}`}>
-                          {esCorrecta ? '✓ Correcta' : '✗ Incorrecta'}
-                        </span>
-                      </div>
-                      <p className="mb-2">{pregunta.texto}</p>
-                      <div className="ms-3">
-                        {pregunta.opciones.map((opcion, opIdx) => (
-                          <div
-                            key={opIdx}
-                            className={`p-2 mb-1 rounded ${
-                              opIdx === pregunta.correcta
-                                ? 'bg-success bg-opacity-10 border border-success'
-                                : opIdx === respuestaEstudiante
-                                ? 'bg-danger bg-opacity-10 border border-danger'
-                                : 'bg-light'
-                            }`}
-                          >
-                            {opIdx === pregunta.correcta && <i className="fas fa-check-circle text-success me-2"></i>}
-                            {opIdx === respuestaEstudiante && opIdx !== pregunta.correcta && <i className="fas fa-times-circle text-danger me-2"></i>}
-                            {opcion}
+                    let esCorrecta = null; // null = no aplica (manual) o sin responder
+                    if (!sinResponder && !esManual) {
+                      if (pregunta.tipo === 'short_answer') {
+                        const aceptadas = (pregunta.opciones || []).map(o => String(o).trim().toLowerCase());
+                        esCorrecta = aceptadas.includes(String(respuestaEstudiante).trim().toLowerCase());
+                      } else if (pregunta.tipo === 'numeric') {
+                        const [valorCorrecto, tolerancia] = pregunta.opciones || [];
+                        const diff = Math.abs(Number(respuestaEstudiante) - Number(valorCorrecto));
+                        esCorrecta = !isNaN(diff) && diff <= (Number(tolerancia) || 0);
+                      } else if (pregunta.tipo === 'multiple_response') {
+                        const marcadas = Array.isArray(respuestaEstudiante) ? [...respuestaEstudiante].sort((a, b) => a - b) : [];
+                        const esperadas = Array.isArray(pregunta.correctas) ? [...pregunta.correctas].sort((a, b) => a - b) : [];
+                        esCorrecta = marcadas.length === esperadas.length && marcadas.every((v, i) => v === esperadas[i]);
+                      } else {
+                        esCorrecta = respuestaEstudiante === pregunta.correcta;
+                      }
+                    }
+
+                    return (
+                      <div key={pregunta.id} className="mb-3 p-3 border rounded">
+                        <div className="d-flex justify-content-between align-items-start mb-2">
+                          <h6 className="mb-1">Pregunta {idx + 1}</h6>
+                          {esManual ? (
+                            <span className="badge bg-secondary">
+                              <i className="fas fa-user-check me-1"></i>
+                              Corrección manual
+                            </span>
+                          ) : sinResponder ? (
+                            <span className="badge bg-secondary">Sin responder</span>
+                          ) : (
+                            <span className={`badge ${esCorrecta ? 'bg-success' : 'bg-danger'}`}>
+                              {esCorrecta ? '✓ Correcta' : '✗ Incorrecta'}
+                            </span>
+                          )}
+                        </div>
+                        <p className="mb-2">{pregunta.texto}</p>
+
+                        {pregunta.tipo === 'short_answer' && (
+                          <div className="ms-3">
+                            <div className="mb-1"><strong>Respuesta del alumno:</strong> {sinResponder ? <span className="text-muted">—</span> : respuestaEstudiante}</div>
+                            <small className="text-muted">Aceptadas: {(pregunta.opciones || []).join(', ')}</small>
                           </div>
-                        ))}
+                        )}
+
+                        {pregunta.tipo === 'numeric' && (
+                          <div className="ms-3">
+                            <div className="mb-1"><strong>Respuesta del alumno:</strong> {sinResponder ? <span className="text-muted">—</span> : respuestaEstudiante}</div>
+                            <small className="text-muted">Correcto: {pregunta.opciones?.[0]} ± {pregunta.opciones?.[1] || 0}</small>
+                          </div>
+                        )}
+
+                        {pregunta.tipo === 'essay' && (
+                          <div className="ms-3">
+                            <div className="p-2 bg-light rounded" style={{ whiteSpace: 'pre-wrap' }}>
+                              {sinResponder ? <span className="text-muted">Sin responder</span> : respuestaEstudiante}
+                            </div>
+                          </div>
+                        )}
+
+                        {pregunta.tipo === 'file_upload' && (
+                          <div className="ms-3">
+                            {sinResponder ? (
+                              <span className="text-muted">Sin adjuntar</span>
+                            ) : (
+                              <a href={respuestaEstudiante} target="_blank" rel="noreferrer">
+                                <i className="fas fa-paperclip me-1"></i>
+                                Ver archivo adjuntado
+                              </a>
+                            )}
+                          </div>
+                        )}
+
+                        {['multiple_choice', 'true_false'].includes(pregunta.tipo) && Array.isArray(pregunta.opciones) && (
+                          <div className="ms-3">
+                            {pregunta.opciones.map((opcion, opIdx) => (
+                              <div
+                                key={opIdx}
+                                className={`p-2 mb-1 rounded ${
+                                  opIdx === pregunta.correcta
+                                    ? 'bg-success bg-opacity-10 border border-success'
+                                    : opIdx === respuestaEstudiante
+                                    ? 'bg-danger bg-opacity-10 border border-danger'
+                                    : 'bg-light'
+                                }`}
+                              >
+                                {opIdx === pregunta.correcta && <i className="fas fa-check-circle text-success me-2"></i>}
+                                {opIdx === respuestaEstudiante && opIdx !== pregunta.correcta && <i className="fas fa-times-circle text-danger me-2"></i>}
+                                {opcion}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {pregunta.tipo === 'multiple_response' && Array.isArray(pregunta.opciones) && (
+                          <div className="ms-3">
+                            {pregunta.opciones.map((opcion, opIdx) => {
+                              const esperada = Array.isArray(pregunta.correctas) && pregunta.correctas.includes(opIdx);
+                              const marcada = Array.isArray(respuestaEstudiante) && respuestaEstudiante.includes(opIdx);
+                              return (
+                                <div
+                                  key={opIdx}
+                                  className={`p-2 mb-1 rounded ${
+                                    esperada
+                                      ? 'bg-success bg-opacity-10 border border-success'
+                                      : marcada
+                                      ? 'bg-danger bg-opacity-10 border border-danger'
+                                      : 'bg-light'
+                                  }`}
+                                >
+                                  {esperada && <i className="fas fa-check-circle text-success me-2"></i>}
+                                  {marcada && !esperada && <i className="fas fa-times-circle text-danger me-2"></i>}
+                                  {opcion}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {['fill_in_blank', 'matching'].includes(pregunta.tipo) && (
+                          <div className="ms-3">
+                            <small className="text-muted">
+                              {sinResponder ? 'Sin responder' : 'Respondida — ver detalle completo en resultados del alumno'}
+                            </small>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
               </div>
 
             </div>

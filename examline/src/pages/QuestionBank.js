@@ -7,6 +7,24 @@ import { useModal } from "../hooks";
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:4000";
 
+const TIPO_META = {
+  multiple_choice: { label: "Opción Múltiple", color: "#007bff", icon: "fa-list-ul" },
+  multiple_response: { label: "Selección Múltiple", color: "#6610f2", icon: "fa-check-square" },
+  true_false: { label: "Verdadero/Falso", color: "#28a745", icon: "fa-check-double" },
+  fill_in_blank: { label: "Completar", color: "#ffc107", icon: "fa-fill-drip" },
+  matching: { label: "Unir con Flechas", color: "#9c27b0", icon: "fa-arrows-alt-h" },
+  short_answer: { label: "Respuesta Corta", color: "#17a2b8", icon: "fa-font" },
+  numeric: { label: "Numérica", color: "#fd7e14", icon: "fa-calculator" },
+  essay: { label: "Desarrollo", color: "#6c757d", icon: "fa-pen-fancy" },
+  file_upload: { label: "Adjuntar Archivo", color: "#20c997", icon: "fa-paperclip" },
+};
+
+const DIFICULTAD_META = {
+  facil: { label: "Fácil", color: "#28a745" },
+  media: { label: "Media", color: "#fd7e14" },
+  dificil: { label: "Difícil", color: "#dc3545" },
+};
+
 const QuestionBank = () => {
   const { modal, showModal, closeModal, setModalProcessing } = useModal();
   const [questions, setQuestions] = useState([]);
@@ -476,18 +494,31 @@ const QuestionBank = () => {
                           <i className="fas fa-question-circle me-2 text-primary"></i>
                           {question.titulo || `Pregunta #${index + 1}`}
                         </h5>
-                        <span 
-                          className="badge"
+                        <span
+                          className="badge me-2"
                           style={{
-                            backgroundColor: question.tipo === 'true_false' ? '#28a745' : question.tipo === 'fill_in_blank' ? '#ffc107' : question.tipo === 'matching' ? '#9c27b0' : '#007bff',
+                            backgroundColor: (TIPO_META[question.tipo] || TIPO_META.multiple_choice).color,
                             color: 'white',
                             padding: '0.35rem 0.65rem',
                             fontSize: '0.75rem',
                             borderRadius: '6px'
                           }}
                         >
-                          <i className={`fas ${question.tipo === 'true_false' ? 'fa-check-double' : question.tipo === 'fill_in_blank' ? 'fa-fill-drip' : question.tipo === 'matching' ? 'fa-arrows-alt-h' : 'fa-list-ul'} me-1`}></i>
-                          {question.tipo === 'true_false' ? 'Verdadero/Falso' : question.tipo === 'fill_in_blank' ? 'Completar' : question.tipo === 'matching' ? 'Unir con Flechas' : 'Opción Múltiple'}
+                          <i className={`fas ${(TIPO_META[question.tipo] || TIPO_META.multiple_choice).icon} me-1`}></i>
+                          {(TIPO_META[question.tipo] || TIPO_META.multiple_choice).label}
+                        </span>
+                        <span
+                          className="badge"
+                          style={{
+                            backgroundColor: (DIFICULTAD_META[question.dificultad] || DIFICULTAD_META.media).color,
+                            color: 'white',
+                            padding: '0.35rem 0.65rem',
+                            fontSize: '0.75rem',
+                            borderRadius: '6px'
+                          }}
+                        >
+                          <i className="fas fa-signal me-1"></i>
+                          {(DIFICULTAD_META[question.dificultad] || DIFICULTAD_META.media).label}
                         </span>
                       </div>
                       {editingId !== question.id ? (
@@ -730,9 +761,52 @@ const QuestionBank = () => {
                           </div>
                         )}
                         <div className="mb-2">
-                          <strong className="text-muted">{question.tipo === 'fill_in_blank' ? 'Respuestas:' : question.tipo === 'matching' ? 'Pares correctos:' : 'Opciones:'}</strong>
+                          <strong className="text-muted">
+                            {question.tipo === 'fill_in_blank' ? 'Respuestas:'
+                              : question.tipo === 'matching' ? 'Pares correctos:'
+                              : question.tipo === 'short_answer' ? 'Respuestas aceptadas:'
+                              : question.tipo === 'multiple_response' ? 'Opciones (correctas marcadas):'
+                              : question.tipo === 'numeric' ? 'Valor correcto:'
+                              : question.tipo === 'essay' || question.tipo === 'file_upload' ? 'Corrección:'
+                              : 'Opciones:'}
+                          </strong>
                         </div>
-                        {question.tipo === 'matching' ? (
+                        {question.tipo === 'short_answer' ? (
+                          <ul className="list-group mb-3">
+                            {Array.isArray(question.opciones) && question.opciones.map((opcion, i) => (
+                              <li key={i} className="list-group-item list-group-item-success">
+                                <i className="fas fa-check-circle me-2 text-success"></i>
+                                {opcion}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : question.tipo === 'multiple_response' ? (
+                          <ul className="list-group mb-3">
+                            {Array.isArray(question.opciones) && question.opciones.map((opcion, i) => {
+                              const esCorrecta = Array.isArray(question.correctas) && question.correctas.includes(i);
+                              return (
+                                <li key={i} className={`list-group-item ${esCorrecta ? 'list-group-item-success' : ''}`}>
+                                  {esCorrecta && <i className="fas fa-check-circle me-2 text-success"></i>}
+                                  {opcion}
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        ) : question.tipo === 'numeric' ? (
+                          <div className="mb-3">
+                            <span className="badge bg-success me-2" style={{ fontSize: '0.85rem' }}>
+                              {question.opciones?.[0]}
+                            </span>
+                            <span className="text-muted" style={{ fontSize: '0.85rem' }}>
+                              ± {question.opciones?.[1] || 0} de tolerancia
+                            </span>
+                          </div>
+                        ) : question.tipo === 'essay' || question.tipo === 'file_upload' ? (
+                          <div className="alert alert-secondary mb-3" style={{ fontSize: '0.85rem' }}>
+                            <i className="fas fa-user-check me-2"></i>
+                            Se corrige manualmente al revisar el examen.
+                          </div>
+                        ) : question.tipo === 'matching' ? (
                           <div className="list-group mb-3">
                             {Array.isArray(question.opciones) && question.opciones.slice(0, question.correcta).map((concepto, i) => {
                               const respuesta = question.opciones[question.correcta + i];
