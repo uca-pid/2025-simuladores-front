@@ -8,6 +8,7 @@ import BackToMainButton from "../components/BackToMainButton";
 import Modal from "../components/Modal";
 import ExamPartBuilder from "../components/ExamPartBuilder";
 import { createExam, updateExam, getExamById } from "../services/api";
+import { getTipoBadge, getDificultadBadge } from "../utils/questionBadges";
 
 const DRAFT_KEY = 'examCreatorDraft';
 
@@ -112,6 +113,7 @@ const ExamCreator = () => {
   const [newPartTipo, setNewPartTipo] = useState("multiple_choice");
   const [isLoadingExam, setIsLoadingExam] = useState(isEditMode);
   const [loadExamError, setLoadExamError] = useState("");
+  const [showStudentPreview, setShowStudentPreview] = useState(false);
 
   // Wizard: los profesores pueden moverse libremente entre los 3 pasos
   const [currentStep, setCurrentStep] = useState(1);
@@ -731,8 +733,115 @@ const ExamCreator = () => {
                   </li>
                 ))}
               </ul>
+              <button
+                type="button"
+                className="modern-btn modern-btn-secondary mt-3"
+                onClick={() => setShowStudentPreview(prev => !prev)}
+              >
+                <i className={`fas ${showStudentPreview ? 'fa-eye-slash' : 'fa-eye'} me-2`}></i>
+                {showStudentPreview ? 'Ocultar vista previa' : 'Ver como lo verá el alumno'}
+              </button>
             </div>
           </div>
+
+          {showStudentPreview && (
+            <div className="modern-card mb-4">
+              <div className="modern-card-header">
+                <h3 className="modern-card-title">
+                  <i className="fas fa-eye me-2"></i>
+                  Vista previa — lo que el alumno va a ver
+                </h3>
+                <p className="text-muted mb-0" style={{ fontSize: '0.85rem' }}>
+                  No muestra cuál opción es correcta, ni los test cases (eso el alumno tampoco lo ve).
+                </p>
+              </div>
+              <div className="modern-card-body">
+                {partes.map((p, idx) => (
+                  <div key={p.localId} className="mb-4 pb-4" style={{ borderBottom: idx < partes.length - 1 ? '1px solid var(--border-color)' : 'none' }}>
+                    <h5 className="mb-3">
+                      <i className={`fas ${p.tipo === 'multiple_choice' ? 'fa-question-circle' : 'fa-code'} me-2`}></i>
+                      Parte {idx + 1}: {TIPO_LABEL[p.tipo]}
+                    </h5>
+
+                    {p.tipo === 'multiple_choice' ? (
+                      p.preguntas.length === 0 ? (
+                        <p className="text-muted fst-italic">Esta parte todavía no tiene preguntas.</p>
+                      ) : (
+                        <div className="d-flex flex-column gap-3">
+                          {p.preguntas.map((pregunta, qIdx) => (
+                            <div key={qIdx} className="p-3" style={{ border: '1px solid var(--border-color)', borderRadius: '8px' }}>
+                              <div className="d-flex align-items-center gap-2 mb-2">
+                                <span
+                                  className="badge"
+                                  style={{ backgroundColor: getTipoBadge(pregunta.tipo).color, color: 'white' }}
+                                >
+                                  <i className={`fas ${getTipoBadge(pregunta.tipo).icon} me-1`}></i>
+                                  {getTipoBadge(pregunta.tipo).label}
+                                </span>
+                                <span
+                                  className="badge"
+                                  style={{ backgroundColor: getDificultadBadge(pregunta.dificultad).color, color: 'white' }}
+                                >
+                                  {getDificultadBadge(pregunta.dificultad).label}
+                                </span>
+                              </div>
+                              <p className="mb-2">{qIdx + 1}. {pregunta.texto}</p>
+                              {pregunta.imagenUrl && (
+                                <img src={pregunta.imagenUrl} alt="" style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px' }} className="mb-2" />
+                              )}
+                              {Array.isArray(pregunta.opciones) && pregunta.opciones.length > 0 && (
+                                <ul className="mb-0">
+                                  {pregunta.opciones.map((op, opIdx) => (
+                                    <li key={opIdx} className="text-muted">{op}</li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )
+                    ) : (
+                      <div className="p-3" style={{ border: '1px solid var(--border-color)', borderRadius: '8px' }}>
+                        <p className="mb-2">
+                          <strong>Lenguaje:</strong> {p.lenguajeProgramacion}
+                        </p>
+                        <div className="mb-2">
+                          <strong>Consigna:</strong>
+                          {p.enunciadoTipo === 'archivo' ? (
+                            p.enunciadoArchivoNombre ? (
+                              <p className="text-muted mb-0"><i className="fas fa-file-pdf me-1"></i>Archivo adjunto: {p.enunciadoArchivoNombre}</p>
+                            ) : (
+                              <p className="text-muted fst-italic mb-0">Todavía no se subió el archivo de consigna.</p>
+                            )
+                          ) : p.enunciadoProgramacion.trim() ? (
+                            <p className="mb-0" style={{ whiteSpace: 'pre-wrap' }}>{p.enunciadoProgramacion}</p>
+                          ) : (
+                            <p className="text-muted fst-italic mb-0">Todavía no se escribió la consigna.</p>
+                          )}
+                        </div>
+                        {p.datasetFiles.length > 0 && (
+                          <div className="mb-2">
+                            <strong>Datasets disponibles:</strong>
+                            <ul className="mb-0">
+                              {p.datasetFiles.map(f => <li key={f.nombre} className="text-muted">{f.nombre}</li>)}
+                            </ul>
+                          </div>
+                        )}
+                        {p.codigoInicial.trim() && (
+                          <div>
+                            <strong>Código inicial:</strong>
+                            <pre className="mb-0 p-2 mt-1" style={{ backgroundColor: '#1e1e1e', color: '#d4d4d4', borderRadius: '6px', fontSize: '0.85rem', overflowX: 'auto' }}>
+                              {p.codigoInicial}
+                            </pre>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="modern-card mb-4">
             <div className="modern-card-body d-flex justify-content-between align-items-center flex-wrap gap-3">
