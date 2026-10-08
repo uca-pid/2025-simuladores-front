@@ -174,6 +174,13 @@ const QuestionCreator = ({ onAddQuestion }) => {
         setError("Complete todas las opciones antes de agregar la pregunta");
         return;
       }
+
+      const opcionesNormalizadas = opciones.map(o => o.trim().toLowerCase());
+      const hayDuplicados = opcionesNormalizadas.some((o, i) => opcionesNormalizadas.indexOf(o) !== i);
+      if (hayDuplicados) {
+        setError("No se permiten opciones duplicadas (ignorando mayúsculas/minúsculas y espacios).");
+        return;
+      }
     }
 
     if (tipoPregunta === "multiple_response" && correctasSeleccionadas.length === 0) {
@@ -217,6 +224,13 @@ const QuestionCreator = ({ onAddQuestion }) => {
     if (tipoPregunta === "short_answer") {
       if (respuestasAceptadas.every(r => !r.trim())) {
         setError("Ingrese al menos una respuesta aceptada");
+        return;
+      }
+
+      const respuestasNoVacias = respuestasAceptadas.filter(r => r.trim()).map(r => r.trim().toLowerCase());
+      const hayDuplicados = respuestasNoVacias.some((r, i) => respuestasNoVacias.indexOf(r) !== i);
+      if (hayDuplicados) {
+        setError("No se permiten respuestas aceptadas duplicadas (ignorando mayúsculas/minúsculas y espacios).");
         return;
       }
     }
@@ -331,15 +345,21 @@ const QuestionCreator = ({ onAddQuestion }) => {
               fontSize: '1rem'
             }}
           >
-            <option value="multiple_choice">Opción Múltiple</option>
-            <option value="multiple_response">Selección Múltiple (varias correctas)</option>
-            <option value="true_false">Verdadero / Falso</option>
-            <option value="fill_in_blank">Completar Espacios</option>
-            <option value="matching">Unir con Flechas (Matching)</option>
-            <option value="short_answer">Respuesta Corta</option>
-            <option value="numeric">Numérica (con tolerancia)</option>
-            <option value="essay">Desarrollo / Ensayo</option>
-            <option value="file_upload">Adjuntar Archivo</option>
+            <optgroup label="Corrección automática — selección">
+              <option value="multiple_choice">Opción Múltiple</option>
+              <option value="multiple_response">Selección Múltiple (varias correctas)</option>
+              <option value="true_false">Verdadero / Falso</option>
+              <option value="matching">Unir con Flechas (Matching)</option>
+            </optgroup>
+            <optgroup label="Corrección automática — texto/número">
+              <option value="fill_in_blank">Completar Espacios</option>
+              <option value="short_answer">Respuesta Corta</option>
+              <option value="numeric">Numérica (con tolerancia)</option>
+            </optgroup>
+            <optgroup label="Corrección manual (la corregís vos)">
+              <option value="essay">Desarrollo / Ensayo</option>
+              <option value="file_upload">Adjuntar Archivo</option>
+            </optgroup>
           </select>
         </div>
 

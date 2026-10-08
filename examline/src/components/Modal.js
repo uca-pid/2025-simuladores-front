@@ -13,7 +13,8 @@ const Modal = ({
   confirmText = "Aceptar",
   cancelText = "Cancelar",
   showCancel = false,
-  isProcessing = false // Nuevo prop para deshabilitar botones durante el procesamiento
+  isProcessing = false, // Nuevo prop para deshabilitar botones durante el procesamiento
+  children // Contenido opcional extra (ej. un input) debajo del mensaje
 }) => {
   if (!show) return null;
 
@@ -76,7 +77,9 @@ const Modal = ({
               <p className="responsive-modal-message">
                 {message}
               </p>
-              
+
+              {children}
+
               <div className="responsive-modal-buttons">
                 {showCancel && (
                   <button

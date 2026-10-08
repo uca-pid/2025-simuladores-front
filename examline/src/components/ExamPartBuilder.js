@@ -305,7 +305,10 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                       Orden Aleatorio de Preguntas
                     </label>
                     <small className="form-text text-muted d-block">
-                      Mismas preguntas para todos, pero en un orden distinto por alumno. Se aplica a <strong>todas</strong> las partes de preguntas del examen, no solo esta.
+                      {ordenAleatorio
+                        ? 'Cada estudiante ve las mismas preguntas, pero mezcladas en un orden distinto.'
+                        : 'Las preguntas siempre aparecerán en el mismo orden para todos los estudiantes.'}
+                      {' '}Se aplica a <strong>todas</strong> las partes de preguntas del examen, no solo esta.
                     </small>
                   </div>
                 )}
@@ -393,7 +396,8 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                 </div>
                 <h4 className="empty-title">No hay preguntas aún</h4>
                 <p className="empty-subtitle">
-                  Agrega tu primera pregunta usando el formulario de arriba
+                  Agrega tu primera pregunta usando el formulario de arriba.
+                  Las opciones de orden aleatorio y pool balanceado van a aparecer acá abajo apenas cargues la primera.
                 </p>
               </div>
             ) : (
@@ -556,7 +560,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
   // ---- Programming part ----
   const progTabs = [
     { key: 'config', label: 'Configuración', icon: 'fa-code' },
-    { key: 'tests', label: 'Test Cases', icon: 'fa-vial' },
+    { key: 'tests', label: 'Casos de Prueba', icon: 'fa-vial' },
     { key: 'solucion', label: 'Solución de Referencia', icon: 'fa-check-double' },
   ];
 
@@ -821,7 +825,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
         <div className="modern-card-header">
           <h3 className="modern-card-title">
             <i className="fas fa-vial me-2"></i>
-            Test Cases (Evaluación Automática)
+            Casos de Prueba (Evaluación Automática)
           </h3>
         </div>
         <div className="modern-card-body">
@@ -840,7 +844,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
               <div className="card-header d-flex justify-content-between align-items-center" style={{ backgroundColor: '#f8f9fa' }}>
                 <strong>
                   <i className="fas fa-flask me-2"></i>
-                  Test Case {index + 1}
+                  Caso de Prueba {index + 1}
                 </strong>
                 {part.testCases.length > 1 && (
                   <button
@@ -904,17 +908,17 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
 
           <button
             type="button"
-            className="btn btn-outline-primary"
+            className="modern-btn modern-btn-secondary"
             onClick={handleAddTestCase}
             disabled={isPublishing}
           >
             <i className="fas fa-plus me-2"></i>
-            Agregar Test Case
+            Agregar Caso de Prueba
           </button>
 
           <div className="alert alert-success mt-3 mb-0">
             <i className="fas fa-calculator me-2"></i>
-            <strong>Total: {part.testCases.length} test case{part.testCases.length !== 1 ? 's' : ''}</strong>
+            <strong>Total: {part.testCases.length} caso{part.testCases.length !== 1 ? 's' : ''} de prueba</strong>
             <br/>
             <small>
               Cada test vale <strong>{part.testCases.length > 0 ? (100 / part.testCases.length).toFixed(1) : 0}%</strong> del puntaje final.
@@ -930,7 +934,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
           <div className="modern-card mb-4">
             <div className="modern-card-body text-center py-5 text-muted">
               <i className="fas fa-vial-circle-xmark mb-3" style={{ fontSize: '2rem' }}></i>
-              <p className="mb-0">Agregá al menos un test case en la pestaña "Test Cases" para poder probar tu solución acá.</p>
+              <p className="mb-0">Agregá al menos un caso de prueba en la pestaña "Casos de Prueba" para poder probar tu solución acá.</p>
             </div>
           </div>
         ) : (
@@ -938,7 +942,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
           <div className="modern-card-header">
             <h3 className="modern-card-title">
               <i className="fas fa-check-double me-2"></i>
-              Validación de Test Cases y Solución de Referencia
+              Validación de Casos de Prueba y Solución de Referencia
             </h3>
             <p className="text-muted mb-0" style={{ fontSize: '0.85rem' }}>
               Espacio privado para vos: el alumno nunca ve este código ni estos archivos.
@@ -1138,9 +1142,9 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                     <div
                       className="form-check p-3 mb-2"
                       style={{
-                        backgroundColor: part.saveReferenceSolution ? '#d3f9d8' : 'white',
+                        backgroundColor: part.saveReferenceSolution ? 'rgba(40, 167, 69, 0.1)' : 'white',
                         borderRadius: '6px',
-                        border: `2px solid ${part.saveReferenceSolution ? '#2f9e44' : '#dee2e6'}`,
+                        border: `2px solid ${part.saveReferenceSolution ? '#28a745' : '#dee2e6'}`,
                         cursor: isPublishing ? 'not-allowed' : 'pointer',
                         opacity: isPublishing ? 0.6 : 1,
                         transition: 'all 0.2s ease'
@@ -1165,14 +1169,14 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                         <div className="d-flex align-items-start">
                           <div>
                             <strong style={{
-                              color: part.saveReferenceSolution ? '#2f9e44' : '#495057'
+                              color: part.saveReferenceSolution ? '#28a745' : '#495057'
                             }}>
                               <i className="fas fa-check-circle me-2"></i>
                               Guardar esta solución
                             </strong>
                             <div style={{
                               fontSize: '0.875rem',
-                              color: part.saveReferenceSolution ? '#2b8a3e' : '#6c757d',
+                              color: part.saveReferenceSolution ? '#28a745' : '#6c757d',
                               marginTop: '0.25rem'
                             }}>
                               Se guardará como solución de referencia
@@ -1185,9 +1189,9 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                     <div
                       className="form-check p-3"
                       style={{
-                        backgroundColor: !part.saveReferenceSolution ? '#ffe0e0' : 'white',
+                        backgroundColor: !part.saveReferenceSolution ? 'rgba(220, 53, 69, 0.08)' : 'white',
                         borderRadius: '6px',
-                        border: `2px solid ${!part.saveReferenceSolution ? '#c92a2a' : '#dee2e6'}`,
+                        border: `2px solid ${!part.saveReferenceSolution ? '#dc3545' : '#dee2e6'}`,
                         cursor: isPublishing ? 'not-allowed' : 'pointer',
                         opacity: isPublishing ? 0.6 : 1,
                         transition: 'all 0.2s ease'
@@ -1212,14 +1216,14 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                         <div className="d-flex align-items-start">
                           <div>
                             <strong style={{
-                              color: !part.saveReferenceSolution ? '#c92a2a' : '#495057'
+                              color: !part.saveReferenceSolution ? '#dc3545' : '#495057'
                             }}>
                               <i className="fas fa-times-circle me-2"></i>
                               No guardar esta solución
                             </strong>
                             <div style={{
                               fontSize: '0.875rem',
-                              color: !part.saveReferenceSolution ? '#a61e4d' : '#6c757d',
+                              color: !part.saveReferenceSolution ? '#dc3545' : '#6c757d',
                               marginTop: '0.25rem'
                             }}>
                               Solo para probar el código sin guardarlo como referencia
@@ -1267,7 +1271,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                         ) : (
                           <i className="fas fa-times-circle text-danger me-2"></i>
                         )}
-                        Test {index + 1}: {result.description || `Test Case ${index + 1}`}
+                        Test {index + 1}: {result.description || `Caso de Prueba ${index + 1}`}
                       </strong>
                       <span className="badge" style={{
                         backgroundColor: result.passed ? '#28a745' : '#dc3545',
@@ -1330,67 +1334,37 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
         )
       )}
 
-      {showNewReferenceFileModal && (
-        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">
-                  <i className="fas fa-file-plus me-2"></i>
-                  Nuevo Archivo de Referencia
-                </h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => {
-                    setShowNewReferenceFileModal(false);
-                    setNewReferenceFileName('');
-                  }}
-                ></button>
-              </div>
-              <div className="modal-body">
-                <label className="form-label">Nombre del archivo:</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder={`Ej: utils${getExtensionForLanguage(part.lenguajeProgramacion)}`}
-                  value={newReferenceFileName}
-                  onChange={(e) => setNewReferenceFileName(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      handleAddReferenceFile();
-                    }
-                  }}
-                  autoFocus
-                />
-                <small className="text-muted mt-2 d-block">
-                  Se agregará automáticamente la extensión {getExtensionForLanguage(part.lenguajeProgramacion)} si no la incluyes
-                </small>
-              </div>
-              <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => {
-                    setShowNewReferenceFileModal(false);
-                    setNewReferenceFileName('');
-                  }}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={handleAddReferenceFile}
-                >
-                  <i className="fas fa-plus me-2"></i>
-                  Crear Archivo
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        show={showNewReferenceFileModal}
+        onClose={() => {
+          setShowNewReferenceFileModal(false);
+          setNewReferenceFileName('');
+        }}
+        onConfirm={handleAddReferenceFile}
+        title="Nuevo Archivo de Referencia"
+        message="Nombre del archivo:"
+        type="confirm"
+        showCancel={true}
+        confirmText="Crear Archivo"
+        cancelText="Cancelar"
+      >
+        <input
+          type="text"
+          className="form-control"
+          placeholder={`Ej: utils${getExtensionForLanguage(part.lenguajeProgramacion)}`}
+          value={newReferenceFileName}
+          onChange={(e) => setNewReferenceFileName(e.target.value)}
+          onKeyPress={(e) => {
+            if (e.key === 'Enter') {
+              handleAddReferenceFile();
+            }
+          }}
+          autoFocus
+        />
+        <small className="text-muted mt-2 d-block">
+          Se agregará automáticamente la extensión {getExtensionForLanguage(part.lenguajeProgramacion)} si no la incluyes
+        </small>
+      </Modal>
 
       <Modal
         show={showDeleteReferenceFileModal}

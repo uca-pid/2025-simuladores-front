@@ -272,7 +272,7 @@ const ExamCreator = () => {
     setIsPublishing(true);
     try {
       const examData = {
-        titulo,
+        titulo: titulo.trim(),
         ordenAleatorio,
         partes: partes.map((p, idx) => {
           if (p.tipo === 'multiple_choice') {
@@ -355,7 +355,7 @@ const ExamCreator = () => {
   const handlePublicarExamen = async () => {
     if (isPublishing) return;
 
-    if (!titulo) {
+    if (!titulo.trim()) {
       showModal('error', 'Error', 'Ingrese un título para el examen', null, false);
       return;
     }
@@ -379,6 +379,28 @@ const ExamCreator = () => {
           );
           return;
         }
+
+        const poolDefinido = [p.cantidadFaciles, p.cantidadMedias, p.cantidadDificiles].some(c => c !== undefined && c !== null);
+        if (poolDefinido) {
+          const counts = { facil: 0, media: 0, dificil: 0 };
+          p.preguntas.forEach(pregunta => { counts[pregunta.dificultad || 'media']++; });
+          const pedidos = [
+            ['facil', p.cantidadFaciles], ['media', p.cantidadMedias], ['dificil', p.cantidadDificiles]
+          ];
+          for (const [nivel, cantidad] of pedidos) {
+            const n = cantidad ?? 0;
+            if (n > counts[nivel]) {
+              showModal(
+                'warning',
+                'No se puede publicar el examen',
+                `La parte ${partNum} (preguntas) tiene el pool aleatorio balanceado pidiendo ${n} pregunta(s) de dificultad '${nivel}', pero solo hay ${counts[nivel]} disponibles. Ajustá la cantidad o agregá más preguntas de ese nivel.`,
+                null,
+                false
+              );
+              return;
+            }
+          }
+        }
       } else if (p.tipo === "programming") {
         if (p.enunciadoTipo === "texto" && !p.enunciadoProgramacion.trim()) {
           showModal(
@@ -400,7 +422,48 @@ const ExamCreator = () => {
           );
           return;
         }
+        const tieneTestCaseValido = p.testCases.some(tc => tc.expectedOutput && tc.expectedOutput.trim());
+        if (!tieneTestCaseValido) {
+          showModal(
+            'warning',
+            'No se puede publicar el examen',
+            `La parte ${partNum} (programación) no tiene ningún caso de prueba con el output esperado completo. Sin esto, el examen no se puede corregir automáticamente. Completá al menos un caso de prueba en la pestaña "Casos de Prueba" antes de continuar.`,
+            null,
+            false
+          );
+          return;
+        }
       }
+    }
+
+    // Limitación conocida: el backend solo guarda los archivos auxiliares de
+    // "solución de referencia" (multi-archivo) de la PRIMERA parte de
+    // programación del examen (ver proceedWithPublishing). El archivo principal
+    // usado para auto-corregir (solucionReferencia) sí se guarda bien para cada
+    // parte; lo que se pierde son los archivos adicionales (ej. utils.py) de
+    // las demás partes de programación. Avisamos antes de publicar en vez de
+    // perderlo en silencio.
+    const firstProgrammingPartId = partes.find(p => p.tipo === 'programming')?.localId;
+    const partesConArchivosAuxiliaresEnRiesgo = partes.filter(p =>
+      p.tipo === 'programming' &&
+      p.localId !== firstProgrammingPartId &&
+      p.saveReferenceSolution &&
+      p.referenceFiles.length > 1
+    );
+    if (partesConArchivosAuxiliaresEnRiesgo.length > 0) {
+      const numeros = partesConArchivosAuxiliaresEnRiesgo.map(p => partes.findIndex(x => x.localId === p.localId) + 1).join(', ');
+      showModal(
+        'warning',
+        'Archivos auxiliares de referencia no se guardarán',
+        `Las partes ${numeros} tienen una solución de referencia con varios archivos, pero solo la primera parte de programación del examen puede guardar archivos auxiliares. El archivo principal (el que se usa para corregir) sí se va a guardar bien en todas las partes — solo se perderán los archivos adicionales de apoyo de las partes ${numeros}. ¿Querés publicar igual?`,
+        () => {
+          closeModal();
+          proceedWithPublishing();
+        },
+        true,
+        'Publicar igual'
+      );
+      return;
     }
 
     proceedWithPublishing();
@@ -655,7 +718,7 @@ const ExamCreator = () => {
                   </div>
                   <small className="form-text text-muted">
                     {ordenAleatorio
-                      ? "✓ Cada estudiante ve las mismas preguntas, pero mezcladas en un orden distinto (aplica a todas las partes de opción múltiple)."
+                      ? "Cada estudiante ve las mismas preguntas, pero mezcladas en un orden distinto."
                       : "Las preguntas siempre aparecerán en el mismo orden para todos los estudiantes."}
                     {" "}Esto no cambia qué preguntas le tocan a cada alumno — para que cada alumno reciba un subconjunto distinto de preguntas, usá el "Pool aleatorio balanceado" dentro de cada parte, más abajo.
                   </small>
@@ -728,7 +791,7 @@ const ExamCreator = () => {
                     {p.tipo === 'multiple_choice' ? (
                       <span className="ms-2 text-muted">— {p.preguntas.length} pregunta{p.preguntas.length !== 1 ? 's' : ''}</span>
                     ) : (
-                      <span className="ms-2 text-muted">— {p.testCases.length} test case{p.testCases.length !== 1 ? 's' : ''} ({p.lenguajeProgramacion})</span>
+                      <span className="ms-2 text-muted">— {p.testCases.length} caso{p.testCases.length !== 1 ? 's' : ''} de prueba ({p.lenguajeProgramacion})</span>
                     )}
                   </li>
                 ))}
@@ -752,7 +815,7 @@ const ExamCreator = () => {
                   Vista previa — lo que el alumno va a ver
                 </h3>
                 <p className="text-muted mb-0" style={{ fontSize: '0.85rem' }}>
-                  No muestra cuál opción es correcta, ni los test cases (eso el alumno tampoco lo ve).
+                  No muestra cuál opción es correcta, ni los casos de prueba (eso el alumno tampoco lo ve).
                 </p>
               </div>
               <div className="modern-card-body">
