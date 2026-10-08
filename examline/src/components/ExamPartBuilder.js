@@ -609,10 +609,11 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
           </div>
 
           <div className="mb-3">
-            <label className="form-label d-flex align-items-center gap-2">
+            <label className="form-label d-flex align-items-center gap-2 mb-0">
               <i className="fas fa-file-alt text-muted"></i>
               Consigna del Problema
             </label>
+            <small className="text-muted d-block mb-2">Lo que el alumno lee al empezar este ejercicio.</small>
             <div className="d-flex gap-3 mb-2">
               <div className="form-check">
                 <input
@@ -695,10 +696,11 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
           </div>
 
           <div className="mb-3">
-            <label className="form-label d-flex align-items-center gap-2">
+            <label className="form-label d-flex align-items-center gap-2 mb-0">
               <i className="fas fa-table text-muted"></i>
               Datasets CSV/TXT (Opcional)
             </label>
+            <small className="text-muted d-block mb-2">Archivos que el código del alumno puede abrir por nombre (no son la consigna).</small>
             <input
               type="file"
               className="form-control"
@@ -904,6 +906,9 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
               <i className="fas fa-check-double me-2"></i>
               Validación de Test Cases y Solución de Referencia
             </h3>
+            <p className="text-muted mb-0" style={{ fontSize: '0.85rem' }}>
+              Espacio privado para vos: el alumno nunca ve este código ni estos archivos.
+            </p>
           </div>
           <div className="modern-card-body">
             <div className="alert alert-info mb-3">
