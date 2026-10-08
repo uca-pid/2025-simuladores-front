@@ -653,8 +653,9 @@ const ExamCreator = () => {
                   </div>
                   <small className="form-text text-muted">
                     {ordenAleatorio
-                      ? "✓ Cada estudiante verá las preguntas en un orden diferente (aplica solo a las partes de opción múltiple)"
-                      : "Las preguntas siempre aparecerán en el mismo orden"}
+                      ? "✓ Cada estudiante ve las mismas preguntas, pero mezcladas en un orden distinto (aplica a todas las partes de opción múltiple)."
+                      : "Las preguntas siempre aparecerán en el mismo orden para todos los estudiantes."}
+                    {" "}Esto no cambia qué preguntas le tocan a cada alumno — para que cada alumno reciba un subconjunto distinto de preguntas, usá el "Pool aleatorio balanceado" dentro de cada parte, más abajo.
                   </small>
                 </div>
               )}
@@ -669,6 +670,8 @@ const ExamCreator = () => {
               isPublishing={isPublishing}
               showModal={showModal}
               partLabel={`Parte ${partes.findIndex(p => p.localId === selectedPart.localId) + 1}`}
+              ordenAleatorio={ordenAleatorio}
+              onOrdenAleatorioChange={setOrdenAleatorio}
             />
           )}
 

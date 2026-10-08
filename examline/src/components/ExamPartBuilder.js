@@ -12,7 +12,7 @@ const getExtensionForLanguage = (lenguaje) => LANGUAGE_EXTENSIONS[lenguaje] || '
 // `part` / `onChange` lift this part's whole local state up into ExamCreator's
 // `partes` array, so every setter below reads `part.<field>` and calls
 // `onChange({ ...part, <field>: value })` instead of owning local state.
-const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, partLabel }) => {
+const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, partLabel, ordenAleatorio, onOrdenAleatorioChange }) => {
   const [showBankSelector, setShowBankSelector] = useState(false);
   const [showNewReferenceFileModal, setShowNewReferenceFileModal] = useState(false);
   const [newReferenceFileName, setNewReferenceFileName] = useState('');
@@ -285,8 +285,29 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                   <i className="fas fa-random me-2"></i>
                   Pool aleatorio balanceado (opcional)
                 </h3>
+                <p className="text-muted mb-0" style={{ fontSize: '0.85rem' }}>
+                  Cada alumno recibe una selección distinta de preguntas (no solo un orden distinto).
+                </p>
               </div>
               <div className="modern-card-body">
+                {typeof ordenAleatorio === 'boolean' && (
+                  <div className="form-check form-switch mb-3 pb-3" style={{ borderBottom: '1px solid var(--border-color)' }}>
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      id={`ordenAleatorio-${part.localId}`}
+                      checked={ordenAleatorio}
+                      onChange={(e) => onOrdenAleatorioChange?.(e.target.checked)}
+                    />
+                    <label className="form-check-label" htmlFor={`ordenAleatorio-${part.localId}`}>
+                      Orden Aleatorio de Preguntas
+                    </label>
+                    <small className="form-text text-muted d-block">
+                      Mismas preguntas para todos, pero en un orden distinto por alumno. Se aplica a <strong>todas</strong> las partes de preguntas del examen, no solo esta.
+                    </small>
+                  </div>
+                )}
+
                 <div className="form-check form-switch mb-3">
                   <input
                     className="form-check-input"
@@ -312,6 +333,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                       <i className="fas fa-info-circle me-2"></i>
                       Definí cuántas preguntas de cada dificultad le va a tocar a <strong>cada alumno</strong>, sorteadas del pool de abajo.
                       Todos reciben la misma cantidad de cada nivel, así nadie tiene ventaja por azar.
+                      {" "}Esto hace que cada alumno reciba preguntas distintas; es independiente del switch "Orden Aleatorio de Preguntas" (arriba), que solo mezcla el orden, no cambia cuáles preguntas le tocan a cada uno. Podés combinar ambos.
                     </div>
                     <div className="row g-3">
                       {[
