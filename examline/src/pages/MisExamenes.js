@@ -66,7 +66,7 @@ const MisExamenes = () => {
 
   // Filtrar exámenes
   const filteredExams = exams.filter((exam) =>
-    exam.titulo.toLowerCase().includes(searchTerm.toLowerCase())
+    (exam.titulo || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -173,7 +173,7 @@ const MisExamenes = () => {
             <div className="exams-grid">
               {filteredExams.map((exam, index) => (
                 <div key={exam.id} className="exam-grid-item">
-                  <div className={`exam-card fade-in-up`} style={{animationDelay: `${index * 0.1}s`}}>
+                  <div className={`exam-card fade-in-up`} style={{animationDelay: `${Math.min(index, 8) * 0.1}s`}}>
                     <div className="exam-card-header">
                       <h5 className="exam-title">{exam.titulo}</h5>
                       {exam.partes?.length > 1 ? (
