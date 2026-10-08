@@ -5,6 +5,7 @@ import QuestionCreator from "./QuestionCreator";
 import QuestionBankSelector from "./QuestionBankSelector";
 import { testSolutionPreview, uploadEnunciado, uploadDataset } from "../services/api";
 import { TIPO_BADGE, DIFICULTAD_BADGE } from "../utils/questionBadges";
+import Modal from "./Modal";
 
 const LANGUAGE_EXTENSIONS = { python: '.py', javascript: '.js', c: '.c' };
 const getExtensionForLanguage = (lenguaje) => LANGUAGE_EXTENSIONS[lenguaje] || '.js';
@@ -1351,52 +1352,20 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
         </div>
       )}
 
-      {showDeleteReferenceFileModal && (
-        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">
-                  <i className="fas fa-exclamation-triangle me-2 text-warning"></i>
-                  Confirmar Eliminación
-                </h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => {
-                    setShowDeleteReferenceFileModal(false);
-                    setReferenceFileToDelete('');
-                  }}
-                ></button>
-              </div>
-              <div className="modal-body">
-                <p>¿Estás seguro de que deseas eliminar el archivo <strong>{referenceFileToDelete}</strong>?</p>
-                <p className="text-muted mb-0">Esta acción no se puede deshacer.</p>
-              </div>
-              <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => {
-                    setShowDeleteReferenceFileModal(false);
-                    setReferenceFileToDelete('');
-                  }}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-danger"
-                  onClick={handleDeleteReferenceFile}
-                >
-                  <i className="fas fa-trash me-2"></i>
-                  Eliminar
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        show={showDeleteReferenceFileModal}
+        onClose={() => {
+          setShowDeleteReferenceFileModal(false);
+          setReferenceFileToDelete('');
+        }}
+        onConfirm={handleDeleteReferenceFile}
+        title="Confirmar Eliminación"
+        message={`¿Estás seguro de que deseas eliminar el archivo "${referenceFileToDelete}"? Esta acción no se puede deshacer.`}
+        type="error"
+        showCancel={true}
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+      />
     </>
   );
 };
