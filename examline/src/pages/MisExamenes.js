@@ -183,23 +183,23 @@ const MisExamenes = () => {
                         </span>
                       ) : (
                         <span
-  className={`exam-badge ${
-    exam.tipo === "programming"
-      ? "badge-programming"
-      : "badge-multiple"
-  }`}
->
-  <i
-    className={`fas ${
-      exam.tipo === "programming" ? "fa-code" : "fa-list-ul"
-    } me-1`}
-  ></i>
-  <span className="badge-text">
-    {exam.tipo === "programming"
-      ? "Programación"
-      : "Múltiple Choice"}
-  </span>
-</span>
+                          className={`exam-badge ${
+                            exam.tipo === "programming"
+                              ? "badge-programming"
+                              : "badge-multiple"
+                          }`}
+                        >
+                          <i
+                            className={`fas ${
+                              exam.tipo === "programming" ? "fa-code" : "fa-list-ul"
+                            } me-1`}
+                          ></i>
+                          <span className="badge-text">
+                            {exam.tipo === "programming"
+                              ? "Programación"
+                              : "Múltiple Choice"}
+                          </span>
+                        </span>
                       )}
 
                     </div>

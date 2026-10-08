@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { getTipoBadge } from "../utils/questionBadges";
-
-const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:4000";
+import { getQuestionBank } from "../services/api";
 
 const QuestionBankSelector = ({ show, onClose, onSelectQuestions }) => {
   const [questions, setQuestions] = useState([]);
@@ -23,20 +22,7 @@ const QuestionBankSelector = ({ show, onClose, onSelectQuestions }) => {
     try {
       setLoading(true);
       setError("");
-      const token = localStorage.getItem("token");
-      
-      const response = await fetch(`${API_BASE_URL}/question-bank`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Error al cargar preguntas");
-      }
-
-      const data = await response.json();
+      const data = await getQuestionBank();
       setQuestions(data);
     } catch (err) {
       setError(err.message || "Error al cargar las preguntas del banco");

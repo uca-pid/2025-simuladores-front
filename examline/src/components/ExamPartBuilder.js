@@ -22,6 +22,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
   const [isUploadingEnunciado, setIsUploadingEnunciado] = useState(false);
   const [isUploadingDataset, setIsUploadingDataset] = useState(false);
   const [isRunningTests, setIsRunningTests] = useState(false);
+  const [activeProgTab, setActiveProgTab] = useState('config');
 
   const update = (patch) => onChange({ ...part, ...patch });
 
@@ -200,7 +201,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
     if (invalidTests.length > 0) {
       showModal(
         'error',
-        '❌ Error de Validación',
+        'Error de Validación',
         `Hay ${invalidTests.length} test case(s) sin output esperado. Por favor completa todos los test cases antes de ejecutar.`,
         null,
         false
@@ -553,8 +554,30 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
   }
 
   // ---- Programming part ----
+  const progTabs = [
+    { key: 'config', label: 'Configuración', icon: 'fa-code' },
+    { key: 'tests', label: 'Test Cases', icon: 'fa-vial' },
+    { key: 'solucion', label: 'Solución de Referencia', icon: 'fa-check-double' },
+  ];
+
   return (
     <>
+      <ul className="nav nav-tabs mb-4">
+        {progTabs.map((tab) => (
+          <li className="nav-item" key={tab.key}>
+            <button
+              type="button"
+              className={`nav-link ${activeProgTab === tab.key ? 'active' : ''}`}
+              onClick={() => setActiveProgTab(tab.key)}
+            >
+              <i className={`fas ${tab.icon} me-2`}></i>
+              {tab.label}
+            </button>
+          </li>
+        ))}
+      </ul>
+
+      {activeProgTab === 'config' && (
       <div className="modern-card mb-4">
         <div className="modern-card-header">
           <h3 className="modern-card-title">
@@ -791,7 +814,9 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
           </div>
         </div>
       </div>
+      )}
 
+      {activeProgTab === 'tests' && (
       <div className="modern-card mb-4">
         <div className="modern-card-header">
           <h3 className="modern-card-title">
@@ -898,8 +923,17 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
           </div>
         </div>
       </div>
+      )}
 
-      {part.testCases.length > 0 && (
+      {activeProgTab === 'solucion' && (
+        part.testCases.length === 0 ? (
+          <div className="modern-card mb-4">
+            <div className="modern-card-body text-center py-5 text-muted">
+              <i className="fas fa-vial-circle-xmark mb-3" style={{ fontSize: '2rem' }}></i>
+              <p className="mb-0">Agregá al menos un test case en la pestaña "Test Cases" para poder probar tu solución acá.</p>
+            </div>
+          </div>
+        ) : (
         <div className="modern-card mb-4">
           <div className="modern-card-header">
             <h3 className="modern-card-title">
@@ -1293,6 +1327,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
             )}
           </div>
         </div>
+        )
       )}
 
       {showNewReferenceFileModal && (

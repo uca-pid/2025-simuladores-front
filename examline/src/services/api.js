@@ -337,6 +337,19 @@ export async function getExams() {
   }
 }
 
+export async function getQuestionBank() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/question-bank`, {
+      method: "GET",
+      headers: getAuthHeaders(),
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
 export async function getExamById(examId, windowId = null) {
   try {
     let url = `${API_BASE_URL}/exams/${examId}`;

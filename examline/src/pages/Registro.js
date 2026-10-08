@@ -77,51 +77,50 @@ const Registro = () => {
     setIsLoading(true);
     setError("");
 
-  try {
-  // 1️⃣ Registro
-  await signupUser({
-    nombre,
-    email,
-    password,
-    rol: isProfessor ? "professor" : "student",
-  });
+    try {
+      // 1️⃣ Registro
+      await signupUser({
+        nombre,
+        email,
+        password,
+        rol: isProfessor ? "professor" : "student",
+      });
 
-  // 2️⃣ Login automático
-  const loginData = await loginUser({ email, password });
+      // 2️⃣ Login automático
+      const loginData = await loginUser({ email, password });
 
-  // 3️⃣ Usar contexto de autenticación
-  login(loginData.token, loginData.user);
+      // 3️⃣ Usar contexto de autenticación
+      login(loginData.token, loginData.user);
 
-  // 4️⃣ Redirigir según rol
-  if (loginData.user.rol === "professor") {
-    navigate("/principal");
-  } else {
-    navigate("/student-exam");
-  }
+      // 4️⃣ Redirigir según rol
+      if (loginData.user.rol === "professor") {
+        navigate("/principal");
+      } else {
+        navigate("/student-exam");
+      }
+    } catch (err) {
+      console.error("Error en registro:", err);
 
-} catch (err) {
-  console.error("Error en registro:", err);
-
-  if (err.status === 400) {
-    setError(err.message || "El email ya está registrado.");
-  } else if (err.status === 429) {
-    setError(err.message || "Demasiados intentos. Intentá de nuevo en unos minutos.");
-  } else if (err.status === 500) {
-    setError("Error en el servidor. Inténtalo más tarde.");
-  } else if (err.status) {
-    setError(err.message || "Error desconocido al registrarse.");
-  } else {
-    setError("No se pudo conectar al servidor. Revisa tu conexión.");
-  }
-} finally {
-  setIsLoading(false);
-  // Start cooldown period
-  setIsOnCooldown(true);
-  setTimeout(() => {
-    setIsOnCooldown(false);
-  }, 1000); // 1 second cooldown
-}
-  };  
+      if (err.status === 400) {
+        setError(err.message || "El email ya está registrado.");
+      } else if (err.status === 429) {
+        setError(err.message || "Demasiados intentos. Intentá de nuevo en unos minutos.");
+      } else if (err.status === 500) {
+        setError("Error en el servidor. Inténtalo más tarde.");
+      } else if (err.status) {
+        setError(err.message || "Error desconocido al registrarse.");
+      } else {
+        setError("No se pudo conectar al servidor. Revisa tu conexión.");
+      }
+    } finally {
+      setIsLoading(false);
+      // Start cooldown period
+      setIsOnCooldown(true);
+      setTimeout(() => {
+        setIsOnCooldown(false);
+      }, 1000); // 1 second cooldown
+    }
+  };
   return (
     <div
       className="d-flex align-items-center justify-content-center min-vh-100 py-3"
