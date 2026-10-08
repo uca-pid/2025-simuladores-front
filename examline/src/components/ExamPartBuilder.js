@@ -4,25 +4,10 @@ import Editor from '@monaco-editor/react';
 import QuestionCreator from "./QuestionCreator";
 import QuestionBankSelector from "./QuestionBankSelector";
 import { testSolutionPreview, uploadEnunciado, uploadDataset } from "../services/api";
+import { TIPO_BADGE, DIFICULTAD_BADGE } from "../utils/questionBadges";
 
 const LANGUAGE_EXTENSIONS = { python: '.py', javascript: '.js', c: '.c' };
 const getExtensionForLanguage = (lenguaje) => LANGUAGE_EXTENSIONS[lenguaje] || '.js';
-
-const TIPO_BADGE = {
-  multiple_choice: { label: 'Múltiple', color: '#007bff', icon: 'fa-list-ul' },
-  true_false: { label: 'V/F', color: '#28a745', icon: 'fa-check-double' },
-  fill_in_blank: { label: 'Completar', color: '#ffc107', icon: 'fa-fill-drip' },
-  matching: { label: 'Unir', color: '#9c27b0', icon: 'fa-arrows-alt-h' },
-  short_answer: { label: 'Resp. Corta', color: '#17a2b8', icon: 'fa-font' },
-  numeric: { label: 'Numérica', color: '#fd7e14', icon: 'fa-calculator' },
-  essay: { label: 'Desarrollo', color: '#6c757d', icon: 'fa-pen-fancy' },
-  file_upload: { label: 'Archivo', color: '#20c997', icon: 'fa-paperclip' },
-};
-const DIFICULTAD_BADGE = {
-  facil: { label: 'Fácil', color: '#28a745' },
-  media: { label: 'Media', color: '#fd7e14' },
-  dificil: { label: 'Difícil', color: '#dc3545' },
-};
 
 // `part` / `onChange` lift this part's whole local state up into ExamCreator's
 // `partes` array, so every setter below reads `part.<field>` and calls

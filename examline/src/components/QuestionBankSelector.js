@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { getTipoBadge } from "../utils/questionBadges";
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:4000";
 
@@ -231,18 +232,18 @@ const QuestionBankSelector = ({ show, onClose, onSelectQuestions }) => {
                                 <i className="fas fa-question-circle me-2 text-primary"></i>
                                 {question.titulo || "Sin título"}
                               </h6>
-                              <span 
+                              <span
                                 className="badge"
                                 style={{
-                                  backgroundColor: question.tipo === 'true_false' ? '#28a745' : question.tipo === 'fill_in_blank' ? '#ffc107' : question.tipo === 'matching' ? '#9c27b0' : '#007bff',
+                                  backgroundColor: getTipoBadge(question.tipo).color,
                                   color: 'white',
                                   padding: '0.25rem 0.5rem',
                                   fontSize: '0.7rem',
                                   borderRadius: '4px'
                                 }}
                               >
-                                <i className={`fas ${question.tipo === 'true_false' ? 'fa-check-double' : question.tipo === 'fill_in_blank' ? 'fa-fill-drip' : question.tipo === 'matching' ? 'fa-arrows-alt-h' : 'fa-list-ul'} me-1`}></i>
-                                {question.tipo === 'true_false' ? 'V/F' : question.tipo === 'fill_in_blank' ? 'Completar' : question.tipo === 'matching' ? 'Unir' : 'Múltiple'}
+                                <i className={`fas ${getTipoBadge(question.tipo).icon} me-1`}></i>
+                                {getTipoBadge(question.tipo).label}
                               </span>
                             </div>
                             

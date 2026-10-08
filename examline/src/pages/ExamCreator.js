@@ -184,7 +184,7 @@ const ExamCreator = () => {
   const handleDiscardDraft = () => {
     showModal(
       'confirm',
-      '🗑️ Descartar Borrador',
+      'Descartar Borrador',
       '¿Estás seguro de que deseas descartar el borrador actual? Esta acción no se puede deshacer.',
       () => {
         localStorage.removeItem(DRAFT_KEY);
@@ -340,7 +340,7 @@ const ExamCreator = () => {
       console.error(err);
       showModal(
         'error',
-        '❌ Error al Publicar',
+        'Error al Publicar',
         err.message || 'Ocurrió un error al publicar el examen',
         null,
         false
@@ -451,9 +451,11 @@ const ExamCreator = () => {
 
       {isLoadingExam && (
         <div className="modern-card mb-4">
-          <div className="modern-card-body text-center py-5">
-            <div className="spinner-border text-primary mb-3" role="status"></div>
-            <p className="mb-0">Cargando examen...</p>
+          <div className="modern-card-body">
+            <div className="loading-container">
+              <div className="modern-spinner"></div>
+              <p className="mb-0">Cargando examen...</p>
+            </div>
           </div>
         </div>
       )}
@@ -778,52 +780,20 @@ const ExamCreator = () => {
       />
 
       {/* Modal para eliminar una parte */}
-      {showDeletePartModal && (
-        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">
-                  <i className="fas fa-exclamation-triangle me-2 text-warning"></i>
-                  Confirmar Eliminación
-                </h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => {
-                    setShowDeletePartModal(false);
-                    setPartToDelete(null);
-                  }}
-                ></button>
-              </div>
-              <div className="modal-body">
-                <p>¿Estás seguro de que deseas eliminar esta parte del examen?</p>
-                <p className="text-muted mb-0">Esta acción no se puede deshacer.</p>
-              </div>
-              <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => {
-                    setShowDeletePartModal(false);
-                    setPartToDelete(null);
-                  }}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-danger"
-                  onClick={confirmDeletePart}
-                >
-                  <i className="fas fa-trash me-2"></i>
-                  Eliminar
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        show={showDeletePartModal}
+        onClose={() => {
+          setShowDeletePartModal(false);
+          setPartToDelete(null);
+        }}
+        onConfirm={confirmDeletePart}
+        title="Confirmar Eliminación"
+        message="¿Estás seguro de que deseas eliminar esta parte del examen? Esta acción no se puede deshacer."
+        type="error"
+        showCancel={true}
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+      />
     </div>
   );
 };
