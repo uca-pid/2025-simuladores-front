@@ -641,7 +641,7 @@ const ExamCreator = () => {
       {/* Paso 2: Partes del examen */}
       {currentStep === 2 && (
         <>
-          <div className="modern-card mb-4">
+          <div className="modern-card mb-4" style={{ overflow: 'visible', transform: 'none' }}>
             <div className="modern-card-header">
               <h3 className="modern-card-title">
                 <i className="fas fa-layer-group me-2"></i>
@@ -753,6 +753,8 @@ const ExamCreator = () => {
                         flexDirection: 'column',
                         gap: '0.25rem',
                         minWidth: '180px',
+                        transition: 'none',
+                        transform: 'none',
                       }}
                     >
                       <button
