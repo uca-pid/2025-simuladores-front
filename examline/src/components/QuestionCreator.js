@@ -525,86 +525,6 @@ const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion }) =
 
         {(tipoPregunta === "multiple_choice" || tipoPregunta === "multiple_response") && (
           <>
-            <div className="mb-4">
-              <label className="form-label d-flex align-items-center gap-2">
-                <i className="fas fa-list text-muted"></i>
-                Opciones de respuesta (mínimo 2, máximo 10)
-              </label>
-              <div className="exam-creator-options-list">
-                {opciones.map((op, i) => (
-                  <div key={i} className="exam-creator-option-item mb-2 d-flex gap-2">
-                    <input
-                      type="text"
-                      className="form-control"
-                      placeholder={`Opción ${i + 1}`}
-                      value={op}
-                      onChange={(e) => {
-                        const nuevasOpciones = [...opciones];
-                        nuevasOpciones[i] = e.target.value;
-                        setOpciones(nuevasOpciones);
-                      }}
-                      style={{
-                        padding: '0.6rem 0.8rem',
-                        border: '1px solid var(--border-color)',
-                        borderRadius: '6px',
-                        fontSize: '0.9rem'
-                      }}
-                    />
-                    {opciones.length > 2 && (
-                      <button
-                        type="button"
-                        className="btn btn-outline-danger btn-sm"
-                        onClick={() => handleEliminarOpcion(i)}
-                        title="Eliminar opción"
-                        style={{ minWidth: '40px' }}
-                      >
-                        <i className="fas fa-trash"></i>
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-              {opciones.length < 10 && (
-                <button
-                  type="button"
-                  className="btn btn-outline-primary btn-sm mt-2"
-                  onClick={handleAgregarOpcion}
-                >
-                  <i className="fas fa-plus me-2"></i>
-                  Agregar opción
-                </button>
-              )}
-            </div>
-
-            {tipoPregunta === "multiple_response" && (
-              <div className="mb-4">
-                <label className="form-label d-flex align-items-center gap-2">
-                  <i className="fas fa-check-square text-success"></i>
-                  Marcá todas las opciones correctas
-                </label>
-                <div className="exam-creator-options-list">
-                  {opciones.map((op, i) => (
-                    <div key={i} className="form-check mb-1">
-                      <input
-                        className="form-check-input"
-                        type="checkbox"
-                        id={`correcta-multiple-${i}`}
-                        checked={correctasSeleccionadas.includes(i)}
-                        onChange={(e) => {
-                          setCorrectasSeleccionadas(prev =>
-                            e.target.checked ? [...prev, i] : prev.filter(idx => idx !== i)
-                          );
-                        }}
-                      />
-                      <label className="form-check-label" htmlFor={`correcta-multiple-${i}`}>
-                        {op.trim() || `Opción ${i + 1}`}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {tipoPregunta === "multiple_choice" && (
             <div className="mb-4">
               <label className="form-label d-flex align-items-center gap-2">
@@ -649,6 +569,84 @@ const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion }) =
               )}
             </div>
             )}
+
+            <div className="mb-4">
+              <label className="form-label d-flex align-items-center gap-2">
+                <i className="fas fa-list text-muted"></i>
+                Opciones de respuesta (mínimo 2, máximo 10)
+              </label>
+              <small className="form-text text-muted d-block mb-2">
+                {tipoPregunta === "multiple_choice"
+                  ? "Marcá el círculo de la opción correcta."
+                  : "Marcá el check de todas las opciones correctas."}
+              </small>
+              <div className="exam-creator-options-list">
+                {opciones.map((op, i) => (
+                  <div key={i} className="exam-creator-option-item mb-2 d-flex align-items-center gap-2">
+                    {tipoPregunta === "multiple_choice" ? (
+                      <input
+                        type="radio"
+                        className="form-check-input flex-shrink-0 mt-0"
+                        name="opcion-correcta"
+                        checked={correcta === i}
+                        onChange={() => setCorrecta(i)}
+                        title="Marcar como respuesta correcta"
+                      />
+                    ) : (
+                      <input
+                        type="checkbox"
+                        className="form-check-input flex-shrink-0 mt-0"
+                        checked={correctasSeleccionadas.includes(i)}
+                        onChange={(e) => {
+                          setCorrectasSeleccionadas(prev =>
+                            e.target.checked ? [...prev, i] : prev.filter(idx => idx !== i)
+                          );
+                        }}
+                        title="Marcar como respuesta correcta"
+                      />
+                    )}
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder={`Opción ${i + 1}`}
+                      value={op}
+                      onChange={(e) => {
+                        const nuevasOpciones = [...opciones];
+                        nuevasOpciones[i] = e.target.value;
+                        setOpciones(nuevasOpciones);
+                      }}
+                      style={{
+                        padding: '0.6rem 0.8rem',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: '6px',
+                        fontSize: '0.9rem'
+                      }}
+                    />
+                    {opciones.length > 2 && (
+                      <button
+                        type="button"
+                        className="btn btn-outline-danger btn-sm"
+                        onClick={() => handleEliminarOpcion(i)}
+                        title="Eliminar opción"
+                        style={{ minWidth: '40px' }}
+                      >
+                        <i className="fas fa-trash"></i>
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {opciones.length < 10 && (
+                <button
+                  type="button"
+                  className="btn btn-outline-primary btn-sm mt-2"
+                  onClick={handleAgregarOpcion}
+                >
+                  <i className="fas fa-plus me-2"></i>
+                  Agregar opción
+                </button>
+              )}
+            </div>
           </>
         )}
 
@@ -1163,7 +1161,7 @@ const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion }) =
           </>
         )}
 
-        {(tipoPregunta === "multiple_choice" || tipoPregunta === "true_false") && (
+        {tipoPregunta === "true_false" && (
           <div className="mb-4">
             <label className="form-label d-flex align-items-center gap-2">
               <i className="fas fa-check-circle text-muted"></i>
@@ -1182,7 +1180,7 @@ const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion }) =
             >
               {opciones.map((opcion, i) => (
                 <option key={i} value={i}>
-                  {tipoPregunta === "true_false" ? opcion : (opcion.trim() ? `${i + 1}. ${opcion}` : `Opción ${i + 1} (vacía)`)}
+                  {opcion}
                 </option>
               ))}
             </select>
