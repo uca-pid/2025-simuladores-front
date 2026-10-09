@@ -110,7 +110,8 @@ const ExamCreator = () => {
 
   const [isPublishing, setIsPublishing] = useState(false);
   const [hasDraft, setHasDraft] = useState(!!draft);
-  const [newPartTipo, setNewPartTipo] = useState("multiple_choice");
+  const [showAddPartMenu, setShowAddPartMenu] = useState(false);
+  const [draggedPartId, setDraggedPartId] = useState(null);
   const [isLoadingExam, setIsLoadingExam] = useState(isEditMode);
   const [loadExamError, setLoadExamError] = useState("");
   const [showStudentPreview, setShowStudentPreview] = useState(false);
@@ -208,10 +209,11 @@ const ExamCreator = () => {
     setPartes(prev => prev.map(p => p.localId === updatedPart.localId ? updatedPart : p));
   }, []);
 
-  const handleAddPart = () => {
-    const part = makeDefaultPart(newPartTipo);
+  const handleAddPart = (tipo) => {
+    const part = makeDefaultPart(tipo);
     setPartes(prev => [...prev, part]);
     setSelectedPartId(part.localId);
+    setShowAddPartMenu(false);
   };
 
   const handleMovePart = (localId, direction) => {
@@ -223,6 +225,37 @@ const ExamCreator = () => {
       [updated[index], updated[targetIndex]] = [updated[targetIndex], updated[index]];
       return updated;
     });
+  };
+
+  // Reordenar partes arrastrando sus pestañas (las flechas siguen andando
+  // como alternativa accesible para quien no pueda/quiera arrastrar).
+  // El id de la parte arrastrada viaja en dataTransfer, no en un estado de
+  // React: dragstart/drop pueden dispararse antes de que un setState llegue
+  // a confirmarse, y una closure stale haría que el drop no encuentre nada
+  // que mover.
+  const handlePartDragStart = (localId) => (e) => {
+    setDraggedPartId(localId);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(localId));
+  };
+  const handlePartDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+  const handlePartDrop = (targetLocalId) => (e) => {
+    e.preventDefault();
+    const sourceLocalId = e.dataTransfer.getData('text/plain');
+    if (!sourceLocalId || sourceLocalId === String(targetLocalId)) return;
+    setPartes(prev => {
+      const fromIndex = prev.findIndex(p => String(p.localId) === sourceLocalId);
+      const toIndex = prev.findIndex(p => p.localId === targetLocalId);
+      if (fromIndex === -1 || toIndex === -1) return prev;
+      const updated = [...prev];
+      const [moved] = updated.splice(fromIndex, 1);
+      updated.splice(toIndex, 0, moved);
+      return updated;
+    });
+    setDraggedPartId(null);
   };
 
   const requestDeletePart = (localId) => {
@@ -470,7 +503,6 @@ const ExamCreator = () => {
   };
 
   const selectedPart = partes.find(p => p.localId === selectedPartId) || partes[0];
-  const hasMultipleChoicePart = partes.some(p => p.tipo === "multiple_choice");
 
   return (
     <div className="container py-5">
@@ -610,95 +642,135 @@ const ExamCreator = () => {
               </h3>
             </div>
             <div className="modern-card-body">
-              <label className="form-label d-flex align-items-center gap-2 mb-1">
-                <i className="fas fa-plus-circle text-muted"></i>
-                Tipo de la nueva parte a agregar:
-              </label>
-              <div className="d-flex gap-2 align-items-center mb-3">
-                <select
-                  className="form-select"
-                  value={newPartTipo}
-                  onChange={(e) => setNewPartTipo(e.target.value)}
-                  disabled={isPublishing}
-                  style={{ maxWidth: '250px' }}
-                >
-                  <option value="multiple_choice">Preguntas</option>
-                  <option value="programming">Programación</option>
-                </select>
-                <button
-                  type="button"
-                  className="modern-btn modern-btn-secondary"
-                  onClick={handleAddPart}
-                  disabled={isPublishing}
-                >
-                  <i className="fas fa-plus me-2"></i>
-                  Agregar Parte
-                </button>
-              </div>
+              <div className="d-flex align-items-center gap-2 flex-wrap mb-3">
+                {partes.map((p, idx) => {
+                  const isSelected = selectedPartId === p.localId;
+                  return (
+                    <div
+                      key={p.localId}
+                      className="d-flex align-items-center gap-2"
+                      draggable={!isPublishing}
+                      onDragStart={handlePartDragStart(p.localId)}
+                      onDragOver={handlePartDragOver}
+                      onDrop={handlePartDrop(p.localId)}
+                      onDragEnd={() => setDraggedPartId(null)}
+                      title="Arrastrá para reordenar"
+                      style={{
+                        border: `2px solid ${isSelected ? 'var(--primary-color)' : 'var(--border-color)'}`,
+                        borderRadius: '8px',
+                        padding: '0.4rem 0.75rem',
+                        backgroundColor: isSelected ? 'rgba(30, 41, 85, 0.08)' : 'transparent',
+                        opacity: draggedPartId === p.localId ? 0.4 : 1,
+                        cursor: isPublishing ? 'default' : 'grab',
+                      }}
+                    >
+                      <i className="fas fa-grip-vertical text-muted" style={{ fontSize: '0.75rem' }}></i>
+                      <span
+                        onClick={() => setSelectedPartId(p.localId)}
+                        style={{ fontWeight: isSelected ? 'bold' : 'normal', cursor: 'pointer' }}
+                      >
+                        <i className={`fas ${p.tipo === 'multiple_choice' ? 'fa-question-circle' : 'fa-code'} me-2`}></i>
+                        Parte {idx + 1}
+                      </span>
+                      {isSelected && (
+                        <>
+                          <select
+                            className="form-select form-select-sm"
+                            value={p.tipo}
+                            disabled={isPublishing}
+                            onChange={(e) => requestChangePartType(p.localId, e.target.value)}
+                            title="Cambiar el tipo de esta parte"
+                            style={{ width: 'auto', minWidth: '140px', padding: '0.2rem 2rem 0.2rem 0.5rem', fontSize: '0.85rem' }}
+                          >
+                            <option value="multiple_choice">Preguntas</option>
+                            <option value="programming">Programación</option>
+                          </select>
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-link p-1"
+                            disabled={idx === 0 || isPublishing}
+                            onClick={() => handleMovePart(p.localId, -1)}
+                            title="Mover a la izquierda"
+                          >
+                            <i className="fas fa-arrow-left"></i>
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-link p-1"
+                            disabled={idx === partes.length - 1 || isPublishing}
+                            onClick={() => handleMovePart(p.localId, 1)}
+                            title="Mover a la derecha"
+                          >
+                            <i className="fas fa-arrow-right"></i>
+                          </button>
+                        </>
+                      )}
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-link text-danger p-1"
+                        disabled={isPublishing}
+                        onClick={() => requestDeletePart(p.localId)}
+                        title="Eliminar parte"
+                      >
+                        <i className="fas fa-times"></i>
+                      </button>
+                    </div>
+                  );
+                })}
 
-              <div className="d-flex flex-column gap-2 mb-3">
-                {partes.map((p, idx) => (
-                  <div
-                    key={p.localId}
-                    className="d-flex align-items-center gap-1"
-                    style={{
-                      border: `2px solid ${selectedPartId === p.localId ? 'var(--primary-color)' : 'var(--border-color)'}`,
-                      borderRadius: '8px',
-                      padding: '0.4rem 0.6rem',
-                      backgroundColor: selectedPartId === p.localId ? 'rgba(124, 58, 237, 0.08)' : 'transparent',
-                    }}
+                <div style={{ position: 'relative' }}>
+                  <button
+                    type="button"
+                    className="modern-btn modern-btn-secondary modern-btn-sm"
+                    onClick={() => setShowAddPartMenu(prev => !prev)}
+                    disabled={isPublishing}
+                    title="Agregar parte"
                   >
-                    <span
-                      onClick={() => setSelectedPartId(p.localId)}
-                      style={{ fontWeight: selectedPartId === p.localId ? 'bold' : 'normal', cursor: 'pointer', flex: 1 }}
+                    <i className="fas fa-plus"></i>
+                  </button>
+                  {showAddPartMenu && (
+                    <>
+                    <div
+                      onClick={() => setShowAddPartMenu(false)}
+                      style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9 }}
+                    />
+                    <div
+                      className="modern-card"
+                      style={{
+                        position: 'absolute',
+                        top: 'calc(100% + 0.5rem)',
+                        left: 0,
+                        zIndex: 10,
+                        padding: '0.5rem',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.25rem',
+                        minWidth: '180px',
+                      }}
                     >
-                      <i className={`fas ${p.tipo === 'multiple_choice' ? 'fa-question-circle' : 'fa-code'} me-2`}></i>
-                      Parte {idx + 1}
-                    </span>
-                    <select
-                      className="form-select form-select-sm"
-                      value={p.tipo}
-                      disabled={isPublishing}
-                      onClick={(e) => e.stopPropagation()}
-                      onChange={(e) => requestChangePartType(p.localId, e.target.value)}
-                      title="Cambiar el tipo de esta parte"
-                      style={{ width: 'auto', padding: '0.15rem 1.5rem 0.15rem 0.4rem', fontSize: '0.85rem' }}
-                    >
-                      <option value="multiple_choice">Preguntas</option>
-                      <option value="programming">Programación</option>
-                    </select>
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-link p-1"
-                      disabled={idx === 0 || isPublishing}
-                      onClick={() => handleMovePart(p.localId, -1)}
-                      title="Mover arriba"
-                    >
-                      <i className="fas fa-arrow-up"></i>
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-link p-1"
-                      disabled={idx === partes.length - 1 || isPublishing}
-                      onClick={() => handleMovePart(p.localId, 1)}
-                      title="Mover abajo"
-                    >
-                      <i className="fas fa-arrow-down"></i>
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-link text-danger p-1"
-                      disabled={isPublishing}
-                      onClick={() => requestDeletePart(p.localId)}
-                      title="Eliminar parte"
-                    >
-                      <i className="fas fa-trash"></i>
-                    </button>
-                  </div>
-                ))}
+                      <button
+                        type="button"
+                        className="btn btn-sm text-start"
+                        onClick={() => handleAddPart('multiple_choice')}
+                      >
+                        <i className="fas fa-question-circle me-2"></i>
+                        Preguntas
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-sm text-start"
+                        onClick={() => handleAddPart('programming')}
+                      >
+                        <i className="fas fa-code me-2"></i>
+                        Programación
+                      </button>
+                    </div>
+                    </>
+                  )}
+                </div>
               </div>
 
-              {hasMultipleChoicePart && (
+              {selectedPart?.tipo === 'multiple_choice' && (
                 <div className="mb-0 mt-3 pt-3" style={{ borderTop: '1px solid var(--border-color)' }}>
                   <label className="form-label d-flex align-items-center gap-2">
                     <i className="fas fa-random text-muted"></i>

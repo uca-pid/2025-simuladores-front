@@ -407,12 +407,15 @@ const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion }) =
                 padding: '0.75rem 1rem',
                 border: '1px solid var(--border-color)',
                 borderRadius: '8px',
-                fontSize: '1rem'
+                fontSize: '1rem',
+                textOverflow: 'ellipsis',
+                overflow: 'hidden',
+                whiteSpace: 'nowrap'
               }}
             >
               <optgroup label="Corrección automática — selección">
                 <option value="multiple_choice">Opción Múltiple</option>
-                <option value="multiple_response">Selección Múltiple (varias correctas)</option>
+                <option value="multiple_response">Selección Múltiple</option>
                 <option value="true_false">Verdadero / Falso</option>
                 <option value="matching">Unir con Flechas (Matching)</option>
               </optgroup>
