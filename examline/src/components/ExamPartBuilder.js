@@ -23,6 +23,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
   const [isUploadingDataset, setIsUploadingDataset] = useState(false);
   const [isRunningTests, setIsRunningTests] = useState(false);
   const [activeProgTab, setActiveProgTab] = useState('config');
+  const [showPoolConfig, setShowPoolConfig] = useState(false);
 
   const update = (patch) => onChange({ ...part, ...patch });
 
@@ -225,72 +226,81 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
   };
 
   if (part.tipo === "multiple_choice") {
+    const conteoPorDificultad = { facil: 0, media: 0, dificil: 0 };
+    part.preguntas.forEach(p => { conteoPorDificultad[p.dificultad || 'media']++; });
+    const poolActivo = part.cantidadFaciles != null || part.cantidadMedias != null || part.cantidadDificiles != null;
+
+    const setCantidad = (nivel, valorStr) => {
+      const valor = valorStr === '' ? 0 : Math.max(0, parseInt(valorStr, 10) || 0);
+      update({ [nivel]: valor });
+    };
+
     return (
       <>
-        <div className="modern-card mb-4">
-          <div className="modern-card-header">
-            <h3 className="modern-card-title">
-              <i className="fas fa-question-circle me-2"></i>
-              Agregar Preguntas al Examen — {partLabel}
-            </h3>
-          </div>
-          <div className="modern-card-body">
-            <div className="alert alert-info mb-3">
-              <i className="fas fa-info-circle me-2"></i>
-              <strong>Tienes dos opciones:</strong> crear una pregunta nueva desde cero o seleccionar preguntas guardadas en tu banco de preguntas.
-            </div>
-            <div className="d-flex gap-3 justify-content-center flex-wrap">
-              <button
-                className="modern-btn modern-btn-primary"
-                onClick={() => setShowBankSelector(true)}
-                style={{ minWidth: '250px' }}
-              >
-                <i className="fas fa-database me-2"></i>
-                <span className="button-text">Seleccionar del Banco</span>
-              </button>
-              <div className="text-muted d-flex align-items-center">
-                <strong>o</strong>
-              </div>
-              <button
-                className="modern-btn modern-btn-secondary"
-                onClick={() => {
-                  const creator = document.getElementById(`question-creator-section-${part.localId}`);
-                  if (creator) creator.scrollIntoView({ behavior: 'smooth' });
-                }}
-                style={{ minWidth: '250px' }}
-              >
-                <i className="fas fa-plus-circle me-2"></i>
-                <span className="button-text">Crear Pregunta Nueva</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div id={`question-creator-section-${part.localId}`}>
-          <QuestionCreator onAddQuestion={handleAddQuestion} />
-        </div>
-
-        {part.preguntas.length > 0 && (() => {
-          const conteoPorDificultad = { facil: 0, media: 0, dificil: 0 };
-          part.preguntas.forEach(p => { conteoPorDificultad[p.dificultad || 'media']++; });
-          const poolActivo = part.cantidadFaciles != null || part.cantidadMedias != null || part.cantidadDificiles != null;
-
-          const setCantidad = (nivel, valorStr) => {
-            const valor = valorStr === '' ? 0 : Math.max(0, parseInt(valorStr, 10) || 0);
-            update({ [nivel]: valor });
-          };
-
-          return (
+        <div className="row g-4">
+          <div className="col-lg-6">
             <div className="modern-card mb-4">
               <div className="modern-card-header">
                 <h3 className="modern-card-title">
-                  <i className="fas fa-random me-2"></i>
-                  Pool aleatorio balanceado (opcional)
+                  <i className="fas fa-question-circle me-2"></i>
+                  Agregar Preguntas al Examen — {partLabel}
                 </h3>
-                <p className="text-muted mb-0" style={{ fontSize: '0.85rem' }}>
-                  Cada alumno recibe una selección distinta de preguntas (no solo un orden distinto).
-                </p>
               </div>
+              <div className="modern-card-body">
+                <div className="alert alert-info mb-3">
+                  <i className="fas fa-info-circle me-2"></i>
+                  <strong>Tienes dos opciones:</strong> crear una pregunta nueva desde cero o seleccionar preguntas guardadas en tu banco de preguntas.
+                </div>
+                <div className="d-flex gap-3 justify-content-center flex-wrap">
+                  <button
+                    className="modern-btn modern-btn-primary"
+                    onClick={() => setShowBankSelector(true)}
+                    style={{ minWidth: '250px' }}
+                  >
+                    <i className="fas fa-database me-2"></i>
+                    <span className="button-text">Seleccionar del Banco</span>
+                  </button>
+                  <div className="text-muted d-flex align-items-center">
+                    <strong>o</strong>
+                  </div>
+                  <button
+                    className="modern-btn modern-btn-secondary"
+                    onClick={() => {
+                      const creator = document.getElementById(`question-creator-section-${part.localId}`);
+                      if (creator) creator.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    style={{ minWidth: '250px' }}
+                  >
+                    <i className="fas fa-plus-circle me-2"></i>
+                    <span className="button-text">Crear Pregunta Nueva</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div id={`question-creator-section-${part.localId}`}>
+              <QuestionCreator onAddQuestion={handleAddQuestion} />
+            </div>
+
+            {part.preguntas.length > 0 && (
+              <div className="modern-card mb-4">
+                <div
+                  className="modern-card-header"
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => setShowPoolConfig(prev => !prev)}
+                >
+                  <h3 className="modern-card-title d-flex justify-content-between align-items-center">
+                    <span>
+                      <i className="fas fa-random me-2"></i>
+                      Pool aleatorio balanceado (opcional)
+                    </span>
+                    <i className={`fas ${showPoolConfig ? 'fa-chevron-up' : 'fa-chevron-down'}`}></i>
+                  </h3>
+                  <p className="text-muted mb-0" style={{ fontSize: '0.85rem' }}>
+                    Cada alumno recibe una selección distinta de preguntas (no solo un orden distinto).
+                  </p>
+                </div>
+                {showPoolConfig && (
               <div className="modern-card-body">
                 {typeof ordenAleatorio === 'boolean' && (
                   <div className="form-check form-switch mb-3 pb-3" style={{ borderBottom: '1px solid var(--border-color)' }}>
@@ -377,29 +387,31 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                   </>
                 )}
               </div>
-            </div>
-          );
-        })()}
-
-        <div className="modern-card">
-          <div className="modern-card-header">
-            <h3 className="modern-card-title">
-              <i className="fas fa-clipboard-list me-2"></i>
-              Preguntas Agregadas ({part.preguntas.length})
-            </h3>
-          </div>
-          <div className="modern-card-body">
-            {part.preguntas.length === 0 ? (
-              <div className="empty-state">
-                <div className="empty-icon">
-                  <i className="fas fa-question-circle"></i>
-                </div>
-                <h4 className="empty-title">No hay preguntas aún</h4>
-                <p className="empty-subtitle">
-                  Agrega tu primera pregunta usando el formulario de arriba.
-                  Las opciones de orden aleatorio y pool balanceado van a aparecer acá abajo apenas cargues la primera.
-                </p>
+                )}
               </div>
+            )}
+          </div>
+
+          <div className="col-lg-6">
+            <div className="modern-card">
+              <div className="modern-card-header">
+                <h3 className="modern-card-title">
+                  <i className="fas fa-clipboard-list me-2"></i>
+                  Preguntas Agregadas ({part.preguntas.length})
+                </h3>
+              </div>
+              <div className="modern-card-body">
+                {part.preguntas.length === 0 ? (
+                  <div className="empty-state">
+                    <div className="empty-icon">
+                      <i className="fas fa-question-circle"></i>
+                    </div>
+                    <h4 className="empty-title">No hay preguntas aún</h4>
+                    <p className="empty-subtitle">
+                      Agrega tu primera pregunta usando el formulario de la izquierda.
+                      Las opciones de orden aleatorio y pool balanceado van a aparecer acá apenas cargues la primera.
+                    </p>
+                  </div>
             ) : (
               <div className="exam-creator-questions-grid">
                 {part.preguntas.map((p, idx) => (
@@ -545,6 +557,8 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                 ))}
               </div>
             )}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -582,6 +596,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
       </ul>
 
       {activeProgTab === 'config' && (
+      <>
       <div className="modern-card mb-4">
         <div className="modern-card-header">
           <h3 className="modern-card-title">
@@ -634,7 +649,17 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
               </div>
             </div>
           </div>
+        </div>
+      </div>
 
+      <div className="modern-card mb-4">
+        <div className="modern-card-header">
+          <h3 className="modern-card-title">
+            <i className="fas fa-file-alt me-2"></i>
+            Consigna y Recursos — {partLabel}
+          </h3>
+        </div>
+        <div className="modern-card-body">
           <div className="mb-3">
             <label className="form-label d-flex align-items-center gap-2 mb-0">
               <i className="fas fa-file-alt text-muted"></i>
@@ -818,6 +843,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
           </div>
         </div>
       </div>
+      </>
       )}
 
       {activeProgTab === 'tests' && (
