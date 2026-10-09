@@ -273,9 +273,8 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
       update({ [nivel]: valor });
     };
 
-    return (
-      <>
-        {part.preguntas.length > 0 && (
+    const configuracionPreguntasCard =
+        part.preguntas.length > 0 && (
           <div className="modern-card mb-4">
             <div className="modern-card-header">
               <h3 className="modern-card-title">
@@ -427,9 +426,11 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
               </div>
             </div>
           </div>
-        )}
+        );
 
-            <div className="modern-card">
+    return (
+      <>
+            <div className="modern-card mb-4">
               <div className="modern-card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <h3 className="modern-card-title mb-0">
                   <i className="fas fa-clipboard-list me-2"></i>
@@ -442,7 +443,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                     onClick={() => setShowBankSelector(true)}
                   >
                     <i className="fas fa-database me-2"></i>
-                    <span className="button-text">Del Banco</span>
+                    <span className="button-text">Agregar Pregunta del Banco</span>
                   </button>
                   <button
                     type="button"
@@ -461,10 +462,6 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                       <i className="fas fa-question-circle"></i>
                     </div>
                     <h4 className="empty-title">No hay preguntas aún</h4>
-                    <p className="empty-subtitle">
-                      Usá "Agregar Pregunta" arriba para crear una nueva, o "Del Banco" para reutilizar una ya guardada.
-                      Las opciones de orden aleatorio y pool balanceado van a aparecer acá apenas cargues la primera.
-                    </p>
                   </div>
             ) : (
               <div className="exam-creator-questions-grid">
@@ -618,6 +615,8 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
             )}
               </div>
             </div>
+
+        {configuracionPreguntasCard}
 
         <QuestionBankSelector
           show={showBankSelector}

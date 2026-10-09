@@ -104,10 +104,8 @@ const ExamCreator = () => {
 
   const [titulo, setTitulo] = useState(draft?.titulo || "");
   const [ordenAleatorio, setOrdenAleatorio] = useState(draft?.ordenAleatorio || false);
-  const [partes, setPartes] = useState(
-    draft?.partes && draft.partes.length > 0 ? draft.partes : [makeDefaultPart()]
-  );
-  const [selectedPartId, setSelectedPartId] = useState(partes[0].localId);
+  const [partes, setPartes] = useState(draft?.partes || []);
+  const [selectedPartId, setSelectedPartId] = useState(partes[0]?.localId || null);
 
   const [isPublishing, setIsPublishing] = useState(false);
   const [hasDraft, setHasDraft] = useState(!!draft);
@@ -115,7 +113,6 @@ const ExamCreator = () => {
   const [draggedPartId, setDraggedPartId] = useState(null);
   const [isLoadingExam, setIsLoadingExam] = useState(isEditMode);
   const [loadExamError, setLoadExamError] = useState("");
-  const [showStudentPreview, setShowStudentPreview] = useState(false);
 
   // Wizard: los profesores pueden moverse libremente entre los 3 pasos
   const [currentStep, setCurrentStep] = useState(1);
@@ -169,9 +166,9 @@ const ExamCreator = () => {
               .slice()
               .sort((a, b) => (a.orden || 0) - (b.orden || 0))
               .map(mapApiPartToInternal)
-          : [makeDefaultPart()];
+          : [];
         setPartes(mappedPartes);
-        setSelectedPartId(mappedPartes[0].localId);
+        setSelectedPartId(mappedPartes[0]?.localId || null);
       } catch (err) {
         console.error('Error cargando examen para editar:', err);
         if (!cancelled) setLoadExamError(err.message || 'Error al cargar el examen');
@@ -194,9 +191,8 @@ const ExamCreator = () => {
         localStorage.removeItem(DRAFT_KEY);
         setTitulo("");
         setOrdenAleatorio(false);
-        const fresh = makeDefaultPart();
-        setPartes([fresh]);
-        setSelectedPartId(fresh.localId);
+        setPartes([]);
+        setSelectedPartId(null);
         setHasDraft(false);
         closeModal();
       },
@@ -260,10 +256,6 @@ const ExamCreator = () => {
   };
 
   const requestDeletePart = (localId) => {
-    if (partes.length === 1) {
-      showModal('error', 'Error', 'El examen debe tener al menos una parte', null, false);
-      return;
-    }
     setPartToDelete(localId);
     setShowDeletePartModal(true);
   };
@@ -271,8 +263,8 @@ const ExamCreator = () => {
   const confirmDeletePart = () => {
     setPartes(prev => {
       const updated = prev.filter(p => p.localId !== partToDelete);
-      if (selectedPartId === partToDelete && updated.length > 0) {
-        setSelectedPartId(updated[0].localId);
+      if (selectedPartId === partToDelete) {
+        setSelectedPartId(updated[0]?.localId || null);
       }
       return updated;
     });
@@ -733,7 +725,8 @@ const ExamCreator = () => {
                     disabled={isPublishing}
                     title="Agregar parte"
                   >
-                    <i className="fas fa-plus"></i>
+                    <i className="fas fa-plus me-2"></i>
+                    Agregar Parte
                   </button>
                   {showAddPartMenu && (
                     <>
@@ -779,6 +772,12 @@ const ExamCreator = () => {
                 </div>
               </div>
 
+              {partes.length === 0 && (
+                <div className="text-center py-4">
+                  <i className="fas fa-layer-group text-muted mb-3" style={{ fontSize: '2rem' }}></i>
+                  <p className="mb-0">Agregá una parte de "Preguntas" o "Programación" con el botón de arriba para empezar.</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -832,56 +831,9 @@ const ExamCreator = () => {
               <div className="mb-3">
                 <strong>Título:</strong> {titulo || <span className="text-muted fst-italic">Sin título</span>}
               </div>
-              <div className="mb-3">
+              <div className="mb-4">
                 <strong>Orden de presentación:</strong> {ordenAleatorio ? 'Aleatorio para cada alumno' : 'Orden definido por el profesor'}
               </div>
-              <div className="mb-2">
-                <strong>Partes ({partes.length}):</strong>
-              </div>
-              <ul className="list-unstyled mb-0">
-                {partes.map((p, idx) => (
-                  <li key={p.localId} className="exam-summary-part-item">
-                    <i className={`fas ${p.tipo === 'multiple_choice' ? 'fa-question-circle' : 'fa-code'} me-2`}></i>
-                    <strong>Parte {idx + 1}:</strong> {TIPO_LABEL[p.tipo]}
-                    {p.tipo === 'multiple_choice' ? (
-                      <span className="ms-2 text-muted">
-                        — {p.preguntas.length} pregunta{p.preguntas.length !== 1 ? 's' : ''} disponibles;
-                        {' '}
-                        {p.cantidadPreguntas != null
-                          ? `${p.cantidadPreguntas} al azar por alumno`
-                          : p.cantidadFaciles != null || p.cantidadMedias != null || p.cantidadDificiles != null
-                          ? `${(p.cantidadFaciles || 0) + (p.cantidadMedias || 0) + (p.cantidadDificiles || 0)} por alumno (${p.cantidadFaciles || 0} fáciles, ${p.cantidadMedias || 0} medias, ${p.cantidadDificiles || 0} difíciles)`
-                          : 'todos por alumno'}
-                      </span>
-                    ) : (
-                      <span className="ms-2 text-muted">— {p.testCases.length} caso{p.testCases.length !== 1 ? 's' : ''} de prueba ({p.lenguajeProgramacion})</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-              <button
-                type="button"
-                className="modern-btn modern-btn-secondary mt-3"
-                onClick={() => setShowStudentPreview(prev => !prev)}
-              >
-                <i className={`fas ${showStudentPreview ? 'fa-eye-slash' : 'fa-eye'} me-2`}></i>
-                {showStudentPreview ? 'Ocultar vista previa' : 'Ver como lo verá el alumno'}
-              </button>
-            </div>
-          </div>
-
-          {showStudentPreview && (
-            <div className="modern-card mb-4">
-              <div className="modern-card-header">
-                <h3 className="modern-card-title">
-                  <i className="fas fa-eye me-2"></i>
-                  Vista previa — lo que el alumno va a ver
-                </h3>
-                <p className="text-muted mb-0" style={{ fontSize: '0.85rem' }}>
-                  No muestra cuál opción es correcta, ni los casos de prueba (eso el alumno tampoco lo ve).
-                </p>
-              </div>
-              <div className="modern-card-body">
                 {partes.map((p, idx) => (
                   <div key={p.localId} className="mb-4 pb-4" style={{ borderBottom: idx < partes.length - 1 ? '1px solid var(--border-color)' : 'none' }}>
                     <h5 className="mb-3">
@@ -967,7 +919,6 @@ const ExamCreator = () => {
                 ))}
               </div>
             </div>
-          )}
 
           <div className="modern-card mb-4">
             <div className="modern-card-body d-flex justify-content-between align-items-center flex-wrap gap-3">
