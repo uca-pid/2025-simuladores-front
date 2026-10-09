@@ -82,6 +82,22 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
     update({ preguntas: nuevasPreguntas });
   };
 
+  const handleChangeQuestionPoints = (index, valorStr) => {
+    const valor = valorStr === '' ? '' : Math.max(0, parseFloat(valorStr) || 0);
+    update({ preguntas: part.preguntas.map((p, i) => i === index ? { ...p, puntos: valor } : p) });
+  };
+
+  const handleChangeQuestionDificultad = (index, dificultad) => {
+    update({ preguntas: part.preguntas.map((p, i) => i === index ? { ...p, dificultad } : p) });
+  };
+
+  const handleTogglePuntajePersonalizado = (activo) => {
+    update({
+      puntajePersonalizado: activo,
+      preguntas: activo ? part.preguntas : part.preguntas.map(p => ({ ...p, puntos: 1 })),
+    });
+  };
+
   // ---- Programming: enunciado / dataset ----
   const handleDatasetArchivoChange = async (e) => {
     const files = Array.from(e.target.files || []);
@@ -273,6 +289,21 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
       update({ [nivel]: valor });
     };
 
+    const totalPuntosPool = part.preguntas.reduce((acc, p) => acc + (p.puntos ?? 1), 0);
+
+    // Rango de puntos que puede recibir un alumno al elegir `cantidad` preguntas
+    // al azar de una lista: el mínimo toma las de menor puntaje, el máximo las de mayor.
+    const rangoPuntosAlAzar = (preguntas, cantidad) => {
+      const puntos = preguntas.map(p => p.puntos ?? 1).sort((a, b) => a - b);
+      const n = Math.min(cantidad, puntos.length);
+      const min = puntos.slice(0, n).reduce((acc, p) => acc + p, 0);
+      const max = puntos.slice(puntos.length - n).reduce((acc, p) => acc + p, 0);
+      return { min, max };
+    };
+
+    const preguntasPorDificultad = { facil: [], media: [], dificil: [] };
+    part.preguntas.forEach(p => { preguntasPorDificultad[p.dificultad || 'media'].push(p); });
+
     const configuracionPreguntasCard =
         part.preguntas.length > 0 && (
           <div className="modern-card mb-4">
@@ -330,7 +361,10 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
               {modoSeleccion === 'todas' ? (
                 <div className="alert alert-light border mb-4">
                   <i className="fas fa-info-circle me-2"></i>
-                  Hay <strong>{part.preguntas.length}</strong> preguntas disponibles y cada alumno recibirá todas.
+                  Hay <strong>{part.preguntas.length}</strong> preguntas disponibles y cada alumno recibirá todas
+                  {part.puntajePersonalizado && (
+                    <>{' '}(<strong>{totalPuntosPool} pt{totalPuntosPool !== 1 ? 's' : ''}</strong>{' '}en total)</>
+                  )}.
                 </div>
               ) : modoSeleccion === 'aleatorio' ? (
                 <div className="mb-4">
@@ -347,6 +381,14 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                     onChange={(e) => update({ cantidadPreguntas: Math.max(1, Math.min(part.preguntas.length, parseInt(e.target.value, 10) || 1)) })}
                   />
                   <small className="form-text text-muted">Disponibles: {part.preguntas.length}. Todos recibirán la misma cantidad, con preguntas elegidas al azar.</small>
+                  {part.puntajePersonalizado && (() => {
+                    const { min, max } = rangoPuntosAlAzar(part.preguntas, part.cantidadPreguntas ?? 1);
+                    return (
+                      <small className="form-text text-muted d-block">
+                        Puntaje por alumno: {min === max ? <strong>{min} pts</strong> : <><strong>{min}</strong> a <strong>{max} pts</strong></>} (según qué preguntas le toquen).
+                      </small>
+                    );
+                  })()}
                 </div>
               ) : (
                 <>
@@ -383,10 +425,22 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                       </div>
                     ))}
                   </div>
-                  <div className="alert alert-light border mb-4">
-                    <strong>Total por alumno:</strong>{' '}
-                    {(part.cantidadFaciles || 0) + (part.cantidadMedias || 0) + (part.cantidadDificiles || 0)} preguntas
-                  </div>
+                  {(() => {
+                    const rangoFaciles = rangoPuntosAlAzar(preguntasPorDificultad.facil, part.cantidadFaciles || 0);
+                    const rangoMedias = rangoPuntosAlAzar(preguntasPorDificultad.media, part.cantidadMedias || 0);
+                    const rangoDificiles = rangoPuntosAlAzar(preguntasPorDificultad.dificil, part.cantidadDificiles || 0);
+                    const min = rangoFaciles.min + rangoMedias.min + rangoDificiles.min;
+                    const max = rangoFaciles.max + rangoMedias.max + rangoDificiles.max;
+                    return (
+                      <div className="alert alert-light border mb-4">
+                        <strong>Total por alumno:</strong>{' '}
+                        {(part.cantidadFaciles || 0) + (part.cantidadMedias || 0) + (part.cantidadDificiles || 0)} preguntas
+                        {part.puntajePersonalizado && (
+                          <>{' '}— {min === max ? <strong>{min} pts</strong> : <><strong>{min}</strong> a <strong>{max} pts</strong></>}</>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </>
               )}
 
@@ -424,6 +478,26 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                   Primero se seleccionan las preguntas según la distribución por dificultad y luego se aplica el orden elegido.
                 </small>
               </div>
+
+              <div className="pt-3 mt-3" style={{ borderTop: '1px solid var(--border-color)' }}>
+                <h5 className="mb-3">Puntaje</h5>
+                <div className="form-check form-switch">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    role="switch"
+                    id={`puntajePersonalizado-${part.localId}`}
+                    checked={!!part.puntajePersonalizado}
+                    onChange={(e) => handleTogglePuntajePersonalizado(e.target.checked)}
+                  />
+                  <label className="form-check-label" htmlFor={`puntajePersonalizado-${part.localId}`}>
+                    <strong>Usar puntaje personalizado por pregunta</strong>
+                    <small className="text-muted d-block">
+                      Si está desactivado, todas las preguntas valen 1 punto. Si lo activás, podés editar el puntaje de cada una en "Preguntas Agregadas".
+                    </small>
+                  </label>
+                </div>
+              </div>
             </div>
           </div>
         );
@@ -435,6 +509,11 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                 <h3 className="modern-card-title mb-0">
                   <i className="fas fa-clipboard-list me-2"></i>
                   Preguntas Agregadas ({part.preguntas.length})
+                  {part.preguntas.length > 0 && part.puntajePersonalizado && (
+                    <span className="badge bg-secondary ms-2" style={{ fontWeight: 'normal' }}>
+                      {totalPuntosPool} puntos totales
+                    </span>
+                  )}
                 </h3>
                 <div className="d-flex gap-2">
                   <button
@@ -486,26 +565,45 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                             <i className={`fas ${(TIPO_BADGE[p.tipo] || TIPO_BADGE.multiple_choice).icon} me-1`}></i>
                             {(TIPO_BADGE[p.tipo] || TIPO_BADGE.multiple_choice).label}
                           </span>
-                          <span
-                            className="badge"
-                            style={{
-                              backgroundColor: (DIFICULTAD_BADGE[p.dificultad] || DIFICULTAD_BADGE.media).color,
-                              color: 'white',
-                              padding: '0.25rem 0.5rem',
-                              fontSize: '0.7rem',
-                              borderRadius: '4px'
-                            }}
-                          >
-                            {(DIFICULTAD_BADGE[p.dificultad] || DIFICULTAD_BADGE.media).label}
-                          </span>
-                          <span
-                            className="badge"
-                            style={{ backgroundColor: '#495057', color: 'white', padding: '0.25rem 0.5rem', fontSize: '0.7rem', borderRadius: '4px' }}
-                            title="Puntaje de esta pregunta"
-                          >
-                            <i className="fas fa-star me-1"></i>
-                            {p.puntos ?? 1} pt{(p.puntos ?? 1) !== 1 ? 's' : ''}
-                          </span>
+                          {modoSeleccion === 'dificultad' && (
+                            <select
+                              className="form-select form-select-sm"
+                              style={{
+                                width: 'auto',
+                                padding: '0.15rem 1.75rem 0.15rem 0.5rem',
+                                fontSize: '0.7rem',
+                                borderRadius: '4px',
+                                backgroundColor: (DIFICULTAD_BADGE[p.dificultad] || DIFICULTAD_BADGE.media).color,
+                                color: 'white',
+                              }}
+                              value={p.dificultad || 'media'}
+                              disabled={isPublishing}
+                              onChange={(e) => handleChangeQuestionDificultad(idx, e.target.value)}
+                              title="Dificultad de esta pregunta"
+                            >
+                              <option value="facil">Fácil</option>
+                              <option value="media">Media</option>
+                              <option value="dificil">Difícil</option>
+                            </select>
+                          )}
+                          {part.puntajePersonalizado && (
+                            <span className="d-flex align-items-center flex-wrap gap-1" title="Puntaje de esta pregunta">
+                              <span className="text-muted" style={{ fontSize: '0.75rem' }}>Vale</span>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.5"
+                                className="form-control form-control-sm"
+                                style={{ width: '52px', padding: '0.15rem 0.3rem', fontSize: '0.8rem' }}
+                                value={p.puntos ?? 1}
+                                disabled={isPublishing}
+                                onChange={(e) => handleChangeQuestionPoints(idx, e.target.value)}
+                              />
+                              <span className="text-muted" style={{ fontSize: '0.75rem' }}>
+                                puntos ({totalPuntosPool > 0 ? (((p.puntos ?? 1) / totalPuntosPool) * 100).toFixed(1) : '0.0'}%)
+                              </span>
+                            </span>
+                          )}
                         </div>
                         <div className="d-flex align-items-center flex-wrap gap-1">
                           <button

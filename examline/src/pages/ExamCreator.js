@@ -27,6 +27,7 @@ const makeDefaultPart = (tipo = "multiple_choice") => ({
   tipo, // "multiple_choice" | "programming"
   // multiple_choice
   preguntas: [],
+  puntajePersonalizado: false,
   // programming
   lenguajeProgramacion: "python",
   intellisenseHabilitado: false,
@@ -55,6 +56,7 @@ const mapApiPartToInternal = (parte) => {
     return {
       ...makeDefaultPart('multiple_choice'),
       preguntas: parte.preguntas || [],
+      puntajePersonalizado: (parte.preguntas || []).some(p => (p.puntos ?? 1) !== 1),
       cantidadFaciles: parte.cantidadFaciles ?? null,
       cantidadMedias: parte.cantidadMedias ?? null,
       cantidadDificiles: parte.cantidadDificiles ?? null,

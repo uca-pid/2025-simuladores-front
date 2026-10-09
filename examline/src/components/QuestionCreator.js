@@ -394,7 +394,7 @@ const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion }) =
         )}
 
         <div className="row g-3 mb-4">
-          <div className="col-md-4">
+          <div className="col-md-6">
             <label className="form-label d-flex align-items-center gap-2">
               <i className="fas fa-clipboard-list text-muted"></i>
               Tipo de pregunta
@@ -431,7 +431,7 @@ const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion }) =
             </select>
           </div>
 
-          <div className="col-md-4">
+          <div className="col-md-6">
             <label className="form-label d-flex align-items-center gap-2">
               <i className="fas fa-signal text-muted"></i>
               Dificultad
@@ -454,31 +454,6 @@ const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion }) =
             <small className="form-text text-muted mt-1 d-block">
               <i className="fas fa-info-circle me-1"></i>
               Se usa para el pool balanceado (opcional).
-            </small>
-          </div>
-
-          <div className="col-md-4">
-            <label className="form-label d-flex align-items-center gap-2">
-              <i className="fas fa-star text-muted"></i>
-              Puntaje
-            </label>
-            <input
-              type="number"
-              min="0.1"
-              step="0.5"
-              className="form-control"
-              value={puntos}
-              onChange={(e) => setPuntos(e.target.value)}
-              style={{
-                padding: '0.75rem 1rem',
-                border: '1px solid var(--border-color)',
-                borderRadius: '8px',
-                fontSize: '1rem'
-              }}
-            />
-            <small className="form-text text-muted mt-1 d-block">
-              <i className="fas fa-info-circle me-1"></i>
-              Por defecto 1, todas valen igual.
             </small>
           </div>
         </div>
