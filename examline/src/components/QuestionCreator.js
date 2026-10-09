@@ -393,90 +393,91 @@ const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion }) =
           </div>
         )}
 
-        <div className="mb-4">
-          <label className="form-label d-flex align-items-center gap-2">
-            <i className="fas fa-clipboard-list text-muted"></i>
-            Tipo de pregunta
-          </label>
-          <select
-            className="form-select"
-            value={tipoPregunta}
-            onChange={(e) => setTipoPregunta(e.target.value)}
-            style={{
-              padding: '0.75rem 1rem',
-              border: '1px solid var(--border-color)',
-              borderRadius: '8px',
-              fontSize: '1rem'
-            }}
-          >
-            <optgroup label="Corrección automática — selección">
-              <option value="multiple_choice">Opción Múltiple</option>
-              <option value="multiple_response">Selección Múltiple (varias correctas)</option>
-              <option value="true_false">Verdadero / Falso</option>
-              <option value="matching">Unir con Flechas (Matching)</option>
-            </optgroup>
-            <optgroup label="Corrección automática — texto/número">
-              <option value="fill_in_blank">Completar Espacios</option>
-              <option value="short_answer">Respuesta Corta</option>
-              <option value="numeric">Numérica (con tolerancia)</option>
-            </optgroup>
-            <optgroup label="Corrección manual (la corregís vos)">
-              <option value="essay">Desarrollo / Ensayo</option>
-              <option value="file_upload">Adjuntar Archivo</option>
-            </optgroup>
-          </select>
-        </div>
+        <div className="row g-3 mb-4">
+          <div className="col-md-4">
+            <label className="form-label d-flex align-items-center gap-2">
+              <i className="fas fa-clipboard-list text-muted"></i>
+              Tipo de pregunta
+            </label>
+            <select
+              className="form-select"
+              value={tipoPregunta}
+              onChange={(e) => setTipoPregunta(e.target.value)}
+              style={{
+                padding: '0.75rem 1rem',
+                border: '1px solid var(--border-color)',
+                borderRadius: '8px',
+                fontSize: '1rem'
+              }}
+            >
+              <optgroup label="Corrección automática — selección">
+                <option value="multiple_choice">Opción Múltiple</option>
+                <option value="multiple_response">Selección Múltiple (varias correctas)</option>
+                <option value="true_false">Verdadero / Falso</option>
+                <option value="matching">Unir con Flechas (Matching)</option>
+              </optgroup>
+              <optgroup label="Corrección automática — texto/número">
+                <option value="fill_in_blank">Completar Espacios</option>
+                <option value="short_answer">Respuesta Corta</option>
+                <option value="numeric">Numérica (con tolerancia)</option>
+              </optgroup>
+              <optgroup label="Corrección manual (la corregís vos)">
+                <option value="essay">Desarrollo / Ensayo</option>
+                <option value="file_upload">Adjuntar Archivo</option>
+              </optgroup>
+            </select>
+          </div>
 
-        <div className="mb-4">
-          <label className="form-label d-flex align-items-center gap-2">
-            <i className="fas fa-signal text-muted"></i>
-            Dificultad
-          </label>
-          <select
-            className="form-select"
-            value={dificultad}
-            onChange={(e) => setDificultad(e.target.value)}
-            style={{
-              padding: '0.75rem 1rem',
-              border: '1px solid var(--border-color)',
-              borderRadius: '8px',
-              fontSize: '1rem'
-            }}
-          >
-            <option value="facil">Fácil</option>
-            <option value="media">Media</option>
-            <option value="dificil">Difícil</option>
-          </select>
-          <small className="form-text text-muted mt-1 d-block">
-            <i className="fas fa-info-circle me-1"></i>
-            Se usa para sortear un pool de preguntas balanceado entre alumnos (opcional, ver configuración de la parte).
-          </small>
-        </div>
+          <div className="col-md-4">
+            <label className="form-label d-flex align-items-center gap-2">
+              <i className="fas fa-signal text-muted"></i>
+              Dificultad
+            </label>
+            <select
+              className="form-select"
+              value={dificultad}
+              onChange={(e) => setDificultad(e.target.value)}
+              style={{
+                padding: '0.75rem 1rem',
+                border: '1px solid var(--border-color)',
+                borderRadius: '8px',
+                fontSize: '1rem'
+              }}
+            >
+              <option value="facil">Fácil</option>
+              <option value="media">Media</option>
+              <option value="dificil">Difícil</option>
+            </select>
+            <small className="form-text text-muted mt-1 d-block">
+              <i className="fas fa-info-circle me-1"></i>
+              Se usa para el pool balanceado (opcional).
+            </small>
+          </div>
 
-        <div className="mb-4">
-          <label className="form-label d-flex align-items-center gap-2">
-            <i className="fas fa-star text-muted"></i>
-            Puntaje de esta pregunta
-          </label>
-          <input
-            type="number"
-            min="0.1"
-            step="0.5"
-            className="form-control"
-            value={puntos}
-            onChange={(e) => setPuntos(e.target.value)}
-            style={{
-              padding: '0.75rem 1rem',
-              border: '1px solid var(--border-color)',
-              borderRadius: '8px',
-              fontSize: '1rem',
-              maxWidth: '150px'
-            }}
-          />
-          <small className="form-text text-muted mt-1 d-block">
-            <i className="fas fa-info-circle me-1"></i>
-            Cuánto vale esta pregunta frente al resto (por defecto 1, todas valen igual).
-          </small>
+          <div className="col-md-4">
+            <label className="form-label d-flex align-items-center gap-2">
+              <i className="fas fa-star text-muted"></i>
+              Puntaje
+            </label>
+            <input
+              type="number"
+              min="0.1"
+              step="0.5"
+              className="form-control"
+              value={puntos}
+              onChange={(e) => setPuntos(e.target.value)}
+              style={{
+                padding: '0.75rem 1rem',
+                border: '1px solid var(--border-color)',
+                borderRadius: '8px',
+                fontSize: '1rem'
+              }}
+            />
+            <small className="form-text text-muted mt-1 d-block">
+              <i className="fas fa-info-circle me-1"></i>
+              Por defecto 1, todas valen igual.
+            </small>
+          </div>
         </div>
 
         <div className="mb-4">

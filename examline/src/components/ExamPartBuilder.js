@@ -1,5 +1,5 @@
 // src/components/ExamPartBuilder.jsx
-import React, { useState, useRef, memo } from "react";
+import React, { useState, useRef, useEffect, memo } from "react";
 import Editor from '@monaco-editor/react';
 import QuestionCreator from "./QuestionCreator";
 import QuestionBankSelector from "./QuestionBankSelector";
@@ -26,6 +26,19 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
   const [showPoolConfig, setShowPoolConfig] = useState(false);
   const [showQuestionModal, setShowQuestionModal] = useState(false);
   const [editingQuestionIndex, setEditingQuestionIndex] = useState(null);
+
+  // Bloquea el scroll de la página de fondo mientras cualquiera de los
+  // modales de esta parte está abierto, para que la rueda del mouse solo
+  // scrollee el contenido del modal.
+  const anyModalOpen = showBankSelector || showNewReferenceFileModal || showDeleteReferenceFileModal || showQuestionModal;
+  useEffect(() => {
+    if (anyModalOpen) {
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = '';
+      };
+    }
+  }, [anyModalOpen]);
 
   const update = (patch) => onChange({ ...part, ...patch });
 
@@ -574,7 +587,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
               className="modal-dialog modal-lg modal-dialog-scrollable"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="modal-content" style={{ border: 'none', backgroundColor: 'transparent' }}>
+              <div className="modal-content" style={{ border: 'none', borderRadius: '12px', overflow: 'hidden', backgroundColor: 'transparent' }}>
                 <div className="modal-body p-0">
                   <QuestionCreator
                     editingQuestion={editingQuestionIndex != null ? part.preguntas[editingQuestionIndex] : null}
