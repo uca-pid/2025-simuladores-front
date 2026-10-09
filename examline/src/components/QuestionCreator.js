@@ -1,42 +1,98 @@
 // src/components/QuestionCreator.jsx
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { uploadQuestionImage } from "../services/api";
 
-const QuestionCreator = ({ onAddQuestion }) => {
-  const [tipoPregunta, setTipoPregunta] = useState("multiple_choice");
-  const [dificultad, setDificultad] = useState("media");
-  const [puntos, setPuntos] = useState("1");
-  const [textoPregunta, setTextoPregunta] = useState("");
-  const [opciones, setOpciones] = useState(["", ""]);
-  const [correcta, setCorrecta] = useState(0);
+// `editingQuestion`: si se pasa, el formulario arranca precargado con sus
+// datos y al guardar llama a `onSave` (modo edición) en vez de `onAddQuestion`
+// (modo alta, usado por QuestionBank.js y, antes de esta función, por
+// ExamPartBuilder). `onCancel` solo se usa en modo modal (edición o alta
+// dentro de ExamPartBuilder); QuestionBank.js no lo pasa y no muestra el botón.
+const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion }) => {
+  const [tipoPregunta, setTipoPregunta] = useState(editingQuestion?.tipo || "multiple_choice");
+  // Guarda el último tipo "visto" por el efecto de reseteo de abajo, en vez de
+  // un simple flag de "primer render": con ese flag, el doble-invocado de
+  // efectos de React.StrictMode en desarrollo disparaba el reseteo en la
+  // segunda invocación (el flag ya estaba en false) y borraba los datos
+  // precargados en modo edición. Comparando tipos, el efecto es un no-op
+  // mientras el tipo no cambie de verdad, sin importar cuántas veces corra.
+  const prevTipoPregunta = useRef(editingQuestion?.tipo || "multiple_choice");
+  const [dificultad, setDificultad] = useState(editingQuestion?.dificultad || "media");
+  const [puntos, setPuntos] = useState(String(editingQuestion?.puntos ?? 1));
+  const [textoPregunta, setTextoPregunta] = useState(editingQuestion?.texto || "");
+  const [opciones, setOpciones] = useState(() => {
+    if (!editingQuestion) return ["", ""];
+    if (["multiple_choice", "multiple_response", "true_false"].includes(editingQuestion.tipo)) {
+      return editingQuestion.opciones?.length ? editingQuestion.opciones : ["", ""];
+    }
+    return ["", ""];
+  });
+  const [correcta, setCorrecta] = useState(editingQuestion?.correcta ?? 0);
   const [error, setError] = useState("");
 
   // Imagen opcional, solo aplica a multiple_choice
-  const [imagenUrl, setImagenUrl] = useState(null);
+  const [imagenUrl, setImagenUrl] = useState(editingQuestion?.imagenUrl || null);
   const [isUploadingImagen, setIsUploadingImagen] = useState(false);
 
   // Estados adicionales para fill_in_blank
-  const [respuestasCorrectas, setRespuestasCorrectas] = useState([""]);
-  const [distractores, setDistractores] = useState([]);
+  const [respuestasCorrectas, setRespuestasCorrectas] = useState(() => {
+    if (editingQuestion?.tipo === "fill_in_blank") {
+      return editingQuestion.opciones.slice(0, editingQuestion.correcta || 0);
+    }
+    return [""];
+  });
+  const [distractores, setDistractores] = useState(() => {
+    if (editingQuestion?.tipo === "fill_in_blank") {
+      return editingQuestion.opciones.slice(editingQuestion.correcta || 0);
+    }
+    return [];
+  });
 
   // Estados adicionales para matching
-  const [conceptos, setConceptos] = useState(["", ""]);
-  const [respuestasMatching, setRespuestasMatching] = useState(["", ""]);
+  const [conceptos, setConceptos] = useState(() => {
+    if (editingQuestion?.tipo === "matching") {
+      return editingQuestion.opciones.slice(0, editingQuestion.correcta || 0);
+    }
+    return ["", ""];
+  });
+  const [respuestasMatching, setRespuestasMatching] = useState(() => {
+    if (editingQuestion?.tipo === "matching") {
+      return editingQuestion.opciones.slice(editingQuestion.correcta || 0);
+    }
+    return ["", ""];
+  });
 
   // Estados adicionales para short_answer (respuesta corta auto-corregible)
-  const [respuestasAceptadas, setRespuestasAceptadas] = useState([""]);
+  const [respuestasAceptadas, setRespuestasAceptadas] = useState(() => {
+    if (editingQuestion?.tipo === "short_answer" && editingQuestion.opciones?.length) {
+      return editingQuestion.opciones;
+    }
+    return [""];
+  });
 
   // Estados adicionales para numeric (numérica con tolerancia)
-  const [valorNumericoCorrecto, setValorNumericoCorrecto] = useState("");
-  const [toleranciaNumerica, setToleranciaNumerica] = useState("0");
+  const [valorNumericoCorrecto, setValorNumericoCorrecto] = useState(
+    editingQuestion?.tipo === "numeric" ? (editingQuestion.opciones?.[0] || "") : ""
+  );
+  const [toleranciaNumerica, setToleranciaNumerica] = useState(
+    editingQuestion?.tipo === "numeric" ? (editingQuestion.opciones?.[1] || "0") : "0"
+  );
 
   // Estado adicional para multiple_response (selección múltiple / checkbox):
   // reutiliza `opciones` (mismo editor de lista que multiple_choice), pero la
   // respuesta correcta es un conjunto de índices en vez de uno solo.
-  const [correctasSeleccionadas, setCorrectasSeleccionadas] = useState([]);
+  const [correctasSeleccionadas, setCorrectasSeleccionadas] = useState(
+    editingQuestion?.tipo === "multiple_response" ? (editingQuestion.correctas || []) : []
+  );
 
-  // Efecto para ajustar opciones cuando cambia el tipo de pregunta
+  // Efecto para ajustar opciones cuando cambia el tipo de pregunta. Es un
+  // no-op si el tipo no cambió de verdad (cubre tanto el mount inicial como
+  // el doble-invocado de StrictMode en desarrollo), para no pisar los valores
+  // precargados en modo edición.
   React.useEffect(() => {
+    if (prevTipoPregunta.current === tipoPregunta) {
+      return;
+    }
+    prevTipoPregunta.current = tipoPregunta;
     if (tipoPregunta === "true_false") {
       setOpciones(["Verdadero", "Falso"]);
       setCorrecta(0);
@@ -285,7 +341,15 @@ const QuestionCreator = ({ onAddQuestion }) => {
       preguntaData.correcta = correcta;
     }
 
-    // Llamar al callback del padre con la nueva pregunta
+    // En modo edición/modal (ExamPartBuilder) avisamos con onSave y listo: el
+    // modal se cierra y este componente se desmonta. En modo alta clásico
+    // (QuestionBank.js) seguimos usando onAddQuestion y limpiando el formulario
+    // para poder cargar la siguiente pregunta sin cerrar nada.
+    if (onSave) {
+      onSave(preguntaData);
+      return;
+    }
+
     onAddQuestion(preguntaData);
 
     // Limpiar inputs
@@ -318,7 +382,7 @@ const QuestionCreator = ({ onAddQuestion }) => {
       <div className="modern-card-header">
         <h3 className="modern-card-title">
           <i className="fas fa-question-circle me-2"></i>
-          Agregar Pregunta
+          {editingQuestion ? 'Editar Pregunta' : 'Agregar Pregunta'}
         </h3>
       </div>
       <div className="modern-card-body">
@@ -437,7 +501,7 @@ const QuestionCreator = ({ onAddQuestion }) => {
             {tipoPregunta === "fill_in_blank" && (
               <button
                 type="button"
-                className="btn btn-outline-primary"
+                className="modern-btn modern-btn-secondary"
                 onClick={handleInsertarGuion}
                 title="Insertar espacio en blanco"
                 style={{ minWidth: '120px' }}
@@ -915,15 +979,17 @@ const QuestionCreator = ({ onAddQuestion }) => {
               {/* Columna de Conceptos */}
               <div className="col-md-6">
                 <label className="form-label d-flex align-items-center gap-2">
-                  <i className="fas fa-list-ul text-primary me-2"></i>
+                  <i className="fas fa-list-ul me-2" style={{ color: 'var(--primary-color)' }}></i>
                   Conceptos / Preguntas (Columna Izquierda)
                 </label>
                 <div className="exam-creator-options-list">
                   {conceptos.map((concepto, i) => (
                     <div key={i} className="exam-creator-option-item mb-2 d-flex gap-2 align-items-center">
-                      <span 
-                        className="badge bg-primary"
+                      <span
+                        className="badge"
                         style={{
+                          backgroundColor: 'var(--primary-color)',
+                          color: 'white',
                           minWidth: '35px',
                           height: '35px',
                           display: 'flex',
@@ -1073,11 +1139,11 @@ const QuestionCreator = ({ onAddQuestion }) => {
                   
                   return (
                     <div key={i} className="mb-2 d-flex align-items-center gap-2">
-                      <span className="badge bg-primary" style={{ fontSize: '0.85rem', minWidth: '30px' }}>
+                      <span className="badge" style={{ backgroundColor: 'var(--primary-color)', color: 'white', fontSize: '0.85rem', minWidth: '30px' }}>
                         {i + 1}
                       </span>
                       <span style={{ fontSize: '0.9rem' }}>{concepto}</span>
-                      <i className="fas fa-arrow-right text-primary mx-1"></i>
+                      <i className="fas fa-arrow-right mx-1" style={{ color: 'var(--primary-color)' }}></i>
                       <span className="badge bg-success" style={{ fontSize: '0.85rem', minWidth: '30px' }}>
                         {String.fromCharCode(65 + i)}
                       </span>
@@ -1120,12 +1186,23 @@ const QuestionCreator = ({ onAddQuestion }) => {
         )}
 
         <div className="exam-creator-buttons">
-          <button 
-            className="modern-btn modern-btn-secondary"
+          {onCancel && (
+            <button
+              className="modern-btn modern-btn-secondary"
+              onClick={onCancel}
+              type="button"
+            >
+              <i className="fas fa-times me-2"></i>
+              <span className="button-text">Cancelar</span>
+            </button>
+          )}
+          <button
+            className="modern-btn modern-btn-primary"
             onClick={handleAgregarPregunta}
+            type="button"
           >
-            <i className="fas fa-plus me-2"></i>
-            <span className="button-text">Agregar Pregunta</span>
+            <i className={`fas ${editingQuestion ? 'fa-save' : 'fa-plus'} me-2`}></i>
+            <span className="button-text">{editingQuestion ? 'Guardar Cambios' : 'Agregar Pregunta'}</span>
           </button>
         </div>
       </div>

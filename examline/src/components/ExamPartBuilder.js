@@ -24,12 +24,34 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
   const [isRunningTests, setIsRunningTests] = useState(false);
   const [activeProgTab, setActiveProgTab] = useState('config');
   const [showPoolConfig, setShowPoolConfig] = useState(false);
+  const [showQuestionModal, setShowQuestionModal] = useState(false);
+  const [editingQuestionIndex, setEditingQuestionIndex] = useState(null);
 
   const update = (patch) => onChange({ ...part, ...patch });
 
   // ---- Multiple choice ----
-  const handleAddQuestion = (nuevaPregunta) => {
-    update({ preguntas: [...part.preguntas, nuevaPregunta] });
+  const handleOpenNewQuestion = () => {
+    setEditingQuestionIndex(null);
+    setShowQuestionModal(true);
+  };
+
+  const handleOpenEditQuestion = (index) => {
+    setEditingQuestionIndex(index);
+    setShowQuestionModal(true);
+  };
+
+  const handleCloseQuestionModal = () => {
+    setShowQuestionModal(false);
+    setEditingQuestionIndex(null);
+  };
+
+  const handleSaveQuestion = (preguntaData) => {
+    if (editingQuestionIndex != null) {
+      update({ preguntas: part.preguntas.map((p, i) => i === editingQuestionIndex ? preguntaData : p) });
+    } else {
+      update({ preguntas: [...part.preguntas, preguntaData] });
+    }
+    handleCloseQuestionModal();
   };
 
   const handleAddQuestionsFromBank = (selectedQuestions) => {
@@ -237,52 +259,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
 
     return (
       <>
-        <div className="row g-4">
-          <div className="col-lg-6">
-            <div className="modern-card mb-4">
-              <div className="modern-card-header">
-                <h3 className="modern-card-title">
-                  <i className="fas fa-question-circle me-2"></i>
-                  Agregar Preguntas al Examen — {partLabel}
-                </h3>
-              </div>
-              <div className="modern-card-body">
-                <div className="alert alert-info mb-3">
-                  <i className="fas fa-info-circle me-2"></i>
-                  <strong>Tienes dos opciones:</strong> crear una pregunta nueva desde cero o seleccionar preguntas guardadas en tu banco de preguntas.
-                </div>
-                <div className="d-flex gap-3 justify-content-center flex-wrap">
-                  <button
-                    className="modern-btn modern-btn-primary"
-                    onClick={() => setShowBankSelector(true)}
-                    style={{ minWidth: '250px' }}
-                  >
-                    <i className="fas fa-database me-2"></i>
-                    <span className="button-text">Seleccionar del Banco</span>
-                  </button>
-                  <div className="text-muted d-flex align-items-center">
-                    <strong>o</strong>
-                  </div>
-                  <button
-                    className="modern-btn modern-btn-secondary"
-                    onClick={() => {
-                      const creator = document.getElementById(`question-creator-section-${part.localId}`);
-                      if (creator) creator.scrollIntoView({ behavior: 'smooth' });
-                    }}
-                    style={{ minWidth: '250px' }}
-                  >
-                    <i className="fas fa-plus-circle me-2"></i>
-                    <span className="button-text">Crear Pregunta Nueva</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div id={`question-creator-section-${part.localId}`}>
-              <QuestionCreator onAddQuestion={handleAddQuestion} />
-            </div>
-
-            {part.preguntas.length > 0 && (
+        {part.preguntas.length > 0 && (
               <div className="modern-card mb-4">
                 <div
                   className="modern-card-header"
@@ -390,15 +367,31 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                 )}
               </div>
             )}
-          </div>
 
-          <div className="col-lg-6">
             <div className="modern-card">
-              <div className="modern-card-header">
-                <h3 className="modern-card-title">
+              <div className="modern-card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h3 className="modern-card-title mb-0">
                   <i className="fas fa-clipboard-list me-2"></i>
                   Preguntas Agregadas ({part.preguntas.length})
                 </h3>
+                <div className="d-flex gap-2">
+                  <button
+                    type="button"
+                    className="modern-btn modern-btn-secondary modern-btn-sm"
+                    onClick={() => setShowBankSelector(true)}
+                  >
+                    <i className="fas fa-database me-2"></i>
+                    <span className="button-text">Del Banco</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="modern-btn modern-btn-primary modern-btn-sm"
+                    onClick={handleOpenNewQuestion}
+                  >
+                    <i className="fas fa-plus me-2"></i>
+                    <span className="button-text">Agregar Pregunta</span>
+                  </button>
+                </div>
               </div>
               <div className="modern-card-body">
                 {part.preguntas.length === 0 ? (
@@ -408,7 +401,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                     </div>
                     <h4 className="empty-title">No hay preguntas aún</h4>
                     <p className="empty-subtitle">
-                      Agrega tu primera pregunta usando el formulario de la izquierda.
+                      Usá "Agregar Pregunta" arriba para crear una nueva, o "Del Banco" para reutilizar una ya guardada.
                       Las opciones de orden aleatorio y pool balanceado van a aparecer acá apenas cargues la primera.
                     </p>
                   </div>
@@ -478,6 +471,15 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                             style={{ padding: '0.25rem 0.5rem' }}
                           >
                             <i className="fas fa-arrow-down"></i>
+                          </button>
+                          <button
+                            className="btn btn-sm btn-outline-primary"
+                            onClick={() => handleOpenEditQuestion(idx)}
+                            disabled={isPublishing}
+                            title="Editar pregunta"
+                            style={{ padding: '0.25rem 0.5rem' }}
+                          >
+                            <i className="fas fa-pen"></i>
                           </button>
                           <button
                             className="btn btn-sm btn-outline-danger"
@@ -559,14 +561,31 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
             )}
               </div>
             </div>
-          </div>
-        </div>
 
         <QuestionBankSelector
           show={showBankSelector}
           onClose={() => setShowBankSelector(false)}
           onSelectQuestions={handleAddQuestionsFromBank}
         />
+
+        {showQuestionModal && (
+          <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={handleCloseQuestionModal}>
+            <div
+              className="modal-dialog modal-lg modal-dialog-scrollable"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="modal-content" style={{ border: 'none', backgroundColor: 'transparent' }}>
+                <div className="modal-body p-0">
+                  <QuestionCreator
+                    editingQuestion={editingQuestionIndex != null ? part.preguntas[editingQuestionIndex] : null}
+                    onSave={handleSaveQuestion}
+                    onCancel={handleCloseQuestionModal}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </>
     );
   }
