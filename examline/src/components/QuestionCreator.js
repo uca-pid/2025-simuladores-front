@@ -586,16 +586,17 @@ const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion }) =
                     {tipoPregunta === "multiple_choice" ? (
                       <input
                         type="radio"
-                        className="form-check-input flex-shrink-0 mt-0"
+                        className="flex-shrink-0"
                         name="opcion-correcta"
                         checked={correcta === i}
                         onChange={() => setCorrecta(i)}
                         title="Marcar como respuesta correcta"
+                        style={{ width: '1.15rem', height: '1.15rem', accentColor: 'var(--primary-color)', cursor: 'pointer' }}
                       />
                     ) : (
                       <input
                         type="checkbox"
-                        className="form-check-input flex-shrink-0 mt-0"
+                        className="flex-shrink-0"
                         checked={correctasSeleccionadas.includes(i)}
                         onChange={(e) => {
                           setCorrectasSeleccionadas(prev =>
@@ -603,6 +604,7 @@ const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion }) =
                           );
                         }}
                         title="Marcar como respuesta correcta"
+                        style={{ width: '1.15rem', height: '1.15rem', accentColor: 'var(--primary-color)', cursor: 'pointer' }}
                       />
                     )}
                     <input
@@ -639,8 +641,9 @@ const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion }) =
               {opciones.length < 10 && (
                 <button
                   type="button"
-                  className="btn btn-outline-primary btn-sm mt-2"
+                  className="btn btn-sm mt-2"
                   onClick={handleAgregarOpcion}
+                  style={{ borderColor: 'var(--primary-color)', color: 'var(--primary-color)' }}
                 >
                   <i className="fas fa-plus me-2"></i>
                   Agregar opción
