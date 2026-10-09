@@ -58,6 +58,7 @@ const mapApiPartToInternal = (parte) => {
       cantidadFaciles: parte.cantidadFaciles ?? null,
       cantidadMedias: parte.cantidadMedias ?? null,
       cantidadDificiles: parte.cantidadDificiles ?? null,
+      cantidadPreguntas: parte.cantidadPreguntas ?? null,
     };
   }
 
@@ -316,6 +317,7 @@ const ExamCreator = () => {
               cantidadFaciles: p.cantidadFaciles,
               cantidadMedias: p.cantidadMedias,
               cantidadDificiles: p.cantidadDificiles,
+              cantidadPreguntas: p.cantidadPreguntas,
             };
           }
           return {
@@ -414,7 +416,12 @@ const ExamCreator = () => {
         }
 
         const poolDefinido = [p.cantidadFaciles, p.cantidadMedias, p.cantidadDificiles].some(c => c !== undefined && c !== null);
-        if (poolDefinido) {
+        if (p.cantidadPreguntas != null) {
+          if (p.cantidadPreguntas < 1 || p.cantidadPreguntas > p.preguntas.length) {
+            showModal('warning', 'No se puede publicar el examen', `La parte ${partNum} debe tener una cantidad aleatoria entre 1 y ${p.preguntas.length}.`, null, false);
+            return;
+          }
+        } else if (poolDefinido) {
           const counts = { facil: 0, media: 0, dificil: 0 };
           p.preguntas.forEach(pregunta => { counts[pregunta.dificultad || 'media']++; });
           const pedidos = [
@@ -770,32 +777,6 @@ const ExamCreator = () => {
                 </div>
               </div>
 
-              {selectedPart?.tipo === 'multiple_choice' && (
-                <div className="mb-0 mt-3 pt-3" style={{ borderTop: '1px solid var(--border-color)' }}>
-                  <label className="form-label d-flex align-items-center gap-2">
-                    <i className="fas fa-random text-muted"></i>
-                    Orden Aleatorio de Preguntas
-                  </label>
-                  <div className="form-check form-switch mt-2">
-                    <input
-                      className="form-check-input"
-                      type="checkbox"
-                      id="ordenAleatorioSwitch"
-                      checked={ordenAleatorio}
-                      onChange={(e) => setOrdenAleatorio(e.target.checked)}
-                    />
-                    <label className="form-check-label" htmlFor="ordenAleatorioSwitch">
-                      {ordenAleatorio ? "Las preguntas aparecerán en orden aleatorio para cada estudiante" : "Las preguntas aparecerán en el orden definido"}
-                    </label>
-                  </div>
-                  <small className="form-text text-muted">
-                    {ordenAleatorio
-                      ? "Cada estudiante ve las mismas preguntas, pero mezcladas en un orden distinto."
-                      : "Las preguntas siempre aparecerán en el mismo orden para todos los estudiantes."}
-                    {" "}Esto no cambia qué preguntas le tocan a cada alumno — para que cada alumno reciba un subconjunto distinto de preguntas, usá el "Pool aleatorio balanceado" dentro de cada parte, más abajo.
-                  </small>
-                </div>
-              )}
             </div>
           </div>
 
@@ -850,7 +831,7 @@ const ExamCreator = () => {
                 <strong>Título:</strong> {titulo || <span className="text-muted fst-italic">Sin título</span>}
               </div>
               <div className="mb-3">
-                <strong>Orden aleatorio de preguntas:</strong> {ordenAleatorio ? 'Sí' : 'No'}
+                <strong>Orden de presentación:</strong> {ordenAleatorio ? 'Aleatorio para cada alumno' : 'Orden definido por el profesor'}
               </div>
               <div className="mb-2">
                 <strong>Partes ({partes.length}):</strong>
@@ -861,7 +842,15 @@ const ExamCreator = () => {
                     <i className={`fas ${p.tipo === 'multiple_choice' ? 'fa-question-circle' : 'fa-code'} me-2`}></i>
                     <strong>Parte {idx + 1}:</strong> {TIPO_LABEL[p.tipo]}
                     {p.tipo === 'multiple_choice' ? (
-                      <span className="ms-2 text-muted">— {p.preguntas.length} pregunta{p.preguntas.length !== 1 ? 's' : ''}</span>
+                      <span className="ms-2 text-muted">
+                        — {p.preguntas.length} pregunta{p.preguntas.length !== 1 ? 's' : ''} disponibles;
+                        {' '}
+                        {p.cantidadPreguntas != null
+                          ? `${p.cantidadPreguntas} al azar por alumno`
+                          : p.cantidadFaciles != null || p.cantidadMedias != null || p.cantidadDificiles != null
+                          ? `${(p.cantidadFaciles || 0) + (p.cantidadMedias || 0) + (p.cantidadDificiles || 0)} por alumno (${p.cantidadFaciles || 0} fáciles, ${p.cantidadMedias || 0} medias, ${p.cantidadDificiles || 0} difíciles)`
+                          : 'todos por alumno'}
+                      </span>
                     ) : (
                       <span className="ms-2 text-muted">— {p.testCases.length} caso{p.testCases.length !== 1 ? 's' : ''} de prueba ({p.lenguajeProgramacion})</span>
                     )}

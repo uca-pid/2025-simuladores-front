@@ -23,7 +23,6 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
   const [isUploadingDataset, setIsUploadingDataset] = useState(false);
   const [isRunningTests, setIsRunningTests] = useState(false);
   const [activeProgTab, setActiveProgTab] = useState('config');
-  const [showPoolConfig, setShowPoolConfig] = useState(false);
   const [showQuestionModal, setShowQuestionModal] = useState(false);
   const [editingQuestionIndex, setEditingQuestionIndex] = useState(null);
 
@@ -263,7 +262,11 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
   if (part.tipo === "multiple_choice") {
     const conteoPorDificultad = { facil: 0, media: 0, dificil: 0 };
     part.preguntas.forEach(p => { conteoPorDificultad[p.dificultad || 'media']++; });
-    const poolActivo = part.cantidadFaciles != null || part.cantidadMedias != null || part.cantidadDificiles != null;
+    const modoSeleccion = part.cantidadPreguntas != null
+      ? 'aleatorio'
+      : (part.cantidadFaciles != null || part.cantidadMedias != null || part.cantidadDificiles != null)
+        ? 'dificultad'
+        : 'todas';
 
     const setCantidad = (nivel, valorStr) => {
       const valor = valorStr === '' ? 0 : Math.max(0, parseInt(valorStr, 10) || 0);
@@ -273,113 +276,158 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
     return (
       <>
         {part.preguntas.length > 0 && (
-              <div className="modern-card mb-4">
-                <div
-                  className="modern-card-header"
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => setShowPoolConfig(prev => !prev)}
-                >
-                  <h3 className="modern-card-title d-flex justify-content-between align-items-center">
-                    <span>
-                      <i className="fas fa-random me-2"></i>
-                      Pool aleatorio balanceado (opcional)
-                    </span>
-                    <i className={`fas ${showPoolConfig ? 'fa-chevron-up' : 'fa-chevron-down'}`}></i>
-                  </h3>
-                  <p className="text-muted mb-0" style={{ fontSize: '0.85rem' }}>
-                    Cada alumno recibe una selección distinta de preguntas (no solo un orden distinto).
-                  </p>
-                </div>
-                {showPoolConfig && (
-              <div className="modern-card-body">
-                {typeof ordenAleatorio === 'boolean' && (
-                  <div className="form-check form-switch mb-3 pb-3" style={{ borderBottom: '1px solid var(--border-color)' }}>
-                    <input
-                      className="form-check-input"
-                      type="checkbox"
-                      id={`ordenAleatorio-${part.localId}`}
-                      checked={ordenAleatorio}
-                      onChange={(e) => onOrdenAleatorioChange?.(e.target.checked)}
-                    />
-                    <label className="form-check-label" htmlFor={`ordenAleatorio-${part.localId}`}>
-                      Orden Aleatorio de Preguntas
-                    </label>
-                    <small className="form-text text-muted d-block">
-                      {ordenAleatorio
-                        ? 'Cada estudiante ve las mismas preguntas, pero mezcladas en un orden distinto.'
-                        : 'Las preguntas siempre aparecerán en el mismo orden para todos los estudiantes.'}
-                      {' '}Se aplica a <strong>todas</strong> las partes de preguntas del examen, no solo esta.
-                    </small>
-                  </div>
-                )}
+          <div className="modern-card mb-4">
+            <div className="modern-card-header">
+              <h3 className="modern-card-title">
+                <i className="fas fa-sliders-h me-2"></i>
+                Configuración de preguntas
+              </h3>
+              <p className="text-muted mb-0" style={{ fontSize: '0.85rem' }}>
+                Definí qué preguntas recibe cada alumno y en qué orden las verá.
+              </p>
+            </div>
+            <div className="modern-card-body">
+              <h5 className="mb-3">Preguntas que recibirá cada alumno</h5>
+              <div className="form-check mb-2">
+                <input
+                  className="form-check-input"
+                  type="radio"
+                  name={`questionSelection-${part.localId}`}
+                  id={`allQuestions-${part.localId}`}
+                  checked={modoSeleccion === 'todas'}
+                  onChange={() => update({ cantidadPreguntas: null, cantidadFaciles: null, cantidadMedias: null, cantidadDificiles: null })}
+                />
+                <label className="form-check-label" htmlFor={`allQuestions-${part.localId}`}>
+                  <strong>Usar todas las preguntas agregadas</strong>
+                </label>
+              </div>
+              <div className="form-check mb-3">
+                <input
+                  className="form-check-input"
+                  type="radio"
+                  name={`questionSelection-${part.localId}`}
+                  id={`randomQuestions-${part.localId}`}
+                  checked={modoSeleccion === 'aleatorio'}
+                  onChange={() => update({ cantidadPreguntas: Math.min(1, part.preguntas.length), cantidadFaciles: null, cantidadMedias: null, cantidadDificiles: null })}
+                />
+                <label className="form-check-label" htmlFor={`randomQuestions-${part.localId}`}>
+                  <strong>Usar una cantidad de preguntas al azar</strong>
+                </label>
+              </div>
+              <div className="form-check mb-3">
+                <input
+                  className="form-check-input"
+                  type="radio"
+                  name={`questionSelection-${part.localId}`}
+                  id={`distributedQuestions-${part.localId}`}
+                  checked={modoSeleccion === 'dificultad'}
+                  onChange={() => update({ cantidadPreguntas: null, cantidadFaciles: 0, cantidadMedias: 0, cantidadDificiles: 0 })}
+                />
+                <label className="form-check-label" htmlFor={`distributedQuestions-${part.localId}`}>
+                  <strong>Usar una cantidad de preguntas distribuida por dificultad</strong>
+                </label>
+              </div>
 
-                <div className="form-check form-switch mb-3">
+              {modoSeleccion === 'todas' ? (
+                <div className="alert alert-light border mb-4">
+                  <i className="fas fa-info-circle me-2"></i>
+                  Hay <strong>{part.preguntas.length}</strong> preguntas disponibles y cada alumno recibirá todas.
+                </div>
+              ) : modoSeleccion === 'aleatorio' ? (
+                <div className="mb-4">
+                  <label className="form-label" htmlFor={`randomQuestionCount-${part.localId}`}>
+                    <strong>Cantidad por alumno</strong>
+                  </label>
+                  <input
+                    id={`randomQuestionCount-${part.localId}`}
+                    type="number"
+                    min="1"
+                    max={part.preguntas.length}
+                    className="form-control"
+                    value={part.cantidadPreguntas ?? 1}
+                    onChange={(e) => update({ cantidadPreguntas: Math.max(1, Math.min(part.preguntas.length, parseInt(e.target.value, 10) || 1)) })}
+                  />
+                  <small className="form-text text-muted">Disponibles: {part.preguntas.length}. Todos recibirán la misma cantidad, con preguntas elegidas al azar.</small>
+                </div>
+              ) : (
+                <>
+                  <div className="alert alert-info mb-3">
+                    <i className="fas fa-info-circle me-2"></i>
+                    Todos los alumnos recibirán la misma cantidad por dificultad, pero las preguntas concretas pueden ser diferentes.
+                  </div>
+                  <div className="row g-3 mb-4">
+                    {[
+                      { key: 'cantidadFaciles', nivel: 'facil', label: 'Fáciles' },
+                      { key: 'cantidadMedias', nivel: 'media', label: 'Medias' },
+                      { key: 'cantidadDificiles', nivel: 'dificil', label: 'Difíciles' },
+                    ].map(({ key, nivel, label }) => (
+                      <div className="col-md-4" key={key}>
+                        <label className="form-label d-flex align-items-center gap-2" htmlFor={`${key}-${part.localId}`}>
+                          <span className="badge" style={{ backgroundColor: DIFICULTAD_BADGE[nivel].color, color: 'white' }}>
+                            {label}
+                          </span>
+                          <span>por alumno</span>
+                        </label>
+                        <input
+                          id={`${key}-${part.localId}`}
+                          type="number"
+                          min="0"
+                          max={conteoPorDificultad[nivel]}
+                          className={`form-control ${(part[key] || 0) > conteoPorDificultad[nivel] ? 'is-invalid' : ''}`}
+                          value={part[key] ?? 0}
+                          onChange={(e) => setCantidad(key, e.target.value)}
+                        />
+                        <small className="form-text text-muted">Disponibles: {conteoPorDificultad[nivel]}</small>
+                        {(part[key] || 0) > conteoPorDificultad[nivel] && (
+                          <div className="invalid-feedback d-block">No puede superar las disponibles.</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="alert alert-light border mb-4">
+                    <strong>Total por alumno:</strong>{' '}
+                    {(part.cantidadFaciles || 0) + (part.cantidadMedias || 0) + (part.cantidadDificiles || 0)} preguntas
+                  </div>
+                </>
+              )}
+
+              <div className="pt-3" style={{ borderTop: '1px solid var(--border-color)' }}>
+                <h5 className="mb-3">Orden de presentación</h5>
+                <div className="form-check mb-2">
                   <input
                     className="form-check-input"
-                    type="checkbox"
-                    id={`pool-toggle-${part.localId}`}
-                    checked={poolActivo}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        update({ cantidadFaciles: 0, cantidadMedias: 0, cantidadDificiles: 0 });
-                      } else {
-                        update({ cantidadFaciles: null, cantidadMedias: null, cantidadDificiles: null });
-                      }
-                    }}
+                    type="radio"
+                    name={`questionOrder-${part.localId}`}
+                    id={`definedOrder-${part.localId}`}
+                    checked={!ordenAleatorio}
+                    onChange={() => onOrdenAleatorioChange?.(false)}
                   />
-                  <label className="form-check-label" htmlFor={`pool-toggle-${part.localId}`}>
-                    Sortear un subconjunto de estas preguntas para cada alumno (en vez de usarlas todas)
+                  <label className="form-check-label" htmlFor={`definedOrder-${part.localId}`}>
+                    <strong>Mantener el orden definido</strong>
+                    <small className="text-muted d-block">Todos verán las preguntas en el orden configurado.</small>
                   </label>
                 </div>
-
-                {poolActivo && (
-                  <>
-                    <div className="alert alert-info mb-3">
-                      <i className="fas fa-info-circle me-2"></i>
-                      Definí cuántas preguntas de cada dificultad le va a tocar a <strong>cada alumno</strong>, sorteadas del pool de abajo.
-                      Todos reciben la misma cantidad de cada nivel, así nadie tiene ventaja por azar.
-                      {" "}Esto hace que cada alumno reciba preguntas distintas; es independiente del switch "Orden Aleatorio de Preguntas" (arriba), que solo mezcla el orden, no cambia cuáles preguntas le tocan a cada uno. Podés combinar ambos.
-                    </div>
-                    <div className="row g-3">
-                      {[
-                        { key: 'cantidadFaciles', nivel: 'facil', label: 'Fáciles' },
-                        { key: 'cantidadMedias', nivel: 'media', label: 'Medias' },
-                        { key: 'cantidadDificiles', nivel: 'dificil', label: 'Difíciles' },
-                      ].map(({ key, nivel, label }) => (
-                        <div className="col-md-4" key={key}>
-                          <label className="form-label d-flex align-items-center gap-2">
-                            <span
-                              className="badge"
-                              style={{ backgroundColor: DIFICULTAD_BADGE[nivel].color, color: 'white' }}
-                            >
-                              {label}
-                            </span>
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            max={conteoPorDificultad[nivel]}
-                            className={`form-control ${(part[key] || 0) > conteoPorDificultad[nivel] ? 'is-invalid' : ''}`}
-                            value={part[key] ?? 0}
-                            onChange={(e) => setCantidad(key, e.target.value)}
-                          />
-                          <small className="form-text text-muted">
-                            Pool disponible: {conteoPorDificultad[nivel]}
-                          </small>
-                          {(part[key] || 0) > conteoPorDificultad[nivel] && (
-                            <div className="invalid-feedback d-block">
-                              Pediste más de las que hay en el pool ({conteoPorDificultad[nivel]})
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                )}
+                <div className="form-check">
+                  <input
+                    className="form-check-input"
+                    type="radio"
+                    name={`questionOrder-${part.localId}`}
+                    id={`randomOrder-${part.localId}`}
+                    checked={ordenAleatorio}
+                    onChange={() => onOrdenAleatorioChange?.(true)}
+                  />
+                  <label className="form-check-label" htmlFor={`randomOrder-${part.localId}`}>
+                    <strong>Orden aleatorio para cada alumno</strong>
+                    <small className="text-muted d-block">Cambia el orden, no la selección de preguntas.</small>
+                  </label>
+                </div>
+                <small className="form-text text-muted d-block mt-2">
+                  Primero se seleccionan las preguntas según la distribución por dificultad y luego se aplica el orden elegido.
+                </small>
               </div>
-                )}
-              </div>
-            )}
+            </div>
+          </div>
+        )}
 
             <div className="modern-card">
               <div className="modern-card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
