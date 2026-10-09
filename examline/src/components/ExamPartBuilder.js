@@ -423,8 +423,8 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                 {part.preguntas.map((p, idx) => (
                   <div key={idx} className="exam-creator-question-card">
                     <div className="exam-card">
-                      <div className="exam-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                        <div className="d-flex align-items-center gap-2">
+                      <div className="exam-card-header" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: '0.5rem' }}>
+                        <div className="d-flex align-items-center flex-wrap gap-2">
                           <h5 className="exam-title mb-0">
                             <span className="question-number">Pregunta {idx + 1}</span>
                           </h5>
@@ -461,12 +461,8 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                             <i className="fas fa-star me-1"></i>
                             {p.puntos ?? 1} pt{(p.puntos ?? 1) !== 1 ? 's' : ''}
                           </span>
-                          <span className="exam-badge">
-                            <i className="fas fa-check-circle"></i>
-                            <span className="badge-text">Lista</span>
-                          </span>
                         </div>
-                        <div className="d-flex align-items-center gap-1">
+                        <div className="d-flex align-items-center flex-wrap gap-1">
                           <button
                             className="btn btn-sm btn-outline-secondary"
                             onClick={() => handleMoveQuestion(idx, -1)}

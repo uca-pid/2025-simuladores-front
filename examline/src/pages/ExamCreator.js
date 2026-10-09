@@ -813,7 +813,7 @@ const ExamCreator = () => {
           )}
 
           <div className="modern-card mt-4">
-            <div className="modern-card-body d-flex justify-content-between">
+            <div className="modern-card-body d-flex flex-column flex-md-row justify-content-between gap-2">
               <button
                 type="button"
                 className="modern-btn modern-btn-secondary"
