@@ -417,7 +417,7 @@ const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion }) =
                 <option value="multiple_choice">Opción Múltiple</option>
                 <option value="multiple_response">Selección Múltiple</option>
                 <option value="true_false">Verdadero / Falso</option>
-                <option value="matching">Unir con Flechas (Matching)</option>
+                <option value="matching">Emparejar / Unir Conceptos</option>
               </optgroup>
               <optgroup label="Corrección automática — texto/número">
                 <option value="fill_in_blank">Completar Espacios</option>

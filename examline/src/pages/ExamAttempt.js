@@ -12,7 +12,7 @@ const EXAM_ATTEMPT_TIPO_META = {
   multiple_response: { label: 'Selección Múltiple', color: '#6610f2', icon: 'fa-check-square' },
   true_false: { label: 'V/F', color: '#28a745', icon: 'fa-check-double' },
   fill_in_blank: { label: 'Completar', color: '#ffc107', icon: 'fa-fill-drip' },
-  matching: { label: 'Unir', color: '#9c27b0', icon: 'fa-arrows-alt-h' },
+  matching: { label: 'Emparejar', color: '#9c27b0', icon: 'fa-arrows-alt-h' },
   short_answer: { label: 'Resp. Corta', color: '#17a2b8', icon: 'fa-font' },
   numeric: { label: 'Numérica', color: '#fd7e14', icon: 'fa-calculator' },
   essay: { label: 'Desarrollo', color: '#6c757d', icon: 'fa-pen-fancy' },

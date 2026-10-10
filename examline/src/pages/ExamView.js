@@ -407,7 +407,7 @@ const ExamView = ({ examId: propExamId, onBack }) => {
                             }}
                           >
                             <i className={`fas ${p.tipo === 'true_false' ? 'fa-check-double' : p.tipo === 'fill_in_blank' ? 'fa-fill-drip' : p.tipo === 'matching' ? 'fa-arrows-alt-h' : 'fa-list-ul'} me-1`}></i>
-                            {p.tipo === 'true_false' ? 'V/F' : p.tipo === 'fill_in_blank' ? 'Completar' : p.tipo === 'matching' ? 'Unir con Flechas' : 'Múltiple'}
+                            {p.tipo === 'true_false' ? 'V/F' : p.tipo === 'fill_in_blank' ? 'Completar' : p.tipo === 'matching' ? 'Emparejar' : 'Múltiple'}
                           </span>
                         </div>
                         <span className="exam-badge">
