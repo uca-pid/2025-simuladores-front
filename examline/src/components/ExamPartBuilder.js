@@ -304,149 +304,100 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
     const preguntasPorDificultad = { facil: [], media: [], dificil: [] };
     part.preguntas.forEach(p => { preguntasPorDificultad[p.dificultad || 'media'].push(p); });
 
-    const configuracionPreguntasCard =
-        part.preguntas.length > 0 && (
-          <div className="modern-card mb-4">
-            <div className="modern-card-header">
-              <h3 className="modern-card-title">
-                <i className="fas fa-sliders-h me-2"></i>
-                Configuración de preguntas
-              </h3>
-              <p className="text-muted mb-0" style={{ fontSize: '0.85rem' }}>
-                Definí qué preguntas recibe cada alumno y en qué orden las verá.
-              </p>
-            </div>
-            <div className="modern-card-body">
-              <h5 className="mb-3">Preguntas que recibirá cada alumno</h5>
-              <div className="form-check mb-2">
-                <input
-                  className="form-check-input"
-                  type="radio"
-                  name={`questionSelection-${part.localId}`}
-                  id={`allQuestions-${part.localId}`}
-                  checked={modoSeleccion === 'todas'}
-                  onChange={() => update({ cantidadPreguntas: null, cantidadFaciles: null, cantidadMedias: null, cantidadDificiles: null })}
-                />
-                <label className="form-check-label" htmlFor={`allQuestions-${part.localId}`}>
-                  <strong>Usar todas las preguntas agregadas</strong>
-                </label>
-              </div>
-              <div className="form-check mb-3">
-                <input
-                  className="form-check-input"
-                  type="radio"
-                  name={`questionSelection-${part.localId}`}
-                  id={`randomQuestions-${part.localId}`}
-                  checked={modoSeleccion === 'aleatorio'}
-                  onChange={() => update({ cantidadPreguntas: Math.min(1, part.preguntas.length), cantidadFaciles: null, cantidadMedias: null, cantidadDificiles: null })}
-                />
-                <label className="form-check-label" htmlFor={`randomQuestions-${part.localId}`}>
-                  <strong>Usar una cantidad de preguntas al azar</strong>
-                </label>
-              </div>
-              <div className="form-check mb-3">
-                <input
-                  className="form-check-input"
-                  type="radio"
-                  name={`questionSelection-${part.localId}`}
-                  id={`distributedQuestions-${part.localId}`}
-                  checked={modoSeleccion === 'dificultad'}
-                  onChange={() => update({ cantidadPreguntas: null, cantidadFaciles: 0, cantidadMedias: 0, cantidadDificiles: 0 })}
-                />
-                <label className="form-check-label" htmlFor={`distributedQuestions-${part.localId}`}>
-                  <strong>Usar una cantidad de preguntas distribuida por dificultad</strong>
-                </label>
-              </div>
+    const cuantasPreguntasSubmenu = part.preguntas.length > 0 && (
+      <div className="mb-4 pb-3" style={{ borderBottom: '1px solid var(--border-color)' }}>
+        <label className="form-label d-flex align-items-center gap-2" htmlFor={`modoSeleccion-${part.localId}`}>
+          <i className="fas fa-filter text-muted"></i>
+          <strong>Cuántas preguntas recibirá el alumno</strong>
+        </label>
+        <div className="d-flex align-items-center flex-wrap gap-3">
+          <select
+            id={`modoSeleccion-${part.localId}`}
+            className="form-select"
+            style={{ maxWidth: '240px' }}
+            value={modoSeleccion}
+            onChange={(e) => {
+              const nuevoModo = e.target.value;
+              if (nuevoModo === 'todas') {
+                update({ cantidadPreguntas: null, cantidadFaciles: null, cantidadMedias: null, cantidadDificiles: null });
+              } else if (nuevoModo === 'aleatorio') {
+                update({ cantidadPreguntas: Math.min(1, part.preguntas.length), cantidadFaciles: null, cantidadMedias: null, cantidadDificiles: null });
+              } else {
+                update({ cantidadPreguntas: null, cantidadFaciles: 0, cantidadMedias: 0, cantidadDificiles: 0 });
+              }
+            }}
+          >
+            <option value="todas">Todas</option>
+            <option value="aleatorio">Cantidad al azar</option>
+            <option value="dificultad">Distribuidas por dificultad</option>
+          </select>
 
-              {modoSeleccion === 'todas' ? (
-                <div className="alert alert-light border mb-4">
-                  <i className="fas fa-info-circle me-2"></i>
-                  Hay <strong>{part.preguntas.length}</strong> preguntas disponibles y cada alumno recibirá todas
-                  {part.puntajePersonalizado && (
-                    <>{' '}(<strong>{totalPuntosPool} pt{totalPuntosPool !== 1 ? 's' : ''}</strong>{' '}en total)</>
-                  )}.
-                </div>
-              ) : modoSeleccion === 'aleatorio' ? (
-                <div className="mb-4">
-                  <label className="form-label" htmlFor={`randomQuestionCount-${part.localId}`}>
-                    <strong>Cantidad por alumno</strong>
-                  </label>
-                  <input
-                    id={`randomQuestionCount-${part.localId}`}
-                    type="number"
-                    min="1"
-                    max={part.preguntas.length}
-                    className="form-control"
-                    value={part.cantidadPreguntas ?? 1}
-                    onChange={(e) => update({ cantidadPreguntas: Math.max(1, Math.min(part.preguntas.length, parseInt(e.target.value, 10) || 1)) })}
-                  />
-                  <small className="form-text text-muted">Disponibles: {part.preguntas.length}. Todos recibirán la misma cantidad, con preguntas elegidas al azar.</small>
-                  {part.puntajePersonalizado && (() => {
-                    const { min, max } = rangoPuntosAlAzar(part.preguntas, part.cantidadPreguntas ?? 1);
-                    return (
-                      <small className="form-text text-muted d-block">
-                        Puntaje por alumno: {min === max ? <strong>{min} pts</strong> : <><strong>{min}</strong> a <strong>{max} pts</strong></>} (según qué preguntas le toquen).
-                      </small>
-                    );
-                  })()}
-                </div>
-              ) : (
-                <>
-                  <div className="alert alert-info mb-3">
-                    <i className="fas fa-info-circle me-2"></i>
-                    Todos los alumnos recibirán la misma cantidad por dificultad, pero las preguntas concretas pueden ser diferentes.
-                  </div>
-                  <div className="row g-3 mb-4">
-                    {[
-                      { key: 'cantidadFaciles', nivel: 'facil', label: 'Fáciles' },
-                      { key: 'cantidadMedias', nivel: 'media', label: 'Medias' },
-                      { key: 'cantidadDificiles', nivel: 'dificil', label: 'Difíciles' },
-                    ].map(({ key, nivel, label }) => (
-                      <div className="col-md-4" key={key}>
-                        <label className="form-label d-flex align-items-center gap-2" htmlFor={`${key}-${part.localId}`}>
-                          <span className="badge" style={{ backgroundColor: DIFICULTAD_BADGE[nivel].color, color: 'white' }}>
-                            {label}
-                          </span>
-                          <span>por alumno</span>
-                        </label>
-                        <input
-                          id={`${key}-${part.localId}`}
-                          type="number"
-                          min="0"
-                          max={conteoPorDificultad[nivel]}
-                          className={`form-control ${(part[key] || 0) > conteoPorDificultad[nivel] ? 'is-invalid' : ''}`}
-                          value={part[key] ?? 0}
-                          onChange={(e) => setCantidad(key, e.target.value)}
-                        />
-                        <small className="form-text text-muted">Disponibles: {conteoPorDificultad[nivel]}</small>
-                        {(part[key] || 0) > conteoPorDificultad[nivel] && (
-                          <div className="invalid-feedback d-block">No puede superar las disponibles.</div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  {(() => {
-                    const rangoFaciles = rangoPuntosAlAzar(preguntasPorDificultad.facil, part.cantidadFaciles || 0);
-                    const rangoMedias = rangoPuntosAlAzar(preguntasPorDificultad.media, part.cantidadMedias || 0);
-                    const rangoDificiles = rangoPuntosAlAzar(preguntasPorDificultad.dificil, part.cantidadDificiles || 0);
-                    const min = rangoFaciles.min + rangoMedias.min + rangoDificiles.min;
-                    const max = rangoFaciles.max + rangoMedias.max + rangoDificiles.max;
-                    return (
-                      <div className="alert alert-light border mb-4">
-                        <strong>Total por alumno:</strong>{' '}
-                        {(part.cantidadFaciles || 0) + (part.cantidadMedias || 0) + (part.cantidadDificiles || 0)} preguntas
-                        {part.puntajePersonalizado && (
-                          <>{' '}— {min === max ? <strong>{min} pts</strong> : <><strong>{min}</strong> a <strong>{max} pts</strong></>}</>
-                        )}
-                      </div>
-                    );
-                  })()}
-                </>
-              )}
+          {modoSeleccion === 'aleatorio' && (
+            <input
+              type="number"
+              min="1"
+              max={part.preguntas.length}
+              className="form-control"
+              style={{ width: '90px' }}
+              value={part.cantidadPreguntas ?? 1}
+              onChange={(e) => update({ cantidadPreguntas: Math.max(1, Math.min(part.preguntas.length, parseInt(e.target.value, 10) || 1)) })}
+            />
+          )}
 
+          {modoSeleccion === 'dificultad' && [
+            { key: 'cantidadFaciles', nivel: 'facil', label: 'Fáciles' },
+            { key: 'cantidadMedias', nivel: 'media', label: 'Medias' },
+            { key: 'cantidadDificiles', nivel: 'dificil', label: 'Difíciles' },
+          ].map(({ key, nivel, label }) => (
+            <div key={key} className="d-flex align-items-center gap-2">
+              <span className="badge" style={{ backgroundColor: DIFICULTAD_BADGE[nivel].color, color: 'white' }}>
+                {label}
+              </span>
+              <input
+                type="number"
+                min="0"
+                max={conteoPorDificultad[nivel]}
+                className={`form-control form-control-sm ${(part[key] || 0) > conteoPorDificultad[nivel] ? 'is-invalid' : ''}`}
+                style={{ width: '70px' }}
+                value={part[key] ?? 0}
+                onChange={(e) => setCantidad(key, e.target.value)}
+              />
+              <small className="text-muted">/{conteoPorDificultad[nivel]}</small>
             </div>
-          </div>
-        );
+          ))}
+        </div>
+
+        {modoSeleccion === 'todas' ? (
+          <small className="form-text text-muted d-block mt-2">
+            Cada alumno recibe las {part.preguntas.length} preguntas
+            {part.puntajePersonalizado && <> ({totalPuntosPool} pt{totalPuntosPool !== 1 ? 's' : ''})</>}.
+          </small>
+        ) : modoSeleccion === 'aleatorio' ? (
+          <small className="form-text text-muted d-block mt-2">
+            de {part.preguntas.length} disponibles, al azar por alumno
+            {part.puntajePersonalizado && (() => {
+              const { min, max } = rangoPuntosAlAzar(part.preguntas, part.cantidadPreguntas ?? 1);
+              return <> ({min === max ? `${min} pts` : `${min} a ${max} pts`})</>;
+            })()}.
+          </small>
+        ) : (
+          (() => {
+            const rangoFaciles = rangoPuntosAlAzar(preguntasPorDificultad.facil, part.cantidadFaciles || 0);
+            const rangoMedias = rangoPuntosAlAzar(preguntasPorDificultad.media, part.cantidadMedias || 0);
+            const rangoDificiles = rangoPuntosAlAzar(preguntasPorDificultad.dificil, part.cantidadDificiles || 0);
+            const min = rangoFaciles.min + rangoMedias.min + rangoDificiles.min;
+            const max = rangoFaciles.max + rangoMedias.max + rangoDificiles.max;
+            const total = (part.cantidadFaciles || 0) + (part.cantidadMedias || 0) + (part.cantidadDificiles || 0);
+            return (
+              <small className="form-text text-muted d-block mt-2">
+                Total por alumno: {total} preguntas
+                {part.puntajePersonalizado && <> ({min === max ? `${min} pts` : `${min} a ${max} pts`})</>}.
+              </small>
+            );
+          })()
+        )}
+      </div>
+    );
 
     return (
       <>
@@ -523,6 +474,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                     </div>
                   </div>
                 )}
+                {cuantasPreguntasSubmenu}
                 {part.preguntas.length === 0 ? (
                   <div className="empty-state">
                     <div className="empty-icon">
@@ -701,8 +653,6 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
             )}
               </div>
             </div>
-
-        {configuracionPreguntasCard}
 
         <QuestionBankSelector
           show={showBankSelector}
