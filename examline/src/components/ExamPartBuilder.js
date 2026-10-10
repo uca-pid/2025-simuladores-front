@@ -478,26 +478,6 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                   Primero se seleccionan las preguntas según la distribución por dificultad y luego se aplica el orden elegido.
                 </small>
               </div>
-
-              <div className="pt-3 mt-3" style={{ borderTop: '1px solid var(--border-color)' }}>
-                <h5 className="mb-3">Puntaje</h5>
-                <div className="form-check form-switch">
-                  <input
-                    className="form-check-input"
-                    type="checkbox"
-                    role="switch"
-                    id={`puntajePersonalizado-${part.localId}`}
-                    checked={!!part.puntajePersonalizado}
-                    onChange={(e) => handleTogglePuntajePersonalizado(e.target.checked)}
-                  />
-                  <label className="form-check-label" htmlFor={`puntajePersonalizado-${part.localId}`}>
-                    <strong>Usar puntaje personalizado por pregunta</strong>
-                    <small className="text-muted d-block">
-                      Si está desactivado, todas las preguntas valen 1 punto. Si lo activás, podés editar el puntaje de cada una en "Preguntas Agregadas".
-                    </small>
-                  </label>
-                </div>
-              </div>
             </div>
           </div>
         );
@@ -515,7 +495,23 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                     </span>
                   )}
                 </h3>
-                <div className="d-flex gap-2">
+                <div className="d-flex align-items-center gap-3 flex-wrap">
+                  {part.preguntas.length > 0 && (
+                    <div className="form-check form-switch mb-0">
+                      <input
+                        className="form-check-input"
+                        type="checkbox"
+                        role="switch"
+                        id={`puntajePersonalizado-${part.localId}`}
+                        checked={!!part.puntajePersonalizado}
+                        onChange={(e) => handleTogglePuntajePersonalizado(e.target.checked)}
+                      />
+                      <label className="form-check-label" htmlFor={`puntajePersonalizado-${part.localId}`} style={{ fontSize: '0.85rem' }}>
+                        Puntaje personalizado
+                      </label>
+                    </div>
+                  )}
+                  <div className="d-flex gap-2">
                   <button
                     type="button"
                     className="modern-btn modern-btn-secondary modern-btn-sm"
@@ -532,6 +528,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                     <i className="fas fa-plus me-2"></i>
                     <span className="button-text">Agregar Pregunta</span>
                   </button>
+                  </div>
                 </div>
               </div>
               <div className="modern-card-body">
