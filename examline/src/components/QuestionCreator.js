@@ -414,8 +414,8 @@ const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion }) =
               }}
             >
               <optgroup label="Corrección automática — selección">
-                <option value="multiple_choice">Opción Múltiple</option>
-                <option value="multiple_response">Selección Múltiple</option>
+                <option value="multiple_choice">Multiple Choice (una respuesta correcta)</option>
+                <option value="multiple_response">Multiple Choice (varias respuestas correctas)</option>
                 <option value="true_false">Verdadero / Falso</option>
                 <option value="matching">Emparejar / Unir Conceptos</option>
               </optgroup>
