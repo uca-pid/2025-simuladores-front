@@ -310,7 +310,7 @@ const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion }) =
       texto: textoPregunta,
       opciones: [],
       correcta: correcta,
-      imagenUrl: (tipoPregunta === 'multiple_choice' || tipoPregunta === 'multiple_response') ? (imagenUrl || null) : null
+      imagenUrl: imagenUrl || null
     };
 
     if (tipoPregunta === "fill_in_blank") {
@@ -500,54 +500,51 @@ const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion }) =
           )}
         </div>
 
-        {(tipoPregunta === "multiple_choice" || tipoPregunta === "multiple_response") && (
-          <>
-            {tipoPregunta === "multiple_choice" && (
-            <div className="mb-4">
-              <label className="form-label d-flex align-items-center gap-2">
-                <i className="fas fa-image text-muted"></i>
-                Imagen (Opcional)
-              </label>
-              <input
-                type="file"
-                className="form-control"
-                accept="image/*"
-                onChange={handleImagenChange}
-                disabled={isUploadingImagen}
-                style={{
-                  padding: '0.75rem 1rem',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '8px',
-                  fontSize: '1rem'
-                }}
+        <div className="mb-4">
+          <label className="form-label d-flex align-items-center gap-2">
+            <i className="fas fa-image text-muted"></i>
+            Imagen (Opcional)
+          </label>
+          <input
+            type="file"
+            className="form-control"
+            accept="image/*"
+            onChange={handleImagenChange}
+            disabled={isUploadingImagen}
+            style={{
+              padding: '0.75rem 1rem',
+              border: '1px solid var(--border-color)',
+              borderRadius: '8px',
+              fontSize: '1rem'
+            }}
+          />
+          {isUploadingImagen && (
+            <small className="text-muted d-block mt-2">
+              <i className="fas fa-spinner fa-spin me-1"></i>
+              Subiendo imagen...
+            </small>
+          )}
+          {!isUploadingImagen && imagenUrl && (
+            <div className="mt-2">
+              <img
+                src={imagenUrl}
+                alt="Vista previa"
+                style={{ maxHeight: '120px', borderRadius: '6px', border: '1px solid var(--border-color)', display: 'block', marginBottom: '0.5rem' }}
               />
-              {isUploadingImagen && (
-                <small className="text-muted d-block mt-2">
-                  <i className="fas fa-spinner fa-spin me-1"></i>
-                  Subiendo imagen...
-                </small>
-              )}
-              {!isUploadingImagen && imagenUrl && (
-                <div className="mt-2">
-                  <img
-                    src={imagenUrl}
-                    alt="Vista previa"
-                    style={{ maxHeight: '120px', borderRadius: '6px', border: '1px solid var(--border-color)', display: 'block', marginBottom: '0.5rem' }}
-                  />
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-outline-danger"
-                    onClick={handleQuitarImagen}
-                  >
-                    <i className="fas fa-times me-1"></i>
-                    Quitar imagen
-                  </button>
-                </div>
-              )}
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-danger"
+                onClick={handleQuitarImagen}
+              >
+                <i className="fas fa-times me-1"></i>
+                Quitar imagen
+              </button>
             </div>
-            )}
+          )}
+        </div>
 
-            <div className="mb-4">
+        {(tipoPregunta === "multiple_choice" || tipoPregunta === "multiple_response") && (
+          <div className="mb-4">
               <label className="form-label d-flex align-items-center gap-2">
                 <i className="fas fa-list text-muted"></i>
                 Opciones de respuesta (mínimo 2, máximo 10)
@@ -626,25 +623,11 @@ const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion }) =
                   Agregar opción
                 </button>
               )}
-            </div>
-          </>
-        )}
-
-        {tipoPregunta === "true_false" && (
-          <div className="mb-4">
-            <div className="alert alert-info">
-              <i className="fas fa-info-circle me-2"></i>
-              Las opciones para preguntas de Verdadero/Falso están predefinidas.
-            </div>
           </div>
         )}
 
         {tipoPregunta === "short_answer" && (
           <div className="mb-4">
-            <div className="alert alert-info">
-              <i className="fas fa-info-circle me-2"></i>
-              Se corrige automáticamente comparando el texto del alumno (sin importar mayúsculas ni espacios) contra las respuestas aceptadas.
-            </div>
             <label className="form-label d-flex align-items-center gap-2">
               <i className="fas fa-check-circle text-success me-2"></i>
               Respuestas aceptadas
@@ -693,10 +676,6 @@ const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion }) =
 
         {tipoPregunta === "numeric" && (
           <div className="mb-4">
-            <div className="alert alert-info">
-              <i className="fas fa-info-circle me-2"></i>
-              Se corrige automáticamente aceptando cualquier valor dentro del margen de tolerancia.
-            </div>
             <div className="row g-3">
               <div className="col-md-6">
                 <label className="form-label d-flex align-items-center gap-2">
@@ -730,23 +709,6 @@ const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion }) =
           </div>
         )}
 
-        {tipoPregunta === "essay" && (
-          <div className="mb-4">
-            <div className="alert alert-info">
-              <i className="fas fa-info-circle me-2"></i>
-              El alumno responde con texto libre. No tiene corrección automática: la calificás manualmente al corregir el examen.
-            </div>
-          </div>
-        )}
-
-        {tipoPregunta === "file_upload" && (
-          <div className="mb-4">
-            <div className="alert alert-info">
-              <i className="fas fa-info-circle me-2"></i>
-              El alumno adjunta un archivo como respuesta (ej. foto de un diagrama hecho a mano). No tiene corrección automática: la calificás manualmente al corregir el examen.
-            </div>
-          </div>
-        )}
 
         {tipoPregunta === "fill_in_blank" && (
           <>
