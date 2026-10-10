@@ -394,7 +394,7 @@ const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion }) =
         )}
 
         <div className="row g-3 mb-4">
-          <div className="col-md-6">
+          <div className={onSave ? "col-md-12" : "col-md-6"}>
             <label className="form-label d-flex align-items-center gap-2">
               <i className="fas fa-clipboard-list text-muted"></i>
               Tipo de pregunta
@@ -431,31 +431,33 @@ const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion }) =
             </select>
           </div>
 
-          <div className="col-md-6">
-            <label className="form-label d-flex align-items-center gap-2">
-              <i className="fas fa-signal text-muted"></i>
-              Dificultad
-            </label>
-            <select
-              className="form-select"
-              value={dificultad}
-              onChange={(e) => setDificultad(e.target.value)}
-              style={{
-                padding: '0.75rem 1rem',
-                border: '1px solid var(--border-color)',
-                borderRadius: '8px',
-                fontSize: '1rem'
-              }}
-            >
-              <option value="facil">Fácil</option>
-              <option value="media">Media</option>
-              <option value="dificil">Difícil</option>
-            </select>
-            <small className="form-text text-muted mt-1 d-block">
-              <i className="fas fa-info-circle me-1"></i>
-              Se usa para el pool balanceado (opcional).
-            </small>
-          </div>
+          {!onSave && (
+            <div className="col-md-6">
+              <label className="form-label d-flex align-items-center gap-2">
+                <i className="fas fa-signal text-muted"></i>
+                Dificultad
+              </label>
+              <select
+                className="form-select"
+                value={dificultad}
+                onChange={(e) => setDificultad(e.target.value)}
+                style={{
+                  padding: '0.75rem 1rem',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '8px',
+                  fontSize: '1rem'
+                }}
+              >
+                <option value="facil">Fácil</option>
+                <option value="media">Media</option>
+                <option value="dificil">Difícil</option>
+              </select>
+              <small className="form-text text-muted mt-1 d-block">
+                <i className="fas fa-info-circle me-1"></i>
+                Se usa para el pool balanceado (opcional).
+              </small>
+            </div>
+          )}
         </div>
 
         <div className="mb-4">
