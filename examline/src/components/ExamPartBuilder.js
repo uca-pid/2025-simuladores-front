@@ -659,20 +659,19 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
 
   return (
     <>
-      <ul className="nav nav-tabs mb-4">
+      <div className="prog-tabs mb-4">
         {progTabs.map((tab) => (
-          <li className="nav-item" key={tab.key}>
-            <button
-              type="button"
-              className={`nav-link ${activeProgTab === tab.key ? 'active' : ''}`}
-              onClick={() => setActiveProgTab(tab.key)}
-            >
-              <i className={`fas ${tab.icon} me-2`}></i>
-              {tab.label}
-            </button>
-          </li>
+          <button
+            type="button"
+            key={tab.key}
+            className={`prog-tab-button ${activeProgTab === tab.key ? 'active' : ''}`}
+            onClick={() => setActiveProgTab(tab.key)}
+          >
+            <i className={`fas ${tab.icon} me-2`}></i>
+            {tab.label}
+          </button>
         ))}
-      </ul>
+      </div>
 
       {activeProgTab === 'config' && (
       <>
@@ -946,7 +945,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
 
           {part.testCases.map((testCase, index) => (
             <div key={index} className="card mb-3" style={{ border: '1px solid var(--border-color)' }}>
-              <div className="card-header d-flex justify-content-between align-items-center" style={{ backgroundColor: '#f8f9fa' }}>
+              <div className="card-header d-flex justify-content-between align-items-center" style={{ backgroundColor: 'var(--light-color)' }}>
                 <strong>
                   <i className="fas fa-flask me-2"></i>
                   Caso de Prueba {index + 1}
@@ -1066,7 +1065,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
 
             <div className="tab-pane-custom fade show active">
               <div style={{
-                    border: '1px solid #dee2e6',
+                    border: '1px solid var(--border-color)',
                     borderRadius: '8px',
                     overflow: 'hidden',
                     backgroundColor: '#1e1e1e'
@@ -1233,12 +1232,12 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                   </div>
 
                   <div className="mt-3 p-3" style={{
-                    backgroundColor: '#f8f9fa',
+                    backgroundColor: 'var(--light-color)',
                     borderRadius: '8px',
-                    border: '2px solid #dee2e6'
+                    border: '2px solid var(--border-color)'
                   }}>
                     <div className="mb-2">
-                      <strong style={{ fontSize: '0.95rem', color: '#495057' }}>
+                      <strong style={{ fontSize: '0.95rem', color: 'var(--text-color-2)' }}>
                         <i className="fas fa-save me-2"></i>
                         Solución de Referencia
                       </strong>
@@ -1249,7 +1248,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                       style={{
                         backgroundColor: part.saveReferenceSolution ? 'rgba(40, 167, 69, 0.1)' : 'white',
                         borderRadius: '6px',
-                        border: `2px solid ${part.saveReferenceSolution ? '#28a745' : '#dee2e6'}`,
+                        border: `2px solid ${part.saveReferenceSolution ? '#28a745' : 'var(--border-color)'}`,
                         cursor: isPublishing ? 'not-allowed' : 'pointer',
                         opacity: isPublishing ? 0.6 : 1,
                         transition: 'all 0.2s ease'
@@ -1274,14 +1273,14 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                         <div className="d-flex align-items-start">
                           <div>
                             <strong style={{
-                              color: part.saveReferenceSolution ? '#28a745' : '#495057'
+                              color: part.saveReferenceSolution ? '#28a745' : 'var(--text-color-2)'
                             }}>
                               <i className="fas fa-check-circle me-2"></i>
                               Guardar esta solución
                             </strong>
                             <div style={{
                               fontSize: '0.875rem',
-                              color: part.saveReferenceSolution ? '#28a745' : '#6c757d',
+                              color: part.saveReferenceSolution ? '#28a745' : 'var(--text-color-1)',
                               marginTop: '0.25rem'
                             }}>
                               Se guardará como solución de referencia
@@ -1296,7 +1295,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                       style={{
                         backgroundColor: !part.saveReferenceSolution ? 'rgba(220, 53, 69, 0.08)' : 'white',
                         borderRadius: '6px',
-                        border: `2px solid ${!part.saveReferenceSolution ? '#dc3545' : '#dee2e6'}`,
+                        border: `2px solid ${!part.saveReferenceSolution ? '#dc3545' : 'var(--border-color)'}`,
                         cursor: isPublishing ? 'not-allowed' : 'pointer',
                         opacity: isPublishing ? 0.6 : 1,
                         transition: 'all 0.2s ease'
@@ -1321,14 +1320,14 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                         <div className="d-flex align-items-start">
                           <div>
                             <strong style={{
-                              color: !part.saveReferenceSolution ? '#dc3545' : '#495057'
+                              color: !part.saveReferenceSolution ? '#dc3545' : 'var(--text-color-2)'
                             }}>
                               <i className="fas fa-times-circle me-2"></i>
                               No guardar esta solución
                             </strong>
                             <div style={{
                               fontSize: '0.875rem',
-                              color: !part.saveReferenceSolution ? '#dc3545' : '#6c757d',
+                              color: !part.saveReferenceSolution ? '#dc3545' : 'var(--text-color-1)',
                               marginTop: '0.25rem'
                             }}>
                               Solo para probar el código sin guardarlo como referencia
@@ -1390,7 +1389,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                         <div className="mb-2">
                           <strong>Input:</strong>
                           <pre className="mb-0 p-2" style={{
-                            backgroundColor: '#f8f9fa',
+                            backgroundColor: 'var(--light-color)',
                             borderRadius: '4px',
                             fontSize: '0.85rem'
                           }}>{result.input}</pre>
