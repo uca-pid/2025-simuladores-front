@@ -444,40 +444,6 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                 </>
               )}
 
-              <div className="pt-3" style={{ borderTop: '1px solid var(--border-color)' }}>
-                <h5 className="mb-3">Orden de presentación</h5>
-                <div className="form-check mb-2">
-                  <input
-                    className="form-check-input"
-                    type="radio"
-                    name={`questionOrder-${part.localId}`}
-                    id={`definedOrder-${part.localId}`}
-                    checked={!ordenAleatorio}
-                    onChange={() => onOrdenAleatorioChange?.(false)}
-                  />
-                  <label className="form-check-label" htmlFor={`definedOrder-${part.localId}`}>
-                    <strong>Mantener el orden definido</strong>
-                    <small className="text-muted d-block">Todos verán las preguntas en el orden configurado.</small>
-                  </label>
-                </div>
-                <div className="form-check">
-                  <input
-                    className="form-check-input"
-                    type="radio"
-                    name={`questionOrder-${part.localId}`}
-                    id={`randomOrder-${part.localId}`}
-                    checked={ordenAleatorio}
-                    onChange={() => onOrdenAleatorioChange?.(true)}
-                  />
-                  <label className="form-check-label" htmlFor={`randomOrder-${part.localId}`}>
-                    <strong>Orden aleatorio para cada alumno</strong>
-                    <small className="text-muted d-block">Cambia el orden, no la selección de preguntas.</small>
-                  </label>
-                </div>
-                <small className="form-text text-muted d-block mt-2">
-                  Primero se seleccionan las preguntas según la distribución por dificultad y luego se aplica el orden elegido.
-                </small>
-              </div>
             </div>
           </div>
         );
@@ -495,23 +461,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                     </span>
                   )}
                 </h3>
-                <div className="d-flex align-items-center gap-3 flex-wrap">
-                  {part.preguntas.length > 0 && (
-                    <div className="form-check form-switch mb-0">
-                      <input
-                        className="form-check-input"
-                        type="checkbox"
-                        role="switch"
-                        id={`puntajePersonalizado-${part.localId}`}
-                        checked={!!part.puntajePersonalizado}
-                        onChange={(e) => handleTogglePuntajePersonalizado(e.target.checked)}
-                      />
-                      <label className="form-check-label" htmlFor={`puntajePersonalizado-${part.localId}`} style={{ fontSize: '0.85rem' }}>
-                        Puntaje personalizado
-                      </label>
-                    </div>
-                  )}
-                  <div className="d-flex gap-2">
+                <div className="d-flex gap-2">
                   <button
                     type="button"
                     className="modern-btn modern-btn-secondary modern-btn-sm"
@@ -528,10 +478,51 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                     <i className="fas fa-plus me-2"></i>
                     <span className="button-text">Agregar Pregunta</span>
                   </button>
-                  </div>
                 </div>
               </div>
               <div className="modern-card-body">
+                {part.preguntas.length > 0 && (
+                  <div className="d-flex flex-wrap gap-4 mb-4 pb-3" style={{ borderBottom: '1px solid var(--border-color)' }}>
+                    <div className="form-check form-switch mb-0">
+                      <input
+                        className="form-check-input"
+                        type="checkbox"
+                        role="switch"
+                        id={`puntajePersonalizado-${part.localId}`}
+                        checked={!!part.puntajePersonalizado}
+                        onChange={(e) => handleTogglePuntajePersonalizado(e.target.checked)}
+                        style={{
+                          width: '2.5rem',
+                          height: '1.2rem',
+                          backgroundColor: part.puntajePersonalizado ? 'var(--primary-color)' : '#fff',
+                          borderColor: part.puntajePersonalizado ? 'var(--primary-color)' : '#6c757d'
+                        }}
+                      />
+                      <label className="form-check-label ms-2" htmlFor={`puntajePersonalizado-${part.localId}`}>
+                        <strong>Puntaje personalizado</strong>
+                      </label>
+                    </div>
+                    <div className="form-check form-switch mb-0">
+                      <input
+                        className="form-check-input"
+                        type="checkbox"
+                        role="switch"
+                        id={`randomOrder-${part.localId}`}
+                        checked={ordenAleatorio}
+                        onChange={(e) => onOrdenAleatorioChange?.(e.target.checked)}
+                        style={{
+                          width: '2.5rem',
+                          height: '1.2rem',
+                          backgroundColor: ordenAleatorio ? 'var(--primary-color)' : '#fff',
+                          borderColor: ordenAleatorio ? 'var(--primary-color)' : '#6c757d'
+                        }}
+                      />
+                      <label className="form-check-label ms-2" htmlFor={`randomOrder-${part.localId}`}>
+                        <strong>Orden aleatorio para cada alumno</strong>
+                      </label>
+                    </div>
+                  </div>
+                )}
                 {part.preguntas.length === 0 ? (
                   <div className="empty-state">
                     <div className="empty-icon">
