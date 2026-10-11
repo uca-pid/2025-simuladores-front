@@ -25,6 +25,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
   const [activeProgTab, setActiveProgTab] = useState('config');
   const [showQuestionModal, setShowQuestionModal] = useState(false);
   const [editingQuestionIndex, setEditingQuestionIndex] = useState(null);
+  const [draggedQuestionIndex, setDraggedQuestionIndex] = useState(null);
 
   // Bloquea el scroll de la página de fondo mientras cualquiera de los
   // modales de esta parte está abierto, para que la rueda del mouse solo
@@ -80,6 +81,31 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
     const nuevasPreguntas = [...part.preguntas];
     [nuevasPreguntas[index], nuevasPreguntas[newIndex]] = [nuevasPreguntas[newIndex], nuevasPreguntas[index]];
     update({ preguntas: nuevasPreguntas });
+  };
+
+  // Reordenar preguntas arrastrando sus tarjetas (las flechas siguen andando
+  // como alternativa accesible). A diferencia del reordenamiento de partes
+  // en ExamCreator.js (que solo mueve al soltar), acá movemos la pregunta en
+  // vivo cada vez que el drag pasa por encima de otra tarjeta, para que el
+  // usuario vea la vista previa del nuevo orden mientras arrastra.
+  const handleQuestionDragStart = (index) => (e) => {
+    setDraggedQuestionIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(index));
+  };
+  const handleQuestionDragOver = (targetIndex) => (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (draggedQuestionIndex === null || draggedQuestionIndex === targetIndex) return;
+    const nuevasPreguntas = [...part.preguntas];
+    const [moved] = nuevasPreguntas.splice(draggedQuestionIndex, 1);
+    nuevasPreguntas.splice(targetIndex, 0, moved);
+    update({ preguntas: nuevasPreguntas });
+    setDraggedQuestionIndex(targetIndex);
+  };
+  const handleQuestionDrop = (e) => {
+    e.preventDefault();
+    setDraggedQuestionIndex(null);
   };
 
   const handleChangeQuestionPoints = (index, valorStr) => {
@@ -460,10 +486,20 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
             ) : (
               <div className="exam-creator-questions-grid">
                 {part.preguntas.map((p, idx) => (
-                  <div key={idx} className="exam-creator-question-card">
+                  <div
+                    key={idx}
+                    className="exam-creator-question-card"
+                    draggable={!isPublishing}
+                    onDragStart={handleQuestionDragStart(idx)}
+                    onDragOver={handleQuestionDragOver(idx)}
+                    onDrop={handleQuestionDrop}
+                    onDragEnd={() => setDraggedQuestionIndex(null)}
+                    style={{ opacity: draggedQuestionIndex === idx ? 0.4 : 1 }}
+                  >
                     <div className="exam-card">
                       <div className="exam-card-header" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: '0.5rem' }}>
                         <div className="d-flex align-items-center flex-wrap gap-2">
+                          <i className="fas fa-grip-vertical text-muted" style={{ cursor: isPublishing ? 'default' : 'grab', fontSize: '0.8rem' }} title="Arrastrá para reordenar"></i>
                           <h5 className="exam-title mb-0">
                             <span className="question-number">Pregunta {idx + 1}</span>
                           </h5>

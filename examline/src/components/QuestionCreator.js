@@ -912,10 +912,7 @@ const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion }) =
             <div className="mb-3">
               <div className="alert alert-info">
                 <i className="fas fa-info-circle me-2"></i>
-                <strong>Instrucciones:</strong> Agrega los conceptos en la columna izquierda y sus respuestas correspondientes en la columna derecha.
-                Los estudiantes deberán unir cada concepto con su respuesta correcta.
-                <br/>
-                <small>Ejemplo: Concepto "Francia" → Respuesta "París"</small>
+                Cargá cada concepto junto a su respuesta correcta (ej: "Francia" → "París").
               </div>
             </div>
             
@@ -1070,34 +1067,6 @@ const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion }) =
                 <div className="mt-2" style={{ height: '38px' }}>
                   {/* Espacio para mantener alineación con columna izquierda */}
                 </div>
-              </div>
-            </div>
-            
-            {/* Vista previa del matching */}
-            <div className="alert alert-secondary">
-              <strong><i className="fas fa-eye me-2"></i>Vista previa de los pares correctos:</strong>
-              <div className="mt-2">
-                {conceptos.map((concepto, i) => {
-                  const respuesta = respuestasMatching[i];
-                  if (!concepto.trim() || !respuesta.trim()) return null;
-                  
-                  return (
-                    <div key={i} className="mb-2 d-flex align-items-center gap-2">
-                      <span className="badge" style={{ backgroundColor: 'var(--primary-color)', color: 'white', fontSize: '0.85rem', minWidth: '30px' }}>
-                        {i + 1}
-                      </span>
-                      <span style={{ fontSize: '0.9rem' }}>{concepto}</span>
-                      <i className="fas fa-arrow-right mx-1" style={{ color: 'var(--primary-color)' }}></i>
-                      <span className="badge bg-success" style={{ fontSize: '0.85rem', minWidth: '30px' }}>
-                        {String.fromCharCode(65 + i)}
-                      </span>
-                      <span style={{ fontSize: '0.9rem' }}>{respuesta}</span>
-                    </div>
-                  );
-                })}
-                {conceptos.filter(c => c.trim()).length === 0 && (
-                  <small className="text-muted">Complete los campos para ver la vista previa</small>
-                )}
               </div>
             </div>
           </>
