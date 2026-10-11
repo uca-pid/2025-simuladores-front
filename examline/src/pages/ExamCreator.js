@@ -833,15 +833,53 @@ const ExamCreator = () => {
               <div className="mb-3">
                 <strong>Título:</strong> {titulo || <span className="text-muted fst-italic">Sin título</span>}
               </div>
-              <div className="mb-4">
+              <div className="mb-0">
                 <strong>Orden de presentación:</strong> {ordenAleatorio ? 'Aleatorio para cada alumno' : 'Orden definido por el profesor'}
               </div>
-                {partes.map((p, idx) => (
-                  <div key={p.localId} className="mb-4 pb-4" style={{ borderBottom: idx < partes.length - 1 ? '1px solid var(--border-color)' : 'none' }}>
-                    <h5 className="mb-3">
+            </div>
+          </div>
+
+          {partes.length > 1 && (
+            <div className="d-flex align-items-center gap-2 flex-wrap mb-4">
+              {partes.map((p, idx) => {
+                const isSelected = (selectedPartId ?? partes[0]?.localId) === p.localId;
+                return (
+                  <div
+                    key={p.localId}
+                    onClick={() => setSelectedPartId(p.localId)}
+                    style={{
+                      border: `2px solid ${isSelected ? 'var(--primary-color)' : 'var(--border-color)'}`,
+                      borderRadius: '8px',
+                      padding: '0.4rem 0.75rem',
+                      backgroundColor: isSelected ? 'rgba(30, 41, 85, 0.08)' : 'transparent',
+                      fontWeight: isSelected ? 'bold' : 'normal',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <i className={`fas ${p.tipo === 'multiple_choice' ? 'fa-question-circle' : 'fa-code'} me-2`}></i>
+                    Parte {idx + 1}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+                {partes.filter(p => (selectedPartId ?? partes[0]?.localId) === p.localId).map((p) => {
+                  const idx = partes.findIndex(x => x.localId === p.localId);
+                  const modoSeleccionParte = p.cantidadPreguntas != null
+                    ? 'aleatorio'
+                    : (p.cantidadFaciles != null || p.cantidadMedias != null || p.cantidadDificiles != null)
+                      ? 'dificultad'
+                      : 'todas';
+                  return (
+                  <div key={p.localId} className="modern-card mb-4">
+                    <div className="modern-card-header">
+                    <h5 className="mb-0">
                       <i className={`fas ${p.tipo === 'multiple_choice' ? 'fa-question-circle' : 'fa-code'} me-2`}></i>
                       Parte {idx + 1}: {TIPO_LABEL[p.tipo]}
                     </h5>
+                    </div>
+                    <div className="modern-card-body">
 
                     {p.tipo === 'multiple_choice' ? (
                       p.preguntas.length === 0 ? (
@@ -850,7 +888,8 @@ const ExamCreator = () => {
                         <div className="d-flex flex-column gap-3">
                           {p.preguntas.map((pregunta, qIdx) => (
                             <div key={qIdx} className="p-3" style={{ border: '1px solid var(--border-color)', borderRadius: '8px' }}>
-                              <div className="d-flex align-items-center gap-2 mb-2">
+                              <p className="mb-2 d-flex align-items-center flex-wrap gap-2">
+                                <span>{qIdx + 1}. {pregunta.texto}</span>
                                 <span
                                   className="badge"
                                   style={{ backgroundColor: getTipoBadge(pregunta.tipo).color, color: 'white' }}
@@ -858,23 +897,78 @@ const ExamCreator = () => {
                                   <i className={`fas ${getTipoBadge(pregunta.tipo).icon} me-1`}></i>
                                   {getTipoBadge(pregunta.tipo).label}
                                 </span>
-                                <span
-                                  className="badge"
-                                  style={{ backgroundColor: getDificultadBadge(pregunta.dificultad).color, color: 'white' }}
-                                >
-                                  {getDificultadBadge(pregunta.dificultad).label}
-                                </span>
-                              </div>
-                              <p className="mb-2">{qIdx + 1}. {pregunta.texto}</p>
+                                {modoSeleccionParte === 'dificultad' && (
+                                  <span
+                                    className="badge"
+                                    style={{ backgroundColor: getDificultadBadge(pregunta.dificultad).color, color: 'white' }}
+                                  >
+                                    {getDificultadBadge(pregunta.dificultad).label}
+                                  </span>
+                                )}
+                              </p>
                               {pregunta.imagenUrl && (
                                 <img src={pregunta.imagenUrl} alt="" style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px' }} className="mb-2" />
                               )}
-                              {Array.isArray(pregunta.opciones) && pregunta.opciones.length > 0 && (
-                                <ul className="mb-0">
-                                  {pregunta.opciones.map((op, opIdx) => (
-                                    <li key={opIdx} className="text-muted">{op}</li>
+                              {pregunta.tipo === 'matching' ? (
+                                <div className="d-flex flex-column gap-2">
+                                  {pregunta.opciones.slice(0, pregunta.correcta).map((concepto, i) => {
+                                    const respuesta = pregunta.opciones[pregunta.correcta + i];
+                                    return (
+                                      <div key={i} className="d-flex align-items-center gap-2">
+                                        <span className="badge bg-primary" style={{ fontSize: '0.7rem', minWidth: '25px' }}>{i + 1}</span>
+                                        <span style={{ fontSize: '0.9rem' }}>{concepto}</span>
+                                        <i className="fas fa-arrow-right text-primary" style={{ fontSize: '0.7rem' }}></i>
+                                        <span className="badge bg-success" style={{ fontSize: '0.7rem', minWidth: '25px' }}>{String.fromCharCode(65 + i)}</span>
+                                        <span style={{ fontSize: '0.9rem' }}>{respuesta}</span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              ) : pregunta.tipo === 'fill_in_blank' ? (
+                                <div className="exam-info">
+                                  {pregunta.opciones.slice(0, pregunta.correcta).map((o, i) => (
+                                    <div key={i} className="exam-info-item">
+                                      <i className="fas fa-check-circle text-success"></i>
+                                      <span className="fw-bold text-success">{o}</span>
+                                    </div>
                                   ))}
-                                </ul>
+                                  {pregunta.opciones.slice(pregunta.correcta).map((o, i) => (
+                                    <div key={i} className="exam-info-item">
+                                      <i className="fas fa-circle text-muted"></i>
+                                      <span>{o}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : pregunta.tipo === 'numeric' ? (
+                                <div className="exam-info-item">
+                                  <i className="fas fa-check-circle text-success"></i>
+                                  <span className="fw-bold text-success">
+                                    Respuesta correcta: {pregunta.opciones[0]} (tolerancia ±{pregunta.opciones[1] ?? 0})
+                                  </span>
+                                </div>
+                              ) : pregunta.tipo === 'short_answer' ? (
+                                <div className="exam-info">
+                                  {pregunta.opciones.map((o, i) => (
+                                    <div key={i} className="exam-info-item">
+                                      <i className="fas fa-check-circle text-success"></i>
+                                      <span className="fw-bold text-success">{o}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="exam-info">
+                                  {(pregunta.opciones || []).map((op, opIdx) => {
+                                    const esCorrecta = pregunta.tipo === 'multiple_response'
+                                      ? (pregunta.correctas || []).includes(opIdx)
+                                      : opIdx === pregunta.correcta;
+                                    return (
+                                      <div key={opIdx} className="exam-info-item">
+                                        <i className={esCorrecta ? "fas fa-check-circle text-success" : "fas fa-circle text-muted"}></i>
+                                        <span className={esCorrecta ? "fw-bold text-success" : ""}>{op}</span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
                               )}
                             </div>
                           ))}
@@ -918,9 +1012,9 @@ const ExamCreator = () => {
                       </div>
                     )}
                   </div>
-                ))}
-              </div>
-            </div>
+                  </div>
+                  );
+                })}
 
           <div className="modern-card mb-4">
             <div className="modern-card-body d-flex justify-content-between align-items-center flex-wrap gap-3">

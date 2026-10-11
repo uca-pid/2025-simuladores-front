@@ -6,6 +6,8 @@ import { getExams, deleteExam } from "../services/api";
 import { useModal } from "../hooks";
 import Modal from "../components/Modal";
 
+const TIPO_PARTE_LABEL = { multiple_choice: "Preguntas", programming: "Programación" };
+
 const MisExamenes = () => {
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -174,41 +176,21 @@ const MisExamenes = () => {
               {filteredExams.map((exam, index) => (
                 <div key={exam.id} className="exam-grid-item">
                   <div className={`exam-card fade-in-up`} style={{animationDelay: `${Math.min(index, 8) * 0.1}s`}}>
-                    <div className="exam-card-header">
-                      <h5 className="exam-title">{exam.titulo}</h5>
-                      {exam.partes?.length > 1 ? (
-                        <span className="exam-badge badge-multiple">
-                          <i className="fas fa-layer-group me-1"></i>
-                          <span className="badge-text">Multiparte ({exam.partes.length})</span>
-                        </span>
-                      ) : (
-                        <span
-                          className={`exam-badge ${
-                            exam.tipo === "programming"
-                              ? "badge-programming"
-                              : "badge-multiple"
-                          }`}
-                        >
-                          <i
-                            className={`fas ${
-                              exam.tipo === "programming" ? "fa-code" : "fa-list-ul"
-                            } me-1`}
-                          ></i>
-                          <span className="badge-text">
-                            {exam.tipo === "programming"
-                              ? "Programación"
-                              : "Múltiple Choice"}
-                          </span>
-                        </span>
-                      )}
-
+                    <div className="exam-card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                      <h5 className="exam-title mb-0">{exam.titulo}</h5>
+                      <span className="text-muted" style={{ fontSize: '0.85rem' }}>
+                        <i className="fas fa-hashtag me-1"></i>
+                        Código: {exam.id}
+                      </span>
                     </div>
                     <div className="exam-card-body">
                       <div className="exam-info">
-                        <div className="exam-info-item">
-                          <i className="fas fa-hashtag"></i>
-                          <span>Código: {exam.id}</span>
-                        </div>
+                        {exam.partes?.map((parte, i) => (
+                          <div className="exam-info-item" key={parte.id ?? i}>
+                            <i className={`fas ${parte.tipo === "programming" ? "fa-code" : "fa-list-ul"}`}></i>
+                            <span>Parte {i + 1}: {TIPO_PARTE_LABEL[parte.tipo] || parte.tipo}</span>
+                          </div>
+                        ))}
                       </div>
                       <div className="d-flex gap-2">
                         <button

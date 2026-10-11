@@ -640,13 +640,32 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                                 </>
                               )}
                             </>
-                          ) : (
+                          ) : p.tipo === 'numeric' ? (
+                            <div className="exam-info-item">
+                              <i className="fas fa-check-circle text-success"></i>
+                              <span className="fw-bold text-success">
+                                Respuesta correcta: {p.opciones[0]} (tolerancia ±{p.opciones[1] ?? 0})
+                              </span>
+                            </div>
+                          ) : p.tipo === 'short_answer' ? (
                             p.opciones.map((o, i) => (
                               <div key={i} className="exam-info-item">
-                                <i className={i === p.correcta ? "fas fa-check-circle text-success" : "fas fa-circle text-muted"}></i>
-                                <span className={i === p.correcta ? "fw-bold text-success" : ""}>{o}</span>
+                                <i className="fas fa-check-circle text-success"></i>
+                                <span className="fw-bold text-success">{o}</span>
                               </div>
                             ))
+                          ) : (
+                            p.opciones.map((o, i) => {
+                              const esCorrecta = p.tipo === 'multiple_response'
+                                ? (p.correctas || []).includes(i)
+                                : i === p.correcta;
+                              return (
+                                <div key={i} className="exam-info-item">
+                                  <i className={esCorrecta ? "fas fa-check-circle text-success" : "fas fa-circle text-muted"}></i>
+                                  <span className={esCorrecta ? "fw-bold text-success" : ""}>{o}</span>
+                                </div>
+                              );
+                            })
                           )}
                         </div>
                       </div>
