@@ -979,6 +979,9 @@ const ExamCreator = () => {
                         <p className="mb-2">
                           <strong>Lenguaje:</strong> {p.lenguajeProgramacion}
                         </p>
+                        <p className="mb-2">
+                          <strong>Intellisense:</strong> {p.intellisenseHabilitado ? 'Habilitado' : 'Deshabilitado'}
+                        </p>
                         <div className="mb-2">
                           <strong>Consigna:</strong>
                           {p.enunciadoTipo === 'archivo' ? (
@@ -1002,13 +1005,58 @@ const ExamCreator = () => {
                           </div>
                         )}
                         {p.codigoInicial.trim() && (
-                          <div>
+                          <div className="mb-2">
                             <strong>Código inicial:</strong>
                             <pre className="mb-0 p-2 mt-1" style={{ backgroundColor: '#1e1e1e', color: '#d4d4d4', borderRadius: '6px', fontSize: '0.85rem', overflowX: 'auto' }}>
                               {p.codigoInicial}
                             </pre>
                           </div>
                         )}
+
+                        <div className="mb-2">
+                          <strong>Casos de Prueba ({p.testCases.length}):</strong>
+                          {p.testCases.length === 0 ? (
+                            <p className="text-muted fst-italic mb-0">No hay casos de prueba configurados.</p>
+                          ) : (
+                            <div className="d-flex flex-column gap-2 mt-1">
+                              {p.testCases.map((tc, tcIdx) => (
+                                <div key={tcIdx} className="p-2" style={{ border: '1px solid var(--border-color)', borderRadius: '6px' }}>
+                                  <div className="d-flex align-items-center gap-2 mb-1">
+                                    <span className="badge bg-secondary" style={{ fontSize: '0.7rem' }}>Caso {tcIdx + 1}</span>
+                                    {tc.description && <small className="text-muted">{tc.description}</small>}
+                                    {!tc.expectedOutput?.trim() && (
+                                      <span className="badge bg-warning text-dark" style={{ fontSize: '0.7rem' }}>Sin output esperado</span>
+                                    )}
+                                  </div>
+                                  <div className="row g-2">
+                                    <div className="col-md-6">
+                                      <small className="text-muted d-block">Input:</small>
+                                      <pre className="mb-0 p-1" style={{ backgroundColor: 'var(--light-color)', borderRadius: '4px', fontSize: '0.8rem' }}>{tc.input || '(vacío)'}</pre>
+                                    </div>
+                                    <div className="col-md-6">
+                                      <small className="text-muted d-block">Output esperado:</small>
+                                      <pre className="mb-0 p-1" style={{ backgroundColor: 'var(--light-color)', borderRadius: '4px', fontSize: '0.8rem' }}>{tc.expectedOutput || '(vacío)'}</pre>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="mb-0">
+                          <strong>Solución de Referencia:</strong>{' '}
+                          {p.saveReferenceSolution ? (
+                            <span className="text-success"><i className="fas fa-check-circle me-1"></i>Se guardará como referencia</span>
+                          ) : (
+                            <span className="text-muted fst-italic">No se va a guardar (solo se probó el código)</span>
+                          )}
+                          {p.saveReferenceSolution && (
+                            <pre className="mb-0 p-2 mt-1" style={{ backgroundColor: '#1e1e1e', color: '#d4d4d4', borderRadius: '6px', fontSize: '0.85rem', overflowX: 'auto', maxHeight: '300px' }}>
+                              {p.referenceFiles.find(f => f.filename === p.currentReferenceFile)?.content || p.referenceFiles[0]?.content || '(vacío)'}
+                            </pre>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>

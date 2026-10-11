@@ -842,8 +842,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                   padding: '0.75rem 1rem',
                   border: '1px solid var(--border-color)',
                   borderRadius: '8px',
-                  fontSize: '1rem',
-                  fontFamily: 'monospace'
+                  fontSize: '1rem'
                 }}
               />
             ) : (
@@ -938,7 +937,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
               </label>
               <button
                 type="button"
-                className="btn btn-sm btn-outline-secondary"
+                className="modern-btn modern-btn-secondary modern-btn-sm"
                 onClick={handleMarkReadOnly}
                 disabled={isPublishing || !hasCodigoSelection}
                 title={hasCodigoSelection ? undefined : "Seleccioná primero el código que querés bloquear"}
