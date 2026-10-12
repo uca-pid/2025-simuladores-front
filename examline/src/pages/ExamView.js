@@ -8,6 +8,7 @@ import EnunciadoArchivoViewer from "../components/EnunciadoArchivoViewer";
 import CsvDatasetViewer from "../components/CsvDatasetViewer";
 import { useAuth } from "../contexts/AuthContext";
 import { getExamById, getReferenceFiles } from "../services/api";
+import { getTipoBadge } from "../utils/questionBadges";
 
 const ExamView = ({ examId: propExamId, onBack }) => {
   const { examId: routeExamId } = useParams();
@@ -20,6 +21,7 @@ const ExamView = ({ examId: propExamId, onBack }) => {
   const [referenceFiles, setReferenceFiles] = useState([]);
   const [currentReferenceFile, setCurrentReferenceFile] = useState(null);
   const [loadingReferenceFiles, setLoadingReferenceFiles] = useState(false);
+  const [selectedPartIdx, setSelectedPartIdx] = useState(0);
 
   useEffect(() => {
     if (!examId) return;
@@ -121,66 +123,68 @@ const ExamView = ({ examId: propExamId, onBack }) => {
         </div>
       </div>
 
-      {/* Información del tipo de examen */}
-      <div className="modern-card mb-4">
-        <div className="modern-card-header">
-          <h3 className="modern-card-title">
-            <i className="fas fa-info-circle me-2"></i>
-            Información del Examen
-          </h3>
+      {/* Selector de partes (si hay más de una) */}
+      {(exam.partes || []).length > 1 && (
+        <div className="d-flex align-items-center gap-2 flex-wrap mb-4">
+          {exam.partes.map((parte, idx) => {
+            const isSelected = selectedPartIdx === idx;
+            return (
+              <button
+                key={parte.id || idx}
+                type="button"
+                onClick={() => setSelectedPartIdx(idx)}
+                style={{
+                  border: `2px solid ${isSelected ? 'var(--primary-color)' : 'var(--border-color)'}`,
+                  borderRadius: '8px',
+                  padding: '0.4rem 0.75rem',
+                  backgroundColor: isSelected ? 'rgba(30, 41, 85, 0.08)' : 'transparent',
+                  fontWeight: isSelected ? 'bold' : 'normal',
+                  color: 'inherit',
+                }}
+              >
+                <i className={`fas ${parte.tipo === 'programming' ? 'fa-code' : 'fa-question-circle'} me-2`}></i>
+                Parte {idx + 1}
+              </button>
+            );
+          })}
         </div>
-        <div className="modern-card-body">
-          <div className="row">
-            <div className="col-md-6 mb-3">
-              <div className="exam-info-item">
-                <i className="fas fa-tag text-primary me-2"></i>
-                <strong>Tipo:</strong>
-                <span className="ms-2 badge bg-primary">
-                  {exam.partes?.length > 1 ? `Multiparte (${exam.partes.length})` : 'Parte única'}
-                </span>
-              </div>
-            </div>
-            <div className="col-md-6 mb-3">
-              <div className="exam-info-item">
-                <i className="fas fa-random text-info me-2"></i>
-                <strong>Orden de preguntas:</strong>
-                <span className={`ms-2 badge ${exam.ordenAleatorio ? 'bg-info' : 'bg-secondary'}`}>
-                  {exam.ordenAleatorio ? 'Aleatorio' : 'Fijo'}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      )}
 
-      {/* Contenido del examen: una sección por cada parte */}
-      {(exam.partes || []).map((parte, parteIndex) => (
+      {/* Contenido del examen: solo la parte seleccionada */}
+      {(exam.partes || []).filter((_, idx) => idx === selectedPartIdx).map((parte, _, arr) => {
+        const parteIndex = selectedPartIdx;
+        return (
       <div key={parte.id || parteIndex} className="mb-4">
-        {exam.partes.length > 1 && (
-          <h4 className="mb-3" style={{ color: 'var(--primary-color)' }}>
-            Parte {parteIndex + 1}: {parte.tipo === 'programming' ? 'Programación' : 'Opción Múltiple'}
-          </h4>
-        )}
         {parte.tipo === 'programming' ? (
         /* Vista para partes de programación */
         <div>
-          <div className="row mb-3">
-            <div className="col-md-6 mb-3">
-              <div className="exam-info-item">
-                <i className="fas fa-code text-success me-2"></i>
-                <strong>Lenguaje:</strong>
-                <span className="ms-2 badge bg-success">
-                  {parte.lenguajeProgramacion === 'python' ? 'Python' : parte.lenguajeProgramacion === 'c' ? 'C' : 'JavaScript'}
-                </span>
-              </div>
+          <div className="modern-card mb-4">
+            <div className="modern-card-header">
+              <h3 className="modern-card-title">
+                <i className="fas fa-sliders-h me-2"></i>
+                Configuración
+              </h3>
             </div>
-            <div className="col-md-6 mb-3">
-              <div className="exam-info-item">
-                <i className="fas fa-lightbulb text-warning me-2"></i>
-                <strong>Intellisense:</strong>
-                <span className={`ms-2 badge ${parte.intellisenseHabilitado ? 'bg-warning text-dark' : 'bg-secondary'}`}>
-                  {parte.intellisenseHabilitado ? 'Habilitado' : 'Deshabilitado'}
-                </span>
+            <div className="modern-card-body">
+              <div className="row">
+                <div className="col-md-6 mb-3 mb-md-0">
+                  <div className="exam-info-item">
+                    <i className="fas fa-code text-success me-2"></i>
+                    <strong>Lenguaje:</strong>
+                    <span className="ms-2 badge bg-success">
+                      {parte.lenguajeProgramacion === 'python' ? 'Python' : parte.lenguajeProgramacion === 'c' ? 'C' : 'JavaScript'}
+                    </span>
+                  </div>
+                </div>
+                <div className="col-md-6">
+                  <div className="exam-info-item">
+                    <i className="fas fa-lightbulb text-warning me-2"></i>
+                    <strong>Intellisense:</strong>
+                    <span className={`ms-2 badge ${parte.intellisenseHabilitado ? 'bg-warning text-dark' : 'bg-secondary'}`}>
+                      {parte.intellisenseHabilitado ? 'Habilitado' : 'Deshabilitado'}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -344,27 +348,6 @@ const ExamView = ({ examId: propExamId, onBack }) => {
               </div>
             </div>
           )}
-
-          {/* Solución de referencia guardada para esta parte (single-file, wizard) */}
-          {parte.solucionReferencia && user && exam.profesorId === user.userId && (
-            <div className="modern-card mb-4">
-              <div className="modern-card-header">
-                <h3 className="modern-card-title">
-                  <i className="fas fa-star me-2" style={{ color: '#ffd700' }}></i>
-                  Solución de Referencia de esta Parte
-                </h3>
-              </div>
-              <div className="modern-card-body">
-                <Editor
-                  height="300px"
-                  language={parte.lenguajeProgramacion}
-                  value={parte.solucionReferencia}
-                  theme="vs-dark"
-                  options={{ readOnly: true, automaticLayout: true, fontSize: 14, lineNumbers: 'on', wordWrap: 'on' }}
-                />
-              </div>
-            </div>
-          )}
         </div>
       ) : (
         /* Vista para partes de múltiple choice */
@@ -396,24 +379,20 @@ const ExamView = ({ examId: propExamId, onBack }) => {
                           <h5 className="exam-title mb-0">
                             Pregunta {i + 1}
                           </h5>
-                          <span 
+                          <span
                             className="badge"
                             style={{
-                              backgroundColor: p.tipo === 'true_false' ? '#28a745' : p.tipo === 'fill_in_blank' ? '#ffc107' : p.tipo === 'matching' ? '#9c27b0' : '#007bff',
+                              backgroundColor: getTipoBadge(p.tipo).color,
                               color: 'white',
                               padding: '0.35rem 0.65rem',
                               fontSize: '0.75rem',
                               borderRadius: '6px'
                             }}
                           >
-                            <i className={`fas ${p.tipo === 'true_false' ? 'fa-check-double' : p.tipo === 'fill_in_blank' ? 'fa-fill-drip' : p.tipo === 'matching' ? 'fa-arrows-alt-h' : 'fa-list-ul'} me-1`}></i>
-                            {p.tipo === 'true_false' ? 'V/F' : p.tipo === 'fill_in_blank' ? 'Completar' : p.tipo === 'matching' ? 'Emparejar' : 'Múltiple'}
+                            <i className={`fas ${getTipoBadge(p.tipo).icon} me-1`}></i>
+                            {getTipoBadge(p.tipo).label}
                           </span>
                         </div>
-                        <span className="exam-badge">
-                          <i className="fas fa-check-circle"></i>
-                          <span className="badge-text">{p.opciones?.length || 0} opciones</span>
-                        </span>
                       </div>
                       <div className="exam-card-body">
                         <div className="question-text">
@@ -475,24 +454,39 @@ const ExamView = ({ examId: propExamId, onBack }) => {
                                 </>
                               )}
                             </>
-                          ) : (
+                          ) : p.tipo === 'numeric' ? (
+                            <div className="exam-info-item option-item">
+                              <i className="fas fa-check-circle text-success"></i>
+                              <span className="option-text fw-bold text-success">
+                                Respuesta correcta: {p.opciones?.[0]} (tolerancia ±{p.opciones?.[1] ?? 0})
+                              </span>
+                            </div>
+                          ) : p.tipo === 'short_answer' ? (
                             p.opciones?.map((o, j) => (
                               <div key={j} className="exam-info-item option-item">
-                                <i className={
-                                  j === p.correcta 
-                                    ? "fas fa-check-circle text-success" 
-                                    : "fas fa-circle text-muted"
-                                }></i>
-                                <span className={`option-text ${j === p.correcta ? "fw-bold text-success" : ""}`}>
-                                  {o || "Opción vacía"}
-                                  {j === p.correcta && (
-                                    <span className="correct-badge">
-                                      Correcta
-                                    </span>
-                                  )}
-                                </span>
+                                <i className="fas fa-check-circle text-success"></i>
+                                <span className="option-text fw-bold text-success">{o || "Respuesta vacía"}</span>
                               </div>
                             ))
+                          ) : (
+                            p.opciones?.map((o, j) => {
+                              const esCorrecta = p.tipo === 'multiple_response'
+                                ? (p.correctas || []).includes(j)
+                                : j === p.correcta;
+                              return (
+                                <div key={j} className="exam-info-item option-item">
+                                  <i className={esCorrecta ? "fas fa-check-circle text-success" : "fas fa-circle text-muted"}></i>
+                                  <span className={`option-text ${esCorrecta ? "fw-bold text-success" : ""}`}>
+                                    {o || "Opción vacía"}
+                                    {esCorrecta && (
+                                      <span className="correct-badge">
+                                        Correcta
+                                      </span>
+                                    )}
+                                  </span>
+                                </div>
+                              );
+                            })
                           )}
                         </div>
                       </div>
@@ -505,10 +499,11 @@ const ExamView = ({ examId: propExamId, onBack }) => {
         </div>
       )}
       </div>
-      ))}
+        );
+      })}
 
-      {/* Solución de Referencia - Solo visible para el profesor */}
-      {exam.partes?.some(p => p.tipo === 'programming') && user && exam.profesorId === user.userId && (
+      {/* Solución de Referencia - Solo visible para el profesor, y solo si la parte seleccionada es de programación */}
+      {exam.partes?.[selectedPartIdx]?.tipo === 'programming' && user && exam.profesorId === user.userId && (
         <div className="modern-card mt-4">
           <div className="modern-card-header">
             <h3 className="modern-card-title">
