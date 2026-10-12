@@ -37,7 +37,8 @@ const makeDefaultPart = (tipo = "multiple_choice") => ({
   enunciadoArchivoNombre: "",
   datasetFiles: [],
   codigoInicial: "",
-  testCases: [{ description: "", input: "", expectedOutput: "" }],
+  testCasesPuntajePersonalizado: false,
+  testCases: [],
   // local-only testing/reference-solution UI state (not sent verbatim, see proceedWithPublishing)
   referenceFiles: [{ filename: 'main.py', content: '' }],
   currentReferenceFile: 'main.py',
@@ -47,6 +48,7 @@ const makeDefaultPart = (tipo = "multiple_choice") => ({
 });
 
 const TIPO_LABEL = { multiple_choice: "Preguntas", programming: "Programación" };
+const LENGUAJE_LABEL = { python: "Python", javascript: "JavaScript", c: "C" };
 
 // Convierte una parte tal como la devuelve la API (GET /exams/:id) al shape
 // interno del wizard, sintetizando los campos de UI local-only que la API no
@@ -75,9 +77,8 @@ const mapApiPartToInternal = (parte) => {
     enunciadoArchivoNombre: parte.enunciadoArchivoNombre || '',
     datasetFiles: parte.datasetFiles || [],
     codigoInicial: parte.codigoInicial || '',
-    testCases: parte.testCases && parte.testCases.length > 0
-      ? parte.testCases
-      : [{ description: "", input: "", expectedOutput: "" }],
+    testCasesPuntajePersonalizado: (parte.testCases || []).some(tc => (tc.puntos ?? 1) !== 1),
+    testCases: parte.testCases || [],
     referenceFiles: [{ filename, content: parte.solucionReferencia || '' }],
     currentReferenceFile: filename,
     saveReferenceSolution: !!parte.solucionReferencia,
@@ -1028,7 +1029,7 @@ const ExamCreator = () => {
                     ) : (
                       <div className="p-3" style={{ border: '1px solid var(--border-color)', borderRadius: '8px' }}>
                         <p className="mb-2">
-                          <strong>Lenguaje:</strong> {p.lenguajeProgramacion}
+                          <strong>Lenguaje:</strong> {LENGUAJE_LABEL[p.lenguajeProgramacion] || p.lenguajeProgramacion}
                         </p>
                         <p className="mb-2">
                           <strong>Intellisense:</strong> {p.intellisenseHabilitado ? 'Habilitado' : 'Deshabilitado'}

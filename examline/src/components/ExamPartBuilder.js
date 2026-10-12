@@ -256,13 +256,23 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
 
   // ---- Test cases ----
   const handleAddTestCase = () => {
-    update({ testCases: [...part.testCases, { description: "", input: "", expectedOutput: "" }] });
+    update({ testCases: [...part.testCases, { description: "", input: "", expectedOutput: "", puntos: 1 }] });
   };
 
   const handleRemoveTestCase = (index) => {
-    if (part.testCases.length > 1) {
-      update({ testCases: part.testCases.filter((_, i) => i !== index) });
-    }
+    update({ testCases: part.testCases.filter((_, i) => i !== index) });
+  };
+
+  const handleChangeTestCasePoints = (index, valorStr) => {
+    const valor = valorStr === '' ? '' : Math.max(0, parseFloat(valorStr) || 0);
+    update({ testCases: part.testCases.map((tc, i) => i === index ? { ...tc, puntos: valor } : tc) });
+  };
+
+  const handleToggleTestCasesPuntajePersonalizado = (activo) => {
+    update({
+      testCasesPuntajePersonalizado: activo,
+      testCases: activo ? part.testCases : part.testCases.map(tc => ({ ...tc, puntos: 1 })),
+    });
   };
 
   const handleTestCaseChange = (index, field, value) => {
@@ -717,6 +727,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
 
   // ---- Programming part ----
   const progTabs = PROG_TABS;
+  const totalPuntosTestCases = part.testCases.reduce((acc, tc) => acc + (tc.puntos ?? 1), 0);
 
   return (
     <>
@@ -1021,109 +1032,149 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
 
       {activeProgTab === 'tests' && (
       <div className="modern-card mb-4">
-        <div className="modern-card-header">
-          <h3 className="modern-card-title">
+        <div className="modern-card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <h3 className="modern-card-title mb-0">
             <i className="fas fa-vial me-2"></i>
-            Casos de Prueba (Evaluación Automática)
+            Casos de Prueba ({part.testCases.length})
+            {part.testCases.length > 0 && part.testCasesPuntajePersonalizado && (
+              <span className="badge bg-secondary ms-2" style={{ fontWeight: 'normal' }}>
+                {totalPuntosTestCases} puntos totales
+              </span>
+            )}
           </h3>
-        </div>
-        <div className="modern-card-body">
-          <div className="alert alert-info mb-3">
-            <i className="fas fa-info-circle me-2"></i>
-            <strong>Define los casos de prueba que se ejecutarán automáticamente.</strong>
-            <ul className="mb-0 mt-2">
-              <li>Los test cases NO son visibles para los estudiantes</li>
-              <li>El puntaje se calcula como: <strong>(tests pasados / total tests) × 100</strong></li>
-              <li>Ejemplo: 3 de 4 tests correctos = 75%</li>
-            </ul>
-          </div>
-
-          {part.testCases.map((testCase, index) => (
-            <div key={index} className="card mb-3" style={{ border: '1px solid var(--border-color)' }}>
-              <div className="card-header d-flex justify-content-between align-items-center" style={{ backgroundColor: 'var(--light-color)' }}>
-                <strong>
-                  <i className="fas fa-flask me-2"></i>
-                  Caso de Prueba {index + 1}
-                </strong>
-                {part.testCases.length > 1 && (
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-outline-danger"
-                    onClick={() => handleRemoveTestCase(index)}
-                    disabled={isPublishing}
-                  >
-                    <i className="fas fa-trash"></i>
-                  </button>
-                )}
-              </div>
-              <div className="card-body">
-                <div className="mb-3">
-                  <label className="form-label">Descripción del Test</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Ej: Suma de números positivos"
-                    value={testCase.description}
-                    onChange={(e) => handleTestCaseChange(index, 'description', e.target.value)}
-                  />
-                </div>
-
-                <div className="row">
-                  <div className="col-md-6 mb-3">
-                    <label className="form-label">Input (una línea por entrada)</label>
-                    <textarea
-                      className="form-control"
-                      rows="3"
-                      placeholder="2&#10;3"
-                      value={testCase.input}
-                      onChange={(e) => handleTestCaseChange(index, 'input', e.target.value)}
-                      disabled={isPublishing}
-                      style={{ fontFamily: 'monospace', fontSize: '0.9rem' }}
-                    />
-                    <small className="form-text text-muted">
-                      Deja vacío si el código no requiere input. Cada línea será una entrada separada.
-                    </small>
-                  </div>
-
-                  <div className="col-md-6 mb-3">
-                    <label className="form-label">Output Esperado</label>
-                    <textarea
-                      className="form-control"
-                      rows="3"
-                      placeholder="5"
-                      value={testCase.expectedOutput}
-                      onChange={(e) => handleTestCaseChange(index, 'expectedOutput', e.target.value)}
-                      disabled={isPublishing}
-                      style={{ fontFamily: 'monospace', fontSize: '0.9rem' }}
-                    />
-                    <small className="form-text text-muted">
-                      Resultado exacto que debe producir el código
-                    </small>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-
           <button
             type="button"
-            className="modern-btn modern-btn-secondary"
+            className="modern-btn modern-btn-primary modern-btn-sm"
             onClick={handleAddTestCase}
             disabled={isPublishing}
           >
             <i className="fas fa-plus me-2"></i>
-            Agregar Caso de Prueba
+            <span className="button-text">Agregar Caso de Prueba</span>
           </button>
+        </div>
+        <div className="modern-card-body">
+          {part.testCases.length > 0 && (
+            <div className="mb-4 pb-3" style={{ borderBottom: '1px solid var(--border-color)' }}>
+              <div className="d-flex align-items-center gap-2 mb-3">
+                <span className="text-muted" style={{ fontSize: '1.3rem', lineHeight: 1 }}>&bull;</span>
+                <strong>Puntaje personalizado</strong>
+                <div className="form-check form-switch mb-0 ms-2">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    role="switch"
+                    id={`testCasesPuntajePersonalizado-${part.localId}`}
+                    checked={!!part.testCasesPuntajePersonalizado}
+                    onChange={(e) => handleToggleTestCasesPuntajePersonalizado(e.target.checked)}
+                    style={{
+                      backgroundColor: part.testCasesPuntajePersonalizado ? 'var(--primary-color)' : '#fff',
+                      borderColor: part.testCasesPuntajePersonalizado ? 'var(--primary-color)' : '#6c757d'
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
-          <div className="alert alert-success mt-3 mb-0">
-            <i className="fas fa-calculator me-2"></i>
-            <strong>Total: {part.testCases.length} caso{part.testCases.length !== 1 ? 's' : ''} de prueba</strong>
-            <br/>
-            <small>
-              Cada test vale <strong>{part.testCases.length > 0 ? (100 / part.testCases.length).toFixed(1) : 0}%</strong> del puntaje final.
-              El puntaje se calcula automáticamente.
-            </small>
-          </div>
+          {part.testCases.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-icon">
+                <i className="fas fa-vial"></i>
+              </div>
+              <h4 className="empty-title">No hay casos de prueba aún</h4>
+            </div>
+          ) : (
+            <div className="exam-creator-questions-grid">
+              {part.testCases.map((testCase, index) => (
+                <div key={index} className="exam-creator-question-card">
+                  <div className="exam-card">
+                    <div className="exam-card-header" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: '0.5rem' }}>
+                      <div className="d-flex align-items-center flex-wrap gap-2">
+                        <h5 className="exam-title mb-0">
+                          <span className="question-number">Caso de Prueba {index + 1}</span>
+                        </h5>
+                        {part.testCasesPuntajePersonalizado && (
+                          <span className="d-flex align-items-center flex-wrap gap-1" title="Puntaje de este caso de prueba">
+                            <span className="text-muted" style={{ fontSize: '0.75rem' }}>Vale</span>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.5"
+                              className="form-control form-control-sm"
+                              style={{ width: '52px', padding: '0.15rem 0.3rem', fontSize: '0.8rem' }}
+                              value={testCase.puntos ?? 1}
+                              disabled={isPublishing}
+                              onChange={(e) => handleChangeTestCasePoints(index, e.target.value)}
+                            />
+                            <span className="text-muted" style={{ fontSize: '0.75rem' }}>
+                              puntos ({totalPuntosTestCases > 0 ? (((testCase.puntos ?? 1) / totalPuntosTestCases) * 100).toFixed(1) : '0.0'}%)
+                            </span>
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        className="btn btn-sm btn-outline-danger"
+                        onClick={() => handleRemoveTestCase(index)}
+                        disabled={isPublishing}
+                        title="Eliminar caso de prueba"
+                        style={{ padding: '0.25rem 0.5rem' }}
+                      >
+                        <i className="fas fa-trash"></i>
+                      </button>
+                    </div>
+                    <div className="exam-card-body">
+                      <div className="mb-3">
+                        <label className="form-label">Descripción del Test</label>
+                        <input
+                          type="text"
+                          className="form-control"
+                          placeholder="Ej: Suma de números positivos"
+                          value={testCase.description}
+                          onChange={(e) => handleTestCaseChange(index, 'description', e.target.value)}
+                          disabled={isPublishing}
+                        />
+                      </div>
+
+                      <div className="row">
+                        <div className="col-md-6 mb-3">
+                          <label className="form-label">Input (una línea por entrada)</label>
+                          <textarea
+                            className="form-control"
+                            rows="3"
+                            placeholder="2&#10;3"
+                            value={testCase.input}
+                            onChange={(e) => handleTestCaseChange(index, 'input', e.target.value)}
+                            disabled={isPublishing}
+                            style={{ fontFamily: 'monospace', fontSize: '0.9rem' }}
+                          />
+                          <small className="form-text text-muted">
+                            Deja vacío si el código no requiere input. Cada línea será una entrada separada.
+                          </small>
+                        </div>
+
+                        <div className="col-md-6 mb-3">
+                          <label className="form-label">Output Esperado</label>
+                          <textarea
+                            className="form-control"
+                            rows="3"
+                            placeholder="5"
+                            value={testCase.expectedOutput}
+                            onChange={(e) => handleTestCaseChange(index, 'expectedOutput', e.target.value)}
+                            disabled={isPublishing}
+                            style={{ fontFamily: 'monospace', fontSize: '0.9rem' }}
+                          />
+                          <small className="form-text text-muted">
+                            Resultado exacto que debe producir el código
+                          </small>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
         </div>
       </div>
       )}
