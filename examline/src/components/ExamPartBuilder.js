@@ -1376,6 +1376,102 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                       }}
                     />
                   </div>
+                </div>
+
+            {part.showTestPanel && part.testResults && (
+              <div className="mt-4">
+                <h5 className="mb-3">
+                  <i className="fas fa-chart-bar me-2"></i>
+                  Resultados de la Ejecución
+                </h5>
+
+                <div className={`alert ${part.testResults.score === 100 ? 'alert-success' : part.testResults.score >= 50 ? 'alert-warning' : 'alert-danger'}`}>
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div>
+                      <strong>Puntaje: {part.testResults.score.toFixed(1)}%</strong>
+                      <br />
+                      <small>
+                        {part.testResults.passedTests} de {part.testResults.totalTests} tests pasados
+                      </small>
+                    </div>
+                    <div>
+                      {part.testResults.score === 100 ? (
+                        <i className="fas fa-check-circle fa-2x text-success"></i>
+                      ) : (
+                        <i className="fas fa-exclamation-triangle fa-2x text-warning"></i>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {part.testResults.testResults.map((result, index) => (
+                  <div key={index} className="card mb-2" style={{ border: `2px solid ${result.passed ? '#28a745' : '#dc3545'}` }}>
+                    <div className="card-header d-flex justify-content-between align-items-center"
+                         style={{ backgroundColor: result.passed ? '#d4edda' : '#f8d7da' }}>
+                      <strong>
+                        {result.passed ? (
+                          <i className="fas fa-check-circle text-success me-2"></i>
+                        ) : (
+                          <i className="fas fa-times-circle text-danger me-2"></i>
+                        )}
+                        Test {index + 1}: {result.description || `Caso de Prueba ${index + 1}`}
+                      </strong>
+                      <span className="badge" style={{
+                        backgroundColor: result.passed ? '#28a745' : '#dc3545',
+                        color: 'white'
+                      }}>
+                        {result.passed ? 'PASÓ' : 'FALLÓ'}
+                      </span>
+                    </div>
+                    <div className="card-body">
+                      {result.input && (
+                        <div className="mb-2">
+                          <strong>Input:</strong>
+                          <pre className="mb-0 p-2" style={{
+                            backgroundColor: 'var(--light-color)',
+                            borderRadius: '4px',
+                            fontSize: '0.85rem'
+                          }}>{result.input}</pre>
+                        </div>
+                      )}
+                      <div className="row">
+                        <div className="col-md-6 mb-2">
+                          <strong>Output Esperado:</strong>
+                          <pre className="mb-0 p-2" style={{
+                            backgroundColor: '#e7f5e7',
+                            borderRadius: '4px',
+                            fontSize: '0.85rem',
+                            border: '1px solid #c3e6c3'
+                          }}>{result.expectedOutput}</pre>
+                        </div>
+                        <div className="col-md-6 mb-2">
+                          <strong>Output Obtenido:</strong>
+                          <pre className="mb-0 p-2" style={{
+                            backgroundColor: result.passed ? '#e7f5e7' : '#f8d7da',
+                            borderRadius: '4px',
+                            fontSize: '0.85rem',
+                            border: `1px solid ${result.passed ? '#c3e6c3' : '#f5c6cb'}`
+                          }}>{result.actualOutput || '(sin output)'}</pre>
+                        </div>
+                      </div>
+                      {result.error && (
+                        <div className="mt-2">
+                          <strong className="text-danger">Error:</strong>
+                          <pre className="mb-0 p-2 text-danger" style={{
+                            backgroundColor: '#fff3cd',
+                            borderRadius: '4px',
+                            fontSize: '0.85rem'
+                          }}>{result.error}</pre>
+                        </div>
+                      )}
+                      <small className="text-muted d-block mt-2">
+                        Tiempo de ejecución: {result.executionTime}ms
+                      </small>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
                   <div className="mt-3 p-3" style={{
                     backgroundColor: 'var(--light-color)',
@@ -1483,102 +1579,6 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                       </label>
                     </div>
                   </div>
-                </div>
-
-            {part.showTestPanel && part.testResults && (
-              <div className="mt-4">
-                <h5 className="mb-3">
-                  <i className="fas fa-chart-bar me-2"></i>
-                  Resultados de la Ejecución
-                </h5>
-
-                <div className={`alert ${part.testResults.score === 100 ? 'alert-success' : part.testResults.score >= 50 ? 'alert-warning' : 'alert-danger'}`}>
-                  <div className="d-flex justify-content-between align-items-center">
-                    <div>
-                      <strong>Puntaje: {part.testResults.score.toFixed(1)}%</strong>
-                      <br />
-                      <small>
-                        {part.testResults.passedTests} de {part.testResults.totalTests} tests pasados
-                      </small>
-                    </div>
-                    <div>
-                      {part.testResults.score === 100 ? (
-                        <i className="fas fa-check-circle fa-2x text-success"></i>
-                      ) : (
-                        <i className="fas fa-exclamation-triangle fa-2x text-warning"></i>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {part.testResults.testResults.map((result, index) => (
-                  <div key={index} className="card mb-2" style={{ border: `2px solid ${result.passed ? '#28a745' : '#dc3545'}` }}>
-                    <div className="card-header d-flex justify-content-between align-items-center"
-                         style={{ backgroundColor: result.passed ? '#d4edda' : '#f8d7da' }}>
-                      <strong>
-                        {result.passed ? (
-                          <i className="fas fa-check-circle text-success me-2"></i>
-                        ) : (
-                          <i className="fas fa-times-circle text-danger me-2"></i>
-                        )}
-                        Test {index + 1}: {result.description || `Caso de Prueba ${index + 1}`}
-                      </strong>
-                      <span className="badge" style={{
-                        backgroundColor: result.passed ? '#28a745' : '#dc3545',
-                        color: 'white'
-                      }}>
-                        {result.passed ? 'PASÓ' : 'FALLÓ'}
-                      </span>
-                    </div>
-                    <div className="card-body">
-                      {result.input && (
-                        <div className="mb-2">
-                          <strong>Input:</strong>
-                          <pre className="mb-0 p-2" style={{
-                            backgroundColor: 'var(--light-color)',
-                            borderRadius: '4px',
-                            fontSize: '0.85rem'
-                          }}>{result.input}</pre>
-                        </div>
-                      )}
-                      <div className="row">
-                        <div className="col-md-6 mb-2">
-                          <strong>Output Esperado:</strong>
-                          <pre className="mb-0 p-2" style={{
-                            backgroundColor: '#e7f5e7',
-                            borderRadius: '4px',
-                            fontSize: '0.85rem',
-                            border: '1px solid #c3e6c3'
-                          }}>{result.expectedOutput}</pre>
-                        </div>
-                        <div className="col-md-6 mb-2">
-                          <strong>Output Obtenido:</strong>
-                          <pre className="mb-0 p-2" style={{
-                            backgroundColor: result.passed ? '#e7f5e7' : '#f8d7da',
-                            borderRadius: '4px',
-                            fontSize: '0.85rem',
-                            border: `1px solid ${result.passed ? '#c3e6c3' : '#f5c6cb'}`
-                          }}>{result.actualOutput || '(sin output)'}</pre>
-                        </div>
-                      </div>
-                      {result.error && (
-                        <div className="mt-2">
-                          <strong className="text-danger">Error:</strong>
-                          <pre className="mb-0 p-2 text-danger" style={{
-                            backgroundColor: '#fff3cd',
-                            borderRadius: '4px',
-                            fontSize: '0.85rem'
-                          }}>{result.error}</pre>
-                        </div>
-                      )}
-                      <small className="text-muted d-block mt-2">
-                        Tiempo de ejecución: {result.executionTime}ms
-                      </small>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         </div>
         )
