@@ -10,10 +10,21 @@ import Modal from "./Modal";
 const LANGUAGE_EXTENSIONS = { python: '.py', javascript: '.js', c: '.c' };
 const getExtensionForLanguage = (lenguaje) => LANGUAGE_EXTENSIONS[lenguaje] || '.js';
 
+// Pestañas de una parte de programación. Se exporta para que ExamCreator.js
+// pueda armar la navegación unificada (partes + pestañas + pasos del wizard)
+// sin duplicar esta lista.
+export const PROG_TABS = [
+  { key: 'config', label: 'Configuración', icon: 'fa-sliders-h' },
+  { key: 'consigna', label: 'Consigna y Recursos', icon: 'fa-file-alt' },
+  { key: 'codigo', label: 'Código Inicial', icon: 'fa-code' },
+  { key: 'tests', label: 'Casos de Prueba', icon: 'fa-vial' },
+  { key: 'solucion', label: 'Solución de Referencia', icon: 'fa-check-double' },
+];
+
 // `part` / `onChange` lift this part's whole local state up into ExamCreator's
 // `partes` array, so every setter below reads `part.<field>` and calls
 // `onChange({ ...part, <field>: value })` instead of owning local state.
-const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, partLabel, ordenAleatorio, onOrdenAleatorioChange }) => {
+const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, partLabel, ordenAleatorio, onOrdenAleatorioChange, activeProgTab, onActiveProgTabChange }) => {
   const [showBankSelector, setShowBankSelector] = useState(false);
   const [showNewReferenceFileModal, setShowNewReferenceFileModal] = useState(false);
   const [newReferenceFileName, setNewReferenceFileName] = useState('');
@@ -22,7 +33,6 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
   const [isUploadingEnunciado, setIsUploadingEnunciado] = useState(false);
   const [isUploadingDataset, setIsUploadingDataset] = useState(false);
   const [isRunningTests, setIsRunningTests] = useState(false);
-  const [activeProgTab, setActiveProgTab] = useState('config');
   const [showQuestionModal, setShowQuestionModal] = useState(false);
   const [editingQuestionIndex, setEditingQuestionIndex] = useState(null);
   const [draggedQuestionIndex, setDraggedQuestionIndex] = useState(null);
@@ -706,11 +716,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
   }
 
   // ---- Programming part ----
-  const progTabs = [
-    { key: 'config', label: 'Configuración', icon: 'fa-code' },
-    { key: 'tests', label: 'Casos de Prueba', icon: 'fa-vial' },
-    { key: 'solucion', label: 'Solución de Referencia', icon: 'fa-check-double' },
-  ];
+  const progTabs = PROG_TABS;
 
   return (
     <>
@@ -720,7 +726,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
             type="button"
             key={tab.key}
             className={`prog-tab-button ${activeProgTab === tab.key ? 'active' : ''}`}
-            onClick={() => setActiveProgTab(tab.key)}
+            onClick={() => onActiveProgTabChange(tab.key)}
           >
             <i className={`fas ${tab.icon} me-2`}></i>
             {tab.label}
@@ -729,11 +735,10 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
       </div>
 
       {activeProgTab === 'config' && (
-      <>
       <div className="modern-card mb-4">
         <div className="modern-card-header">
           <h3 className="modern-card-title">
-            <i className="fas fa-code me-2"></i>
+            <i className="fas fa-sliders-h me-2"></i>
             Configuración de Programación — {partLabel}
           </h3>
         </div>
@@ -775,6 +780,10 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                   checked={part.intellisenseHabilitado}
                   onChange={(e) => update({ intellisenseHabilitado: e.target.checked })}
                   disabled={isPublishing}
+                  style={{
+                    backgroundColor: part.intellisenseHabilitado ? 'var(--primary-color)' : '#fff',
+                    borderColor: part.intellisenseHabilitado ? 'var(--primary-color)' : '#6c757d'
+                  }}
                 />
                 <label className="form-check-label" htmlFor={`intellisenseSwitch-${part.localId}`}>
                   {part.intellisenseHabilitado ? "Habilitado" : "Deshabilitado"}
@@ -784,22 +793,24 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
           </div>
         </div>
       </div>
+      )}
 
+      {activeProgTab === 'consigna' && (
+      <>
       <div className="modern-card mb-4">
         <div className="modern-card-header">
           <h3 className="modern-card-title">
             <i className="fas fa-file-alt me-2"></i>
-            Consigna y Recursos — {partLabel}
+            Consigna — {partLabel}
           </h3>
         </div>
         <div className="modern-card-body">
-          <div className="mb-3">
+          <div className="mb-0">
             <label className="form-label d-flex align-items-center gap-2 mb-0">
               <i className="fas fa-file-alt text-muted"></i>
-              Consigna del Problema
+              Consigna
             </label>
-            <small className="text-muted d-block mb-2">Lo que el alumno lee al empezar este ejercicio.</small>
-            <div className="d-flex gap-3 mb-2">
+            <div className="d-flex gap-3 mb-2 mt-2">
               <div className="form-check">
                 <input
                   className="form-check-input"
@@ -809,6 +820,10 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                   checked={part.enunciadoTipo === "texto"}
                   onChange={() => update({ enunciadoTipo: "texto" })}
                   disabled={isPublishing}
+                  style={{
+                    backgroundColor: part.enunciadoTipo === "texto" ? 'var(--primary-color)' : '#fff',
+                    borderColor: part.enunciadoTipo === "texto" ? 'var(--primary-color)' : '#6c757d'
+                  }}
                 />
                 <label className="form-check-label" htmlFor={`enunciadoTipoTexto-${part.localId}`}>
                   Escribir texto
@@ -823,6 +838,10 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                   checked={part.enunciadoTipo === "archivo"}
                   onChange={() => update({ enunciadoTipo: "archivo" })}
                   disabled={isPublishing}
+                  style={{
+                    backgroundColor: part.enunciadoTipo === "archivo" ? 'var(--primary-color)' : '#fff',
+                    borderColor: part.enunciadoTipo === "archivo" ? 'var(--primary-color)' : '#6c757d'
+                  }}
                 />
                 <label className="form-check-label" htmlFor={`enunciadoTipoArchivo-${part.localId}`}>
                   Adjuntar archivo (PDF/DOCX)
@@ -834,7 +853,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
               <textarea
                 className="form-control"
                 rows="6"
-                placeholder="Describe detalladamente el problema que deben resolver los estudiantes..."
+                placeholder="Escriba la consigna"
                 value={part.enunciadoProgramacion}
                 onChange={(e) => update({ enunciadoProgramacion: e.target.value })}
                 disabled={isPublishing}
@@ -873,18 +892,28 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                   </small>
                 )}
                 <small className="text-muted d-block mt-1">
-                  Se mostrará embebido en la consigna del alumno. Tamaño máximo: 10MB.
+                  Tamaño máximo: 10MB.
                 </small>
               </div>
             )}
           </div>
+        </div>
+      </div>
 
-          <div className="mb-3">
+      <div className="modern-card mb-4">
+        <div className="modern-card-header">
+          <h3 className="modern-card-title">
+            <i className="fas fa-table me-2"></i>
+            Recursos — {partLabel}
+          </h3>
+        </div>
+        <div className="modern-card-body">
+          <div className="mb-0">
             <label className="form-label d-flex align-items-center gap-2 mb-0">
               <i className="fas fa-table text-muted"></i>
               Datasets CSV/TXT (Opcional)
             </label>
-            <small className="text-muted d-block mb-2">Archivos que el código del alumno puede abrir por nombre (no son la consigna).</small>
+            <small className="text-muted d-block mb-2">Archivos que el código del alumno puede abrir por nombre.</small>
             <input
               type="file"
               className="form-control"
@@ -924,11 +953,24 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
               </ul>
             )}
             <small className="text-muted d-block mt-1">
-              Podés subir varios archivos. El alumno podrá abrirlos desde su código con <code>open("nombre_exacto.csv")</code> (Python)
-              o el método equivalente en JavaScript, usando el mismo nombre con el que se subieron. También se muestran como tabla en la consigna. Tamaño máximo: 5MB por archivo.
+              Podés subir varios archivos. El alumno podrá abrirlos desde su código con el método correspondiente en cada lenguaje
+              (por ejemplo, <code style={{ color: 'var(--primary-color)' }}>open</code> en Python), usando el mismo nombre con el que se subieron. Tamaño máximo: 5MB por archivo.
             </small>
           </div>
+        </div>
+      </div>
+      </>
+      )}
 
+      {activeProgTab === 'codigo' && (
+      <div className="modern-card mb-4">
+        <div className="modern-card-header">
+          <h3 className="modern-card-title">
+            <i className="fas fa-code me-2"></i>
+            Código Inicial — {partLabel}
+          </h3>
+        </div>
+        <div className="modern-card-body">
           <div className="mb-0">
             <div className="d-flex justify-content-between align-items-center mb-2">
               <label className="form-label d-flex align-items-center gap-2 mb-0">
@@ -969,13 +1011,12 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
               Para bloquear una parte y que el alumno no pueda modificarla ni borrarla,
               seleccionala y apretá "Marcar como solo lectura". También podés escribir el marcador
               a mano, encerrando el bloque entre{' '}
-              <code>{part.lenguajeProgramacion === 'python' ? '# SOLO LECTURA' : '// SOLO LECTURA'}</code> y{' '}
-              <code>{part.lenguajeProgramacion === 'python' ? '# FIN SOLO LECTURA' : '// FIN SOLO LECTURA'}</code>.
+              <code style={{ color: 'var(--primary-color)' }}>{part.lenguajeProgramacion === 'python' ? '# SOLO LECTURA' : '// SOLO LECTURA'}</code> y{' '}
+              <code style={{ color: 'var(--primary-color)' }}>{part.lenguajeProgramacion === 'python' ? '# FIN SOLO LECTURA' : '// FIN SOLO LECTURA'}</code>.
             </small>
           </div>
         </div>
       </div>
-      </>
       )}
 
       {activeProgTab === 'tests' && (

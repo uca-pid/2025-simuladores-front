@@ -6,7 +6,7 @@ import "./ExamCreator.css";
 import { useModal } from "../hooks";
 import BackToMainButton from "../components/BackToMainButton";
 import Modal from "../components/Modal";
-import ExamPartBuilder from "../components/ExamPartBuilder";
+import ExamPartBuilder, { PROG_TABS } from "../components/ExamPartBuilder";
 import { createExam, updateExam, getExamById } from "../services/api";
 import { getTipoBadge, getDificultadBadge } from "../utils/questionBadges";
 
@@ -108,6 +108,10 @@ const ExamCreator = () => {
   const [ordenAleatorio, setOrdenAleatorio] = useState(draft?.ordenAleatorio || false);
   const [partes, setPartes] = useState(draft?.partes || []);
   const [selectedPartId, setSelectedPartId] = useState(partes[0]?.localId || null);
+  // Pestaña activa dentro de una parte de programación. Vive acá (no en
+  // ExamPartBuilder) para que la navegación inferior pueda avanzar/retroceder
+  // across partes + pestañas + pasos del wizard como una sola secuencia.
+  const [activeProgTab, setActiveProgTab] = useState(PROG_TABS[0].key);
 
   const [isPublishing, setIsPublishing] = useState(false);
   const [hasDraft, setHasDraft] = useState(!!draft);
@@ -212,6 +216,7 @@ const ExamCreator = () => {
     const part = makeDefaultPart(tipo);
     setPartes(prev => [...prev, part]);
     setSelectedPartId(part.localId);
+    setActiveProgTab(PROG_TABS[0].key);
     setShowAddPartMenu(false);
   };
 
@@ -667,7 +672,7 @@ const ExamCreator = () => {
                     >
                       <i className="fas fa-grip-vertical text-muted" style={{ fontSize: '0.75rem' }}></i>
                       <span
-                        onClick={() => setSelectedPartId(p.localId)}
+                        onClick={() => { setSelectedPartId(p.localId); setActiveProgTab(PROG_TABS[0].key); }}
                         style={{ fontWeight: isSelected ? 'bold' : 'normal', cursor: 'pointer' }}
                       >
                         <i className={`fas ${p.tipo === 'multiple_choice' ? 'fa-question-circle' : 'fa-code'} me-2`}></i>
@@ -793,29 +798,75 @@ const ExamCreator = () => {
               partLabel={`Parte ${partes.findIndex(p => p.localId === selectedPart.localId) + 1}`}
               ordenAleatorio={ordenAleatorio}
               onOrdenAleatorioChange={setOrdenAleatorio}
+              activeProgTab={activeProgTab}
+              onActiveProgTabChange={setActiveProgTab}
             />
           )}
 
-          <div className="modern-card mt-4">
-            <div className="modern-card-body d-flex flex-column flex-md-row justify-content-between gap-2">
-              <button
-                type="button"
-                className="modern-btn modern-btn-secondary"
-                onClick={() => setCurrentStep(1)}
-              >
-                <i className="fas fa-arrow-left me-2"></i>
-                Atrás: Datos generales
-              </button>
-              <button
-                type="button"
-                className="modern-btn modern-btn-primary"
-                onClick={() => setCurrentStep(3)}
-              >
-                Siguiente: Revisar y publicar
-                <i className="fas fa-arrow-right ms-2"></i>
-              </button>
-            </div>
-          </div>
+          {(() => {
+            // Navegación inferior unificada: recorre, en una sola secuencia,
+            // las pestañas de cada parte de programación y las partes de
+            // preguntas (un solo paso cada una), para luego entrar/salir de
+            // este paso del wizard en los extremos.
+            const secuencia = partes.flatMap((p, partIdx) =>
+              p.tipo === 'programming'
+                ? PROG_TABS.map(tab => ({ partIdx, tabKey: tab.key }))
+                : [{ partIdx, tabKey: null }]
+            );
+            const idxActual = secuencia.findIndex(s =>
+              s.partIdx === partes.findIndex(p => p.localId === selectedPartId) &&
+              s.tabKey === (selectedPart?.tipo === 'programming' ? activeProgTab : null)
+            );
+
+            const irA = (nuevoIdx) => {
+              if (nuevoIdx < 0) {
+                setCurrentStep(1);
+                return;
+              }
+              if (nuevoIdx >= secuencia.length) {
+                setCurrentStep(3);
+                return;
+              }
+              const destino = secuencia[nuevoIdx];
+              setSelectedPartId(partes[destino.partIdx].localId);
+              if (destino.tabKey) setActiveProgTab(destino.tabKey);
+            };
+
+            const labelPara = (paso) => {
+              if (!paso) return null;
+              const parte = partes[paso.partIdx];
+              const numero = `Parte ${paso.partIdx + 1}`;
+              if (!paso.tabKey) return numero;
+              const tab = PROG_TABS.find(t => t.key === paso.tabKey);
+              return `${numero}: ${tab.label}`;
+            };
+
+            const anterior = idxActual > 0 ? secuencia[idxActual - 1] : null;
+            const siguiente = idxActual < secuencia.length - 1 ? secuencia[idxActual + 1] : null;
+
+            return (
+              <div className="modern-card mt-4">
+                <div className="modern-card-body d-flex flex-column flex-md-row justify-content-between gap-2">
+                  <button
+                    type="button"
+                    className="modern-btn modern-btn-secondary"
+                    onClick={() => irA(idxActual - 1)}
+                  >
+                    <i className="fas fa-arrow-left me-2"></i>
+                    Atrás: {anterior ? labelPara(anterior) : 'Datos generales'}
+                  </button>
+                  <button
+                    type="button"
+                    className="modern-btn modern-btn-primary"
+                    onClick={() => irA(idxActual + 1)}
+                  >
+                    Siguiente: {siguiente ? labelPara(siguiente) : 'Revisar y publicar'}
+                    <i className="fas fa-arrow-right ms-2"></i>
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
         </>
       )}
 
