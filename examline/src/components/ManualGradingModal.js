@@ -937,7 +937,7 @@ export default function ManualGradingModal({ attemptId, onClose, onSave }) {
               </div>
               <div className="modern-card-body">
                 {attempt.exam.preguntas.map((pregunta, idx) => {
-                  const respuestaEstudiante = attempt.respuestas[idx]; // ✅ usar índice
+                  const respuestaEstudiante = attempt.respuestas?.[pregunta.id]; // ✅ usar id de pregunta (formato objeto)
                   const esCorrecta = respuestaEstudiante === pregunta.correcta;
 
                   return (

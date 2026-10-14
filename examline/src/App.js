@@ -12,7 +12,6 @@ import UserSettingsPage from "./pages/userSettings";
 import StudentExamPage from "./pages/StudentExamPage";
 import StudentProgress from "./pages/StudentProgress";
 import ExamAttempt from "./pages/ExamAttempt";
-import ExamResults from "./pages/ExamResults";
 import ProgrammingExamView from "./pages/ProgrammingExamView";
 import ExamWindows from "./pages/ExamWindows";
 import StudentInscriptions from "./pages/StudentInscriptions";

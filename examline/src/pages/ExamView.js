@@ -54,6 +54,10 @@ const ExamView = ({ examId: propExamId, onBack }) => {
     };
 
     fetchExam();
+    // Se depende de user?.userId (no de `user`) a propósito: `user` es un nuevo
+    // objeto en cada render de AuthContext, y usarlo como dependencia completa
+    // dispararía este efecto (y el fetch del examen) en cada render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [examId, user?.userId]);
 
   if (loading) {

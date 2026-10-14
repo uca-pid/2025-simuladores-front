@@ -6,8 +6,20 @@ import { getExamById, checkExamAttempt, startExamAttempt, finishExamAttempt } fr
  * (multiple_choice / otros tipos de pregunta: true_false, fill_in_blank, matching).
  *
  * Centraliza: validación de acceso (rol/windowId), carga del examen y del intento,
- * randomización de opciones/respuestas por pregunta, estado de respuestas del
- * estudiante (persistido en sessionStorage) y el envío de finalización del intento.
+ * estado de respuestas del estudiante (persistido en sessionStorage) y el envío
+ * de finalización del intento.
+ *
+ * NOTA sobre randomización: antes este hook randomizaba el orden de las opciones
+ * del lado del cliente (Math.random(), después de recibir el examen). Eso NO
+ * protegía nada: para 'fill_in_blank'/'matching' el orden original que llegaba
+ * del backend YA era la respuesta correcta (ver exam.service.ts), así que
+ * inspeccionando la respuesta de la red se podía ver la respuesta sin siquiera
+ * mirar el shuffle del cliente. Ahora el backend manda las opciones de cada
+ * pregunta ya mezcladas, con una seed determinística por estudiante+examen+
+ * pregunta (ver src/utils/seededShuffle.ts del lado del back). Este hook ya no
+ * mezcla nada: lo que llega es lo que se muestra, y lo que el estudiante elige
+ * (posición dentro de ese array ya mezclado) es lo que se manda tal cual al
+ * finalizar - el backend se encarga de traducirlo de vuelta al corregir.
  *
  * @param {string} examId - Id del examen
  * @param {string|null} windowId - Id de la ventana de examen (si aplica)
@@ -22,9 +34,7 @@ export const useMultipleChoiceAttempt = (examId, windowId, navigate, { propExamI
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [respuestas, setRespuestas] = useState({}); // { preguntaId: opcionIndex | opcionIndex[] }
-  const [randomizedOptions, setRandomizedOptions] = useState({}); // { preguntaIndex: [{ texto, originalIndex }] }
-  const [randomizedMatchingAnswers, setRandomizedMatchingAnswers] = useState({}); // { preguntaIndex: [{ texto, originalIndex }] }
+  const [respuestas, setRespuestas] = useState({}); // { preguntaId: posicionMostrada | posicionMostrada[] }
   const [selectedMatchingConcepts, setSelectedMatchingConcepts] = useState({}); // { preguntaId: conceptoIndex | null }
 
   // 🔹 Cargar respuestas guardadas al montar el componente
@@ -45,7 +55,7 @@ export const useMultipleChoiceAttempt = (examId, windowId, navigate, { propExamI
     });
   }, [examId]);
 
-  // Carga del examen + intento + randomización
+  // Carga del examen + intento
   useEffect(() => {
     if (!examId) return;
 
@@ -102,7 +112,9 @@ export const useMultipleChoiceAttempt = (examId, windowId, navigate, { propExamI
           return;
         }
 
-        // SEGUNDO: Cargar examen con las preguntas
+        // SEGUNDO: Cargar examen con las preguntas (las opciones ya vienen mezcladas
+        // por el backend, de forma determinística y estable - no hay nada que
+        // randomizar acá)
         const examData = await getExamById(examId, windowId);
 
         // TERCERO: Aplicar orden de preguntas ANTES de setear el estado (evita flash)
@@ -120,49 +132,6 @@ export const useMultipleChoiceAttempt = (examId, windowId, navigate, { propExamI
         // CUARTO: Setear estados (ya con el orden correcto)
         setAttempt(attemptData);
         setExam(examData);
-
-        // Randomizar opciones para cada pregunta
-        if (preguntasAMostrar) {
-          const randomized = {};
-          const randomizedMatching = {};
-          preguntasAMostrar.forEach((pregunta, index) => {
-            if (pregunta.tipo === 'matching' && pregunta.opciones && Array.isArray(pregunta.opciones)) {
-              const numConceptos = pregunta.correcta || 0;
-              const respuestasOpciones = pregunta.opciones.slice(numConceptos);
-              const respuestasConIndice = respuestasOpciones.map((texto, i) => ({
-                texto,
-                originalIndex: numConceptos + i
-              }));
-              for (let i = respuestasConIndice.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [respuestasConIndice[i], respuestasConIndice[j]] = [respuestasConIndice[j], respuestasConIndice[i]];
-              }
-              randomizedMatching[index] = respuestasConIndice;
-            } else if (pregunta.tipo === 'fill_in_blank' && pregunta.opciones && Array.isArray(pregunta.opciones)) {
-              const opcionesConIndice = pregunta.opciones.map((texto, i) => ({
-                texto,
-                originalIndex: i
-              }));
-              for (let i = opcionesConIndice.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [opcionesConIndice[i], opcionesConIndice[j]] = [opcionesConIndice[j], opcionesConIndice[i]];
-              }
-              randomized[index] = opcionesConIndice;
-            } else if (pregunta.opciones && Array.isArray(pregunta.opciones)) {
-              const opcionesConIndice = pregunta.opciones.map((texto, i) => ({
-                texto,
-                originalIndex: i
-              }));
-              for (let i = opcionesConIndice.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [opcionesConIndice[i], opcionesConIndice[j]] = [opcionesConIndice[j], opcionesConIndice[i]];
-              }
-              randomized[index] = opcionesConIndice;
-            }
-          });
-          setRandomizedOptions(randomized);
-          setRandomizedMatchingAnswers(randomizedMatching);
-        }
 
         // Redireccionar si es un examen de programación
         if (examData.tipo === 'programming') {
@@ -197,39 +166,18 @@ export const useMultipleChoiceAttempt = (examId, windowId, navigate, { propExamI
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [examId, windowId]);
 
-  // Construye el body de finalización a partir de las respuestas actuales
+  // Construye el body de finalización a partir de las respuestas actuales.
+  // Ya no hace falta traducir nada acá: 'respuestas' está en términos de la
+  // posición mostrada (la misma que vio el estudiante), y es el backend el
+  // que la traduce al índice real con la misma seed determinística que usó
+  // para mezclar las opciones.
   const buildFinishBody = useCallback(() => {
     if (!exam || exam.tipo !== 'multiple_choice') {
       return {};
     }
 
-    const respuestasFinales = {};
-    Object.keys(respuestas).forEach(preguntaId => {
-      const preguntaIndex = exam.preguntas.findIndex(p => p.id === parseInt(preguntaId));
-      if (preguntaIndex === -1) return;
-
-      const pregunta = exam.preguntas[preguntaIndex];
-      const respuesta = respuestas[preguntaId];
-
-      if (pregunta.tipo === 'fill_in_blank' && Array.isArray(respuesta)) {
-        respuestasFinales[preguntaId] = respuesta.map(randomIndex =>
-          randomizedOptions[preguntaIndex][randomIndex].originalIndex
-        );
-      } else if (pregunta.tipo === 'matching' && Array.isArray(respuesta)) {
-        respuestasFinales[preguntaId] = respuesta.map(randomizedAnswerIndex =>
-          randomizedMatchingAnswers[preguntaIndex][randomizedAnswerIndex].originalIndex
-        );
-      } else {
-        if (randomizedOptions[preguntaIndex]) {
-          respuestasFinales[preguntaId] = randomizedOptions[preguntaIndex][respuesta].originalIndex;
-        } else {
-          respuestasFinales[preguntaId] = respuesta;
-        }
-      }
-    });
-
-    return { respuestas: respuestasFinales };
-  }, [exam, respuestas, randomizedOptions, randomizedMatchingAnswers]);
+    return { respuestas };
+  }, [exam, respuestas]);
 
   // Finaliza el intento en el backend. Lanza el error para que el componente lo maneje (modal).
   const finishAttempt = useCallback(async () => {
@@ -256,8 +204,6 @@ export const useMultipleChoiceAttempt = (examId, windowId, navigate, { propExamI
     respuestas,
     setRespuestas,
     updateRespuesta,
-    randomizedOptions,
-    randomizedMatchingAnswers,
     selectedMatchingConcepts,
     setSelectedMatchingConcepts,
     finishAttempt

@@ -38,8 +38,6 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
     respuestas,
     setRespuestas,
     updateRespuesta,
-    randomizedOptions,
-    randomizedMatchingAnswers,
     selectedMatchingConcepts,
     setSelectedMatchingConcepts,
     finishAttempt
@@ -49,7 +47,7 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const tokenFromUrl = params.get('token');
-    
+
     if (tokenFromUrl) {
       localStorage.setItem('token', tokenFromUrl);
     }
@@ -58,14 +56,14 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
     if (token) {
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
-        
+
         // SIEMPRE bloquear a profesores - no pueden tomar exámenes
         if (payload.rol === 'professor' || payload.rol === 'system') {
           setError('Acceso no autorizado: Los profesores no pueden tomar exámenes');
           setLoading(false);
           return;
         }
-        
+
         // Bloquear a estudiantes sin windowId válido (solo si no es propExamId)
         if (payload.rol === 'student' && !windowId && !tokenFromUrl && !propExamId) {
           setError('Acceso no autorizado: Debes acceder desde tus inscripciones');
@@ -83,11 +81,11 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
     // Limpiar windowId del sessionStorage
     const examKey = `exam_${examId}_windowId`;
     sessionStorage.removeItem(examKey);
-    
+
     if (isInSEB) {
       // Intentar cerrar SEB automáticamente
       const closed = await tryCloseSEB();
-      
+
       // Si el usuario canceló (puso "NO"), redirigir a login
       if (!closed) {
         navigate('/login');
@@ -107,7 +105,7 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
       // Limpiar windowId del sessionStorage
       const examKey = `exam_${examId}_windowId`;
       sessionStorage.removeItem(examKey);
-      
+
       // Si no hay intento, navegar directamente
       if (onBack) {
         onBack();
@@ -129,7 +127,7 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
         // Para otros tipos, verificar que exista
         return respuesta !== undefined && respuesta !== null;
       }).length;
-      
+
       if (preguntasRespondidas < totalPreguntas) {
         showModal(
           'warning',
@@ -158,7 +156,7 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
       async () => {
         // Prevenir múltiples ejecuciones
         if (submitting) return;
-        
+
         try {
           setSubmitting(true);
           setModalProcessing(true); // Deshabilitar botón del modal
@@ -212,39 +210,6 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
     );
   };
 
-  // Handle navigation away from exam with confirmation
-  const handleLeaveExam = () => {
-    showModal(
-      'warning',
-      'Salir del Examen',
-      '¿Estás seguro de que quieres salir del examen? Se perderá todo tu progreso y no podrás volver a intentarlo.',
-      async () => {
-        // Limpiar windowId del sessionStorage
-        const examKey = `exam_${examId}_windowId`;
-        sessionStorage.removeItem(examKey);
-        
-        closeModal();
-        
-        if (isInSEB) {
-          // Intentar cerrar SEB automáticamente
-          const closed = await tryCloseSEB();
-          
-          // Si el usuario canceló (puso "NO"), redirigir a login
-          if (!closed) {
-            navigate('/login');
-          }
-        } else {
-          if (onBack) {
-            onBack();
-          } else {
-            navigate('/student-exam');
-          }
-        }
-      },
-      true
-    );
-  };
-
   // Add page leave confirmation for exam security
   useEffect(() => {
     if (!exam || error || propExamId) return;
@@ -267,13 +232,13 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
         },
         true
       );
-      
+
       window.history.pushState(null, '', window.location.pathname);
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     window.addEventListener('popstate', handlePopState);
-    
+
     window.history.pushState(null, '', window.location.pathname);
 
     return () => {
@@ -292,11 +257,11 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
       </div>
     );
   }
-  
+
   if (error || !exam) {
     const isExamCompleted = error && (error.includes('Ya has completado') || error.includes('intento ya fue finalizado'));
     const buttonText = isExamCompleted && isInSEB ? 'Salir del examen' : 'Volver';
-    
+
     return (
       <div className="container py-5">
         <div className="empty-state">
@@ -390,16 +355,18 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
           <div className="exam-attempt-questions-grid">
             {exam.preguntas.map((p, i) => {
               const isMatching = p.tipo === 'matching';
-              const opcionesParaMostrar = randomizedOptions[i] || p.opciones?.map((texto, idx) => ({ texto, originalIndex: idx })) || [];
+              // Las opciones ya llegan mezcladas desde el backend (seed determinística
+              // por estudiante+examen+pregunta) - acá solo se muestran tal cual.
+              const opcionesParaMostrar = p.opciones || [];
               const isFillInBlank = p.tipo === 'fill_in_blank';
               const respuestaActual = respuestas[p.id]; // Usar ID de pregunta, no índice
-              
+
               return (
               <div key={i} className="exam-attempt-question-card">
                 <div className={`exam-card fade-in-up`} style={{animationDelay: `${i * 0.1}s`}}>
                   <div className="exam-card-header">
                     <div className="d-flex align-items-center gap-2 mb-3">
-                      <span 
+                      <span
                         className="badge"
                         style={{
                           backgroundColor: p.tipo === 'true_false' ? '#28a745' : p.tipo === 'fill_in_blank' ? '#ffc107' : p.tipo === 'matching' ? '#9c27b0' : '#007bff',
@@ -414,12 +381,12 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
                       </span>
                       <span className="badge badge-primary">{i + 1}</span>
                     </div>
-                    {/* ESTILO ORIGINAL - Puede causar texto aplastado con preguntas largas 
+                    {/* ESTILO ORIGINAL - Puede causar texto aplastado con preguntas largas
                     <h5 className="exam-title" style={{ marginTop: 0 }}>
                       <span className="question-text">{p.texto || "Sin texto"}</span>
                     </h5>*/}
                     {/* ESTILO NUEVO - Permite que la caja se estire verticalmente con textos largos*/}
-                    <h5 className="exam-title" style={{ 
+                    <h5 className="exam-title" style={{
                       marginTop: 0,
                       minHeight: 'auto',
                       height: 'auto',
@@ -447,17 +414,17 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
                             <i className="fas fa-info-circle me-2"></i>
                             Haz clic en un concepto y luego en su respuesta para conectarlos. Haz clic nuevamente para cambiar.
                           </div>
-                          
-                          {/* Obtener conceptos y respuestas randomizadas */}
+
+                          {/* Conceptos y respuestas (las respuestas ya llegan mezcladas del backend) */}
                           {(() => {
                             const numConceptos = p.correcta || 0;
                             const conceptos = p.opciones?.slice(0, numConceptos) || [];
-                            const respuestasRandomizadas = randomizedMatchingAnswers[i] || [];
+                            const respuestasRandomizadas = p.opciones?.slice(numConceptos) || [];
                             const respuestasEstudiante = Array.isArray(respuestaActual) ? respuestaActual : [];
-                            
+
                             // Obtener el concepto seleccionado para esta pregunta
                             const selectedConcept = selectedMatchingConcepts[p.id] ?? null;
-                            
+
                             return (
                               <div style={{ position: 'relative' }}>
                                 <div className="row">
@@ -467,7 +434,7 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
                                     {conceptos.map((concepto, conceptoIdx) => {
                                       const isSelected = selectedConcept === conceptoIdx;
                                       const hasConnection = respuestasEstudiante[conceptoIdx] !== undefined && respuestasEstudiante[conceptoIdx] !== null;
-                                      
+
                                       return (
                                         <div
                                           key={conceptoIdx}
@@ -510,14 +477,14 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
                                       );
                                     })}
                                   </div>
-                                  
+
                                   {/* Columna derecha: Respuestas */}
                                   <div className="col-6">
                                     <h6 className="text-muted mb-3"><i className="fas fa-list me-2"></i>Respuestas</h6>
-                                    {respuestasRandomizadas.map((respuestaObj, respuestaIdx) => {
+                                    {respuestasRandomizadas.map((respuestaTexto, respuestaIdx) => {
                                       const isTargetOfSelected = selectedConcept !== null && respuestasEstudiante[selectedConcept] === respuestaIdx;
                                       const isConnectedToOther = respuestasEstudiante.indexOf(respuestaIdx) !== -1;
-                                      
+
                                       return (
                                         <div
                                           key={respuestaIdx}
@@ -569,7 +536,7 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
                                           <span className="badge bg-success" style={{ fontSize: '0.9rem', minWidth: '35px', padding: '0.5rem' }}>
                                             {String.fromCharCode(65 + respuestaIdx)}
                                           </span>
-                                          <span style={{ flex: 1, fontSize: '0.95rem' }}>{respuestaObj.texto}</span>
+                                          <span style={{ flex: 1, fontSize: '0.95rem' }}>{respuestaTexto}</span>
                                           {isConnectedToOther && (
                                             <span className="badge bg-primary" style={{ fontSize: '0.75rem' }}>
                                               {respuestasEstudiante.indexOf(respuestaIdx) + 1}
@@ -580,7 +547,7 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
                                     })}
                                   </div>
                                 </div>
-                                
+
                                 {/* Resumen de conexiones */}
                                 {respuestasEstudiante.some(r => r !== null && r !== undefined) && (
                                   <div className="mt-3 p-3" style={{ backgroundColor: '#f8f9fa', borderRadius: '8px', border: '1px solid #dee2e6' }}>
@@ -591,9 +558,9 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
                                       {conceptos.map((concepto, conceptoIdx) => {
                                         const respuestaIdx = respuestasEstudiante[conceptoIdx];
                                         if (respuestaIdx === null || respuestaIdx === undefined) return null;
-                                        const respuesta = respuestasRandomizadas[respuestaIdx];
-                                        if (!respuesta) return null;
-                                        
+                                        const respuestaTexto = respuestasRandomizadas[respuestaIdx];
+                                        if (respuestaTexto === undefined) return null;
+
                                         return (
                                           <div key={conceptoIdx} style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem', backgroundColor: 'white', borderRadius: '6px', border: '1px solid #dee2e6' }}>
                                             <span className="badge bg-primary me-1" style={{ fontSize: '0.75rem' }}>{conceptoIdx + 1}</span>
@@ -622,17 +589,17 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
                             </div>
                           )}
                           <div className="exam-options-list">
-                        {opcionesParaMostrar.map((opcion, j) => {
-                          const isSelected = isFillInBlank 
+                        {opcionesParaMostrar.map((textoOpcion, j) => {
+                          const isSelected = isFillInBlank
                             ? Array.isArray(respuestaActual) && respuestaActual.includes(j)
                             : respuestaActual === j;
-                          const selectionOrder = isFillInBlank && Array.isArray(respuestaActual) 
-                            ? respuestaActual.indexOf(j) + 1 
+                          const selectionOrder = isFillInBlank && Array.isArray(respuestaActual)
+                            ? respuestaActual.indexOf(j) + 1
                             : null;
-                          
+
                           return (
-                          <div 
-                            key={j} 
+                          <div
+                            key={j}
                             className={`exam-option-item ${isSelected ? 'selected' : ''}`}
                             onClick={() => {
                               if (submitting) return;
@@ -709,7 +676,7 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
                               color: isSelected ? '#0d6efd' : '#212529',
                               fontWeight: isSelected ? '500' : '400'
                             }}>
-                              {opcion.texto || "Opción vacía"}
+                              {textoOpcion || "Opción vacía"}
                             </span>
                           </div>
                         );})}
@@ -735,8 +702,8 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
                   Una vez que finalices el intento, no podrás volver a entrar al examen. Asegúrate de haber respondido todas las preguntas.
                 </p>
                 <div className="exam-attempt-actions">
-                  <button 
-                    className="modern-btn modern-btn-primary modern-btn-lg" 
+                  <button
+                    className="modern-btn modern-btn-primary modern-btn-lg"
                     onClick={handleExamCompletion}
                     disabled={submitting}
                   >
