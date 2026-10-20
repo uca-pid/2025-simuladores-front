@@ -234,6 +234,44 @@ export default function WindowInscriptionsPage() {
     );
   };
 
+  const handleCopyCodigo = async () => {
+    try {
+      await navigator.clipboard.writeText(examWindow.codigo);
+      showModal('success', 'Copiado', 'Código copiado al portapapeles');
+    } catch (error) {
+      console.error('Error copiando código:', error);
+    }
+  };
+
+  const handleRemoveInscription = (inscription) => {
+    showModal(
+      'confirm',
+      'Dar de baja inscripción',
+      `¿Seguro que deseas dar de baja a "${inscription.user.nombre}" de esta ventana? El cupo se liberará automáticamente.`,
+      async () => {
+        try {
+          const response = await fetch(`${API_BASE_URL}/inscriptions/${inscription.id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+
+          if (response.ok) {
+            showModal('success', '¡Éxito!', 'Inscripción dada de baja correctamente');
+            loadData();
+          } else {
+            const errorData = await response.json();
+            showModal('error', 'Error', errorData.error || 'Error al dar de baja la inscripción');
+          }
+        } catch (error) {
+          console.error('Error dando de baja inscripción:', error);
+          showModal('error', 'Error', 'Error de conexión');
+        }
+        closeModal();
+      },
+      true
+    );
+  };
+
   const canManageAttendance = () => {
     if (!examWindow) return false;
     
@@ -326,6 +364,35 @@ export default function WindowInscriptionsPage() {
                 </button>
                 <BackToMainButton />
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Código de acceso para compartir con los alumnos */}
+      <div className="modern-card mb-4">
+        <div className="modern-card-body">
+          <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div>
+              <h6 className="mb-1">
+                <i className="fas fa-key me-2"></i>
+                Código de inscripción
+              </h6>
+              <p className="text-muted mb-0 small">
+                Compartí este código con tus alumnos para que se inscriban a esta ventana.
+              </p>
+            </div>
+            <div className="d-flex align-items-center gap-2">
+              <span className="badge bg-secondary fs-5 px-3 py-2" style={{ letterSpacing: '0.1em' }}>
+                {examWindow.codigo}
+              </span>
+              <button
+                className="modern-btn modern-btn-secondary"
+                onClick={handleCopyCodigo}
+                title="Copiar código"
+              >
+                <i className="fas fa-copy"></i>
+              </button>
             </div>
           </div>
         </div>
@@ -486,6 +553,15 @@ export default function WindowInscriptionsPage() {
                         </span>
                       </div>
                     )}
+
+                    <button
+                      className="modern-btn modern-btn-danger compact-btn ms-2"
+                      onClick={() => handleRemoveInscription(inscription)}
+                      title="Dar de baja esta inscripción"
+                    >
+                      <i className="fas fa-user-minus me-2"></i>
+                      <span className="btn-text">Dar de baja</span>
+                    </button>
                   </div>
                 </div>
               ))}
