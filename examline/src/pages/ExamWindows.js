@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useModal } from '../hooks';
 import { getExams, getExamWindowsProfesor, createExamWindow, updateExamWindow, toggleExamWindowActive } from '../services/api';
@@ -12,6 +12,8 @@ import './ExamWindows.css';
 export default function ExamWindowsPage() {
   const { user, token } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const scopedExamId = searchParams.get('examId');
   const { modal, showModal, closeModal } = useModal();
   const [examWindows, setExamWindows] = useState([]);
   const [exams, setExams] = useState([]);
@@ -94,7 +96,11 @@ export default function ExamWindowsPage() {
       setExams(examsData);
 
       const windowsData = await getExamWindowsProfesor();
-      setExamWindows(windowsData);
+      setExamWindows(
+        scopedExamId
+          ? windowsData.filter(w => String(w.examId) === String(scopedExamId))
+          : windowsData
+      );
       setLastUpdate(new Date());
     } catch (error) {
       console.error('Error cargando datos:', error);
@@ -108,7 +114,7 @@ export default function ExamWindowsPage() {
         setIsAutoUpdating(false);
       }
     }
-  }, [token, navigate, showModal]);
+  }, [token, navigate, showModal, scopedExamId]);
 
   useEffect(() => {
     localStorage.setItem('examWindows_activeTab', activeTab);
@@ -165,9 +171,9 @@ export default function ExamWindowsPage() {
     }
   };
 
-  const resetForm = () => {
+  const resetForm = (presetExamId = '') => {
     setFormData({
-      examId: '',
+      examId: presetExamId,
       nombre: '',
       fechaInicio: '',
       duracion: 120,
@@ -213,7 +219,7 @@ export default function ExamWindowsPage() {
   };
 
   const handleCreateWindow = () => {
-    resetForm();
+    resetForm(scopedExamId || '');
     setShowCreateModal(true);
   };
 
@@ -718,7 +724,11 @@ export default function ExamWindowsPage() {
             <div className="header-content-section">
               <h1 className="page-title mb-1">
                 <i className="fas fa-calendar-alt me-2" style={{ color: 'var(--primary-color)' }}></i>
-                <span className="title-text">Ventanas de Examen</span>
+                <span className="title-text">
+                  {scopedExamId
+                    ? `Ventanas de "${exams.find(e => String(e.id) === String(scopedExamId))?.titulo || '...'}"`
+                    : 'Ventanas de Examen'}
+                </span>
               </h1>
               <p className="page-subtitle mb-0">
                 Gestiona los horarios y modalidades de tus exámenes
@@ -750,7 +760,20 @@ export default function ExamWindowsPage() {
                   <i className="fas fa-plus me-2"></i>
                   <span className="btn-text">Nueva Ventana</span>
                 </button>
-                <BackToMainButton className="modern-btn modern-btn-secondary modern-btn-sm" />
+                {scopedExamId ? (
+                  <BackToMainButton
+                    className="modern-btn modern-btn-secondary modern-btn-sm"
+                    customPath="/mis-examenes"
+                    customLabel={
+                      <>
+                        <i className="fas fa-arrow-left me-2"></i>
+                        Volver a Mis Exámenes
+                      </>
+                    }
+                  />
+                ) : (
+                  <BackToMainButton className="modern-btn modern-btn-secondary modern-btn-sm" />
+                )}
               </div>
             </div>
           </div>
@@ -1079,7 +1102,7 @@ export default function ExamWindowsPage() {
                           value={formData.examId}
                           onChange={handleInputChange}
                           required
-                          disabled={editingWindow || isSavingWindow}
+                          disabled={editingWindow || isSavingWindow || !!scopedExamId}
                           style={{
                             borderRadius: '8px',
                             border: `1px solid ${validationErrors.examId ? '#dc3545' : 'var(--border-color)'}`,

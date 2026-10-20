@@ -42,6 +42,7 @@ const MisExamenes = () => {
   const handleCrearExamen = () => navigate("/exam-creator");
   const handleVerExamen = (examId) => navigate(`/examen/${examId}`);
   const handleEditarExamen = (examId) => navigate(`/exam-creator?editId=${examId}`);
+  const handleVerVentanas = (examId) => navigate(`/exam-windows?examId=${examId}`);
 
   const handleEliminarExamen = (exam) => {
     showModal(
@@ -206,6 +207,13 @@ const MisExamenes = () => {
                         >
                           <i className="fas fa-edit me-2"></i>
                           <span className="btn-text">Editar</span>
+                        </button>
+                        <button
+                          className="modern-btn modern-btn-secondary modern-btn-sm flex-fill"
+                          onClick={() => handleVerVentanas(exam.id)}
+                        >
+                          <i className="fas fa-calendar-alt me-2"></i>
+                          <span className="btn-text">Ventanas</span>
                         </button>
                         <button
                           className="modern-btn modern-btn-danger modern-btn-sm flex-fill"

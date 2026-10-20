@@ -58,10 +58,10 @@ const Principal = () => {
                     <div className="step-content">
                       <h5 className="step-title">2. Gestionar Ventanas y Corregir</h5>
                       <p className="step-description mb-2">
-                        Hacé clic en <strong>"Gestionar Ventanas"</strong> para:
+                        Entrá a <strong>"Mis Exámenes"</strong> y tocá <strong>"Ventanas"</strong> en el examen que quieras para:
                       </p>
                       <ul className="step-list">
-                        <li><strong>Crear ventanas:</strong> Seleccioná un examen, definí fecha/hora (o sin límites), cupo máximo y si requiere Safe Exam Browser para mayor seguridad.</li>
+                        <li><strong>Crear ventanas:</strong> Definí fecha/hora (o sin límites), cupo máximo y si requiere Safe Exam Browser para mayor seguridad.</li>
                         <li><strong>Corregir:</strong> Una vez rendidos, los múltiple choice se corrigen automáticamente. Los de programación podés corregirlos con test cases automáticos o manualmente agregando calificación</li>
                       </ul>
                     </div>
@@ -130,14 +130,14 @@ const Principal = () => {
                     Ventanas de Exámenes
                   </h5>
                   <p className="action-description text-muted mb-3">
-                    Creá ventanas de examen para inscribirse y corregí los exámenes
+                    Entrá a cada examen para crear sus ventanas, inscribir alumnos y corregir
                   </p>
                   <button
                     className="modern-btn modern-btn-primary w-100"
-                    onClick={() => navigate("/exam-windows")}
+                    onClick={() => navigate("/mis-examenes")}
                   >
                     <i className="fas fa-calendar-check me-2"></i>
-                    <span className="btn-text">Gestionar Ventanas</span>
+                    <span className="btn-text">Ir a Mis Exámenes</span>
                   </button>
                 </div>
               </div>

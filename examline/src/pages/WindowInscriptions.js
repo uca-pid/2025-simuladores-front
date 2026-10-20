@@ -353,7 +353,7 @@ export default function WindowInscriptionsPage() {
               <div className="header-actions">
                 <button 
                   className="modern-btn modern-btn-secondary compact-btn me-3" 
-                  onClick={() => navigate('/exam-windows')}
+                  onClick={() => navigate(`/exam-windows?examId=${examWindow.exam.id}`)}
                   title="Volver a Ventanas de Examen"
                 >
                   <i className="fas fa-arrow-left me-2"></i>
