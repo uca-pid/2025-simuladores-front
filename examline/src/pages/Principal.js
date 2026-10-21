@@ -62,7 +62,7 @@ const Principal = () => {
                       </p>
                       <ul className="step-list">
                         <li><strong>Crear ventanas:</strong> Definí fecha/hora (o sin límites), cupo máximo y si requiere Safe Exam Browser para mayor seguridad.</li>
-                        <li><strong>Corregir:</strong> Una vez rendidos, los múltiple choice se corrigen automáticamente. Los de programación podés corregirlos con test cases automáticos o manualmente agregando calificación</li>
+                        <li><strong>Corregir:</strong> Una vez rendidos, los múltiple choice se corrigen automáticamente. Los de programación podés corregirlos con test cases automáticos o manualmente agregando calificación. Las ventanas con entregas pendientes aparecen destacadas arriba de todo, con acceso directo a corregirlas.</li>
                       </ul>
                     </div>
                   </div>
@@ -110,7 +110,7 @@ const Principal = () => {
                     Ventanas de Examen
                   </h5>
                   <p className="action-description text-muted mb-3">
-                    Programá y gestioná los horarios de tus exámenes en un calendario
+                    Programá horarios en un calendario y corregí las entregas de tus exámenes
                   </p>
                   <button
                     className="modern-btn modern-btn-primary w-100"

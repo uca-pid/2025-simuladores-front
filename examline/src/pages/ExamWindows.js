@@ -302,6 +302,11 @@ export default function ExamWindowsPage() {
     [filteredWindows]
   );
 
+  const pendingCorrectionWindows = useMemo(
+    () => examWindows.filter(w => (w.pendientesCorreccionCount || 0) > 0),
+    [examWindows]
+  );
+
   const eventPropGetter = (event) => {
     const st = WINDOW_STATUS_STYLES[getEffectiveState(event.resource)] || WINDOW_STATUS_STYLES.programada;
     return {
@@ -313,6 +318,46 @@ export default function ExamWindowsPage() {
       }
     };
   };
+
+  const dayPreviewEvents = useMemo(() => {
+    if (!formData.fechaInicio) return [];
+    const selectedDay = new Date(formData.fechaInicio);
+    const sameDay = (d) =>
+      d.getFullYear() === selectedDay.getFullYear() &&
+      d.getMonth() === selectedDay.getMonth() &&
+      d.getDate() === selectedDay.getDate();
+
+    const others = examWindows
+      .filter(w => !w.sinTiempo && w.fechaInicio && (!editingWindow || w.id !== editingWindow.id))
+      .filter(w => sameDay(new Date(w.fechaInicio)))
+      .map(w => {
+        const start = new Date(w.fechaInicio);
+        const end = new Date(start.getTime() + ((w.duracion || 0) * 60 * 1000));
+        return { id: w.id, title: `${w.nombre} · ${w.exam?.titulo || ''}`, start, end, isDraft: false };
+      });
+
+    const draftStart = selectedDay;
+    const draftEnd = new Date(draftStart.getTime() + ((parseInt(formData.duracion, 10) || 0) * 60 * 1000));
+    const draft = {
+      id: 'draft',
+      title: formData.nombre ? `${formData.nombre} (nueva)` : 'Nueva ventana',
+      start: draftStart,
+      end: draftEnd,
+      isDraft: true
+    };
+
+    return [...others, draft];
+  }, [formData.fechaInicio, formData.duracion, formData.nombre, examWindows, editingWindow]);
+
+  const dayPreviewEventPropGetter = (event) => ({
+    style: {
+      backgroundColor: event.isDraft ? 'var(--primary-color)' : '#94a3b8',
+      borderColor: event.isDraft ? 'var(--primary-color)' : '#94a3b8',
+      borderRadius: '6px',
+      color: '#fff',
+      opacity: event.isDraft ? 1 : 0.75
+    }
+  });
 
   const formatDateTimeLocal = (dateString) => {
     const date = new Date(dateString);
@@ -655,6 +700,32 @@ export default function ExamWindowsPage() {
         <div className="error-message mb-4">
           <i className="fas fa-info-circle"></i>
           Necesitas crear al menos un examen antes de poder programar ventanas.
+        </div>
+      )}
+
+      {pendingCorrectionWindows.length > 0 && (
+        <div className="modern-card mb-4" style={{ borderLeft: '4px solid var(--warning-color)' }}>
+          <div className="modern-card-body d-flex flex-wrap align-items-center gap-3">
+            <div style={{ fontSize: '1.5rem', color: 'var(--warning-color)' }}>
+              <i className="fas fa-exclamation-circle"></i>
+            </div>
+            <div className="flex-grow-1">
+              <strong>Pendientes de corrección ({pendingCorrectionWindows.length})</strong>
+              <div className="d-flex flex-wrap gap-2 mt-2">
+                {pendingCorrectionWindows.map(w => (
+                  <button
+                    key={w.id}
+                    type="button"
+                    className="modern-btn modern-btn-secondary modern-btn-sm"
+                    onClick={() => navigate(`/exam-windows/${w.id}/results`)}
+                  >
+                    {w.nombre} · {w.exam?.titulo}
+                    <span className="badge bg-warning text-dark ms-2">{w.pendientesCorreccionCount}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1467,6 +1538,29 @@ export default function ExamWindowsPage() {
                             )}
                           </div>
                         </div>
+
+                        {formData.fechaInicio && (
+                          <div className="mt-3">
+                            <label className="form-label" style={{ fontWeight: '600', color: 'var(--text-color-2)', marginBottom: '0.4rem', fontSize: '0.9rem' }}>
+                              <i className="fas fa-calendar-day text-primary me-2"></i>
+                              Vista del día
+                            </label>
+                            <div className="modern-card" style={{ height: '220px', padding: '0.5rem' }}>
+                              <Calendar
+                                localizer={localizer}
+                                culture="es"
+                                events={dayPreviewEvents}
+                                startAccessor="start"
+                                endAccessor="end"
+                                date={new Date(formData.fechaInicio)}
+                                view="day"
+                                toolbar={false}
+                                eventPropGetter={dayPreviewEventPropGetter}
+                                style={{ height: '100%' }}
+                              />
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -1601,8 +1695,18 @@ export default function ExamWindowsPage() {
                     justifyContent: 'flex-end',
                     flexShrink: 0
                   }}>
-                    <button 
-                      type="submit" 
+                    {editingWindow && (
+                      <button
+                        type="button"
+                        className="modern-btn modern-btn-secondary"
+                        onClick={() => navigate(`/exam-windows/${editingWindow.id}/results`)}
+                      >
+                        <i className="fas fa-trophy me-2"></i>
+                        Ver Resultados / Corregir
+                      </button>
+                    )}
+                    <button
+                      type="submit"
                       className="modern-btn modern-btn-primary"
                       style={{ minWidth: '120px' }}
                       disabled={isSavingWindow}
