@@ -58,7 +58,7 @@ const Principal = () => {
                     <div className="step-content">
                       <h5 className="step-title">2. Gestionar Ventanas y Corregir</h5>
                       <p className="step-description mb-2">
-                        Entrá a <strong>"Mis Exámenes"</strong> y tocá <strong>"Ventanas"</strong> en el examen que quieras para:
+                        Entrá a <strong>"Ventanas de Examen"</strong> para:
                       </p>
                       <ul className="step-list">
                         <li><strong>Crear ventanas:</strong> Definí fecha/hora (o sin límites), cupo máximo y si requiere Safe Exam Browser para mayor seguridad.</li>
@@ -82,7 +82,7 @@ const Principal = () => {
         </div>
         <div className="modern-card-body">
           <div className="row g-3">
-            <div className="col-md-6">
+            <div className="col-md-4">
               <div className="action-card">
                 <div className="action-content">
                   <h5 className="action-title">
@@ -102,7 +102,27 @@ const Principal = () => {
                 </div>
               </div>
             </div>
-            <div className="col-md-6">
+            <div className="col-md-4">
+              <div className="action-card">
+                <div className="action-content">
+                  <h5 className="action-title">
+                    <i className="fas fa-calendar-alt me-2" style={{ color: 'var(--accent-color)' }}></i>
+                    Ventanas de Examen
+                  </h5>
+                  <p className="action-description text-muted mb-3">
+                    Programá y gestioná los horarios de tus exámenes en un calendario
+                  </p>
+                  <button
+                    className="modern-btn modern-btn-primary w-100"
+                    onClick={() => navigate("/exam-windows")}
+                  >
+                    <i className="fas fa-calendar-alt me-2"></i>
+                    <span className="btn-text">Ir a Ventanas de Examen</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="col-md-4">
               <div className="action-card">
                 <div className="action-content">
                   <h5 className="action-title">

@@ -1,3 +1,40 @@
+.filter-bar-card {
+  overflow: visible !important;
+}
+
+.filter-bar-card:hover {
+  transform: none !important;
+}
+
+.filter-dropdown-toggle {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.filter-dropdown-toggle:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: var(--border-color) !important;
+}
+
+.filter-dropdown-option {
+  min-height: 2.25rem;
+}
+
+.filter-dropdown-option input[type="checkbox"] {
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+}
+
+.filter-dropdown-option .badge {
+  white-space: nowrap;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.35em 0.65em;
+}
+
 /* ExamWindows Page Responsive Styles */
 .exam-windows-header {
   display: flex;
