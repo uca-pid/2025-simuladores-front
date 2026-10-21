@@ -21,6 +21,15 @@ export default function ManualGradingModal({ attemptId, onClose, onSave }) {
     saveGrade,
   } = useManualGrading(attemptId);
 
+  const programmingPart = attempt?.exam?.partes?.find(p => p.tipo === 'programming');
+  const lenguajeProgramacion = programmingPart?.lenguajeProgramacion || attempt?.exam?.lenguajeProgramacion;
+  const enunciadoProgramacion = programmingPart?.enunciadoProgramacion || attempt?.exam?.enunciadoProgramacion;
+  const mcPartes = attempt?.exam?.partes?.filter(p => p.tipo === 'multiple_choice') || [];
+  const programmingOrder = programmingPart?.orden ?? 0;
+  const mcOrder = mcPartes.length > 0 ? Math.min(...mcPartes.map(p => p.orden)) : 1;
+  const [collapsedSections, setCollapsedSections] = useState({ programming: false, multipleChoice: false });
+  const toggleSection = (key) => setCollapsedSections(prev => ({ ...prev, [key]: !prev[key] }));
+
   const [selectedFileIndex, setSelectedFileIndex] = useState(0);
   const [fileVersion, setFileVersion] = useState('submission');
   const [editedCode, setEditedCode] = useState('');
@@ -35,7 +44,7 @@ export default function ManualGradingModal({ attemptId, onClose, onSave }) {
 
     // 🔒 IMPORTANTE: Cargar por defecto el archivo main en versión manual
     // Este es el archivo que se usó para la corrección automática
-    const mainFileName = getMainFileName(attempt.exam.lenguajeProgramacion);
+    const mainFileName = getMainFileName(lenguajeProgramacion);
 
     // Intentar encontrar el archivo main en versión manual
     let targetVersion = 'manual';
@@ -127,7 +136,7 @@ export default function ManualGradingModal({ attemptId, onClose, onSave }) {
 
     await executeCode({
       code: editedCode,
-      language: attempt.exam.lenguajeProgramacion,
+      language: lenguajeProgramacion,
       filename: mainFile.filename,
       useCustomInput,
       customInput,
@@ -229,7 +238,7 @@ export default function ManualGradingModal({ attemptId, onClose, onSave }) {
                     }}>
                       {attempt.puntaje.toFixed(1)}%
                     </h2>
-                    {attempt.exam.tipo === 'programming' && (
+                    {programmingPart && (
                       <div style={{
                         marginTop: '12px',
                         padding: '8px 12px',
@@ -241,7 +250,7 @@ export default function ManualGradingModal({ attemptId, onClose, onSave }) {
                         textAlign: 'left'
                       }}>
                         <i className="fas fa-info-circle me-1"></i>
-                        Calculado sobre <strong>{getMainFileName(attempt.exam.lenguajeProgramacion)}</strong> (versión manual guardada)
+                        Calculado sobre <strong>{getMainFileName(lenguajeProgramacion)}</strong> (versión manual guardada)
                       </div>
                     )}
                   </div>
@@ -290,9 +299,24 @@ export default function ManualGradingModal({ attemptId, onClose, onSave }) {
             </div>
           </div>
 
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
           {/* Para exámenes de programación */}
           {attempt.exam.partes?.some(p => p.tipo === 'programming') && (
-            <>
+            <div style={{ order: programmingOrder }}>
+              <button
+                type="button"
+                className="w-100 d-flex justify-content-between align-items-center mb-2"
+                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+                onClick={() => toggleSection('programming')}
+              >
+                <h6 className="mb-0" style={{ fontWeight: '600' }}>
+                  <i className="fas fa-code me-2"></i>
+                  Parte {programmingPart.orden + 1}: Programación
+                </h6>
+                <i className={`fas fa-chevron-${collapsedSections.programming ? 'down' : 'up'}`}></i>
+              </button>
+              {!collapsedSections.programming && (
+              <>
               {/* Enunciado */}
               <div className="modern-card mb-3">
                 <div className="modern-card-header">
@@ -313,7 +337,7 @@ export default function ManualGradingModal({ attemptId, onClose, onSave }) {
                     borderRadius: '0.5rem',
                     border: '1px solid #dee2e6'
                   }}>
-                    {attempt.exam.enunciadoProgramacion || 'No hay enunciado definido'}
+                    {enunciadoProgramacion || 'No hay enunciado definido'}
                   </pre>
                 </div>
               </div>
@@ -401,7 +425,7 @@ export default function ManualGradingModal({ attemptId, onClose, onSave }) {
                           <div style={{ height: '500px', border: '1px solid #444', borderRadius: '0.375rem', overflow: 'hidden' }}>
                             <Editor
                               height="100%"
-                              language={attempt.exam.lenguajeProgramacion}
+                              language={lenguajeProgramacion}
                               theme="vs-dark"
                               value={editedCode}
                               onChange={(value) => setEditedCode(value || '')}
@@ -416,7 +440,7 @@ export default function ManualGradingModal({ attemptId, onClose, onSave }) {
                                 fontSize: 14,
                                 lineNumbers: 'on',
                                 wordWrap: 'on',
-                                tabSize: attempt.exam.lenguajeProgramacion === 'python' ? 4 : 2
+                                tabSize: lenguajeProgramacion === 'python' ? 4 : 2
                               }}
                             />
                           </div>
@@ -497,7 +521,7 @@ export default function ManualGradingModal({ attemptId, onClose, onSave }) {
                           <div style={{ height: '500px', border: '1px solid #444', borderRadius: '0.375rem', overflow: 'hidden' }}>
                             <Editor
                               height="100%"
-                              language={attempt.exam.lenguajeProgramacion}
+                              language={lenguajeProgramacion}
                               theme="vs-dark"
                               value={referenceFiles.find(f => f.filename === currentReferenceFile)?.content || ''}
                               options={{
@@ -511,7 +535,7 @@ export default function ManualGradingModal({ attemptId, onClose, onSave }) {
                                 fontSize: 14,
                                 lineNumbers: 'on',
                                 wordWrap: 'on',
-                                tabSize: attempt.exam.lenguajeProgramacion === 'python' ? 4 : 2
+                                tabSize: lenguajeProgramacion === 'python' ? 4 : 2
                               }}
                             />
                           </div>
@@ -926,18 +950,31 @@ export default function ManualGradingModal({ attemptId, onClose, onSave }) {
                   </div>
                 </div>
               )}
-            </>
+              </>
+              )}
+            </div>
           )}
 
           {/* Para exámenes múltiple choice (incluye todas las partes no-programación) */}
           {attempt.exam.partes?.some(p => p.tipo === 'multiple_choice') && (
-            <div className="modern-card mb-3">
+            <div className="modern-card mb-3" style={{ order: mcOrder }}>
               <div className="modern-card-header">
-                <h5 className="modern-card-title mb-0">
-                  <i className="fas fa-list-check me-2"></i>
-                  Respuestas del Estudiante
-                </h5>
+                <button
+                  type="button"
+                  className="w-100 d-flex justify-content-between align-items-center"
+                  style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+                  onClick={() => toggleSection('multipleChoice')}
+                >
+                  <h5 className="modern-card-title mb-0">
+                    <i className="fas fa-list-check me-2"></i>
+                    {mcPartes.length > 1
+                      ? `Partes ${mcPartes.map(p => p.orden + 1).sort((a, b) => a - b).join(', ')}: Multiple Choice`
+                      : `Parte ${mcOrder + 1}: Multiple Choice`}
+                  </h5>
+                  <i className={`fas fa-chevron-${collapsedSections.multipleChoice ? 'down' : 'up'}`}></i>
+                </button>
               </div>
+              {!collapsedSections.multipleChoice && (
               <div className="modern-card-body">
                 {attempt.exam.partes
                   .filter(p => p.tipo === 'multiple_choice')
@@ -1077,9 +1114,10 @@ export default function ManualGradingModal({ attemptId, onClose, onSave }) {
                     );
                   })}
               </div>
-
+              )}
             </div>
           )}
+          </div>
 
           {/* Calificación Manual */}
           <div className="modern-card">
