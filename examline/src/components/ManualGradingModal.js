@@ -113,7 +113,7 @@ export default function ManualGradingModal({ attemptId, onClose, onSave }) {
   };
 
   const handleExecute = async () => {
-    if (!attempt || attempt.exam.tipo !== 'programming') return;
+    if (!attempt || !attempt.exam.partes?.some(p => p.tipo === 'programming')) return;
 
     const currentFiles = getCurrentFiles();
     const mainFile = currentFiles[selectedFileIndex];
@@ -291,7 +291,7 @@ export default function ManualGradingModal({ attemptId, onClose, onSave }) {
           </div>
 
           {/* Para exámenes de programación */}
-          {attempt.exam.tipo === 'programming' && (
+          {attempt.exam.partes?.some(p => p.tipo === 'programming') && (
             <>
               {/* Enunciado */}
               <div className="modern-card mb-3">

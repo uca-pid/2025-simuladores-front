@@ -32,8 +32,8 @@ export const useManualGrading = (attemptId) => {
       console.log('🔍 Solución de referencia:', data.exam?.solucionReferencia);
       setAttempt(data);
 
-      // Cargar archivos de referencia si es examen de programación
-      if (data.exam.tipo === 'programming') {
+      // Cargar archivos de referencia si el examen tiene una parte de programación
+      if (data.exam.partes?.some(p => p.tipo === 'programming')) {
         try {
           setLoadingReferenceFiles(true);
           const refFiles = await getReferenceFiles(data.examId);
