@@ -47,6 +47,7 @@ export default function ExamWindowsPage() {
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [calendarView, setCalendarView] = useState('week');
+  const [viewMode, setViewMode] = useState('calendar');
   const [formData, setFormData] = useState({
     examId: '',
     nombre: '',
@@ -301,6 +302,15 @@ export default function ExamWindowsPage() {
     () => filteredWindows.filter(w => w.sinTiempo),
     [filteredWindows]
   );
+
+  const listViewWindows = useMemo(() => {
+    return [...filteredWindows].sort((a, b) => {
+      if (!a.fechaInicio && !b.fechaInicio) return 0;
+      if (!a.fechaInicio) return 1;
+      if (!b.fechaInicio) return -1;
+      return new Date(a.fechaInicio) - new Date(b.fechaInicio);
+    });
+  }, [filteredWindows]);
 
   const pendingCorrectionWindows = useMemo(
     () => examWindows.filter(w => (w.pendientesCorreccionCount || 0) > 0),
@@ -732,7 +742,7 @@ export default function ExamWindowsPage() {
       <div className="modern-card mb-4 filter-bar-card">
         <div className="modern-card-body">
           <div className="row g-3 align-items-start">
-            <div className="col-md-7">
+            <div className="col-md-5">
               <h6 className="panel-title mb-2">
                 <i className="fas fa-filter me-2" style={{ color: 'var(--primary-color)' }}></i>
                 Exámenes
@@ -814,7 +824,7 @@ export default function ExamWindowsPage() {
               </div>
             </div>
 
-            <div className="col-md-5">
+            <div className="col-md-4">
               <h6 className="panel-title mb-2">
                 <i className="fas fa-info-circle me-2" style={{ color: 'var(--primary-color)' }}></i>
                 Estados
@@ -879,79 +889,160 @@ export default function ExamWindowsPage() {
                 )}
               </div>
             </div>
+
+            <div className="col-md-3 d-flex align-items-end justify-content-md-end">
+              <div className="btn-group" role="group">
+                <button
+                  type="button"
+                  className={`modern-btn modern-btn-sm ${viewMode === 'calendar' ? 'modern-btn-primary' : 'modern-btn-secondary'}`}
+                  onClick={() => setViewMode('calendar')}
+                >
+                  <i className="fas fa-calendar-alt me-2"></i>
+                  Calendario
+                </button>
+                <button
+                  type="button"
+                  className={`modern-btn modern-btn-sm ${viewMode === 'list' ? 'modern-btn-primary' : 'modern-btn-secondary'}`}
+                  onClick={() => setViewMode('list')}
+                >
+                  <i className="fas fa-list me-2"></i>
+                  Lista
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       <div className="row g-4">
-        <div className="col-lg-3">
-          <div className="modern-card h-100">
-            <div className="modern-card-header">
-              <h3 className="modern-card-title">
-                <i className="fas fa-infinity me-2" style={{ color: 'var(--primary-color)' }}></i>
-                Sin horario fijo ({sinTiempoWindows.length})
-              </h3>
-            </div>
-            <div className="modern-card-body">
-              {sinTiempoWindows.length === 0 ? (
-                <small className="text-muted">No hay ventanas sin horario fijo.</small>
-              ) : (
-                <div className="d-flex flex-column gap-2" style={{ maxHeight: '580px', overflowY: 'auto' }}>
-                  {sinTiempoWindows.map(w => (
-                    <button
-                      key={w.id}
-                      type="button"
-                      className="w-100 text-start"
-                      style={{
-                        background: 'none',
-                        border: `1px solid ${WINDOW_STATUS_STYLES[getEffectiveState(w)].solid}`,
-                        borderRadius: '8px',
-                        padding: '0.5rem 0.65rem',
-                        cursor: 'pointer'
-                      }}
-                      onClick={() => handleEditWindow(w)}
-                    >
-                      <div style={{ fontWeight: '600', fontSize: '0.85rem' }}>{w.nombre}</div>
-                      <div style={{ fontSize: '0.75rem', color: '#6c757d' }}>{w.exam?.titulo}</div>
-                    </button>
-                  ))}
-                </div>
-              )}
+        {viewMode === 'calendar' && (
+          <div className="col-lg-3">
+            <div className="modern-card h-100">
+              <div className="modern-card-header">
+                <h3 className="modern-card-title">
+                  <i className="fas fa-infinity me-2" style={{ color: 'var(--primary-color)' }}></i>
+                  Sin horario fijo ({sinTiempoWindows.length})
+                </h3>
+              </div>
+              <div className="modern-card-body">
+                {sinTiempoWindows.length === 0 ? (
+                  <small className="text-muted">No hay ventanas sin horario fijo.</small>
+                ) : (
+                  <div className="d-flex flex-column gap-2" style={{ maxHeight: '580px', overflowY: 'auto' }}>
+                    {sinTiempoWindows.map(w => (
+                      <button
+                        key={w.id}
+                        type="button"
+                        className="w-100 text-start"
+                        style={{
+                          background: 'none',
+                          border: `1px solid ${WINDOW_STATUS_STYLES[getEffectiveState(w)].solid}`,
+                          borderRadius: '8px',
+                          padding: '0.5rem 0.65rem',
+                          cursor: 'pointer'
+                        }}
+                        onClick={() => handleEditWindow(w)}
+                      >
+                        <div style={{ fontWeight: '600', fontSize: '0.85rem' }}>{w.nombre}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#6c757d' }}>{w.exam?.titulo}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
-        <div className="col-lg-9">
-          <div className="modern-card">
-            <div className="modern-card-body" style={{ height: '650px' }}>
-              <Calendar
-                localizer={localizer}
-                culture="es"
-                events={calendarEvents}
-                startAccessor="start"
-                endAccessor="end"
-                date={calendarDate}
-                onNavigate={setCalendarDate}
-                view={calendarView}
-                onView={setCalendarView}
-                views={['month', 'week', 'day']}
-                selectable
-                onSelectSlot={handleSelectSlot}
-                onSelectEvent={handleSelectEvent}
-                eventPropGetter={eventPropGetter}
-                style={{ height: '100%' }}
-                messages={{
-                  next: 'Sig.',
-                  previous: 'Ant.',
-                  today: 'Hoy',
-                  month: 'Mes',
-                  week: 'Semana',
-                  day: 'Día',
-                  noEventsInRange: 'No hay ventanas en este rango de fechas.'
-                }}
-              />
+        <div className={viewMode === 'calendar' ? 'col-lg-9' : 'col-12'}>
+          {viewMode === 'calendar' ? (
+            <div className="modern-card">
+              <div className="modern-card-body" style={{ height: '650px' }}>
+                <Calendar
+                  localizer={localizer}
+                  culture="es"
+                  events={calendarEvents}
+                  startAccessor="start"
+                  endAccessor="end"
+                  date={calendarDate}
+                  onNavigate={setCalendarDate}
+                  view={calendarView}
+                  onView={setCalendarView}
+                  views={['month', 'week', 'day']}
+                  selectable
+                  onSelectSlot={handleSelectSlot}
+                  onSelectEvent={handleSelectEvent}
+                  eventPropGetter={eventPropGetter}
+                  style={{ height: '100%' }}
+                  messages={{
+                    next: 'Sig.',
+                    previous: 'Ant.',
+                    today: 'Hoy',
+                    month: 'Mes',
+                    week: 'Semana',
+                    day: 'Día',
+                    noEventsInRange: 'No hay ventanas en este rango de fechas.'
+                  }}
+                />
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="modern-card">
+              <div className="modern-card-body p-0" style={{ maxHeight: '650px', overflowY: 'auto' }}>
+                {listViewWindows.length === 0 ? (
+                  <div className="p-4 text-center text-muted">No hay ventanas para mostrar con estos filtros.</div>
+                ) : (
+                  <table className="table table-hover mb-0">
+                    <thead>
+                      <tr>
+                        <th>Nombre</th>
+                        <th>Examen</th>
+                        <th>Fecha y hora</th>
+                        <th>Estado</th>
+                        <th>Inscriptos</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {listViewWindows.map(w => {
+                        const statusOpt = STATUS_OPTIONS.find(opt => opt.key === getEffectiveState(w));
+                        return (
+                          <tr key={w.id} style={{ cursor: 'pointer' }} onClick={() => handleEditWindow(w)}>
+                            <td>{w.nombre}</td>
+                            <td>{w.exam?.titulo}</td>
+                            <td>
+                              {w.sinTiempo
+                                ? <span className="text-muted fst-italic">Sin horario fijo</span>
+                                : w.fechaInicio
+                                  ? `${new Date(w.fechaInicio).toLocaleDateString()} ${new Date(w.fechaInicio).toLocaleTimeString()}`
+                                  : '—'}
+                            </td>
+                            <td>
+                              {statusOpt && <span className={`badge ${statusOpt.badgeClass}`}>{statusOpt.label}</span>}
+                            </td>
+                            <td>{getInscritosCount(w)}/{w.cupoMaximo}</td>
+                            <td className="text-end">
+                              {w.pendientesCorreccionCount > 0 && (
+                                <button
+                                  type="button"
+                                  className="modern-btn modern-btn-sm"
+                                  style={{ backgroundColor: 'var(--primary-color)', borderColor: 'var(--primary-color)', color: '#fff' }}
+                                  onClick={(e) => { e.stopPropagation(); navigate(`/exam-windows/${w.id}/results`); }}
+                                >
+                                  <i className="fas fa-trophy me-2"></i>
+                                  Corregir ({w.pendientesCorreccionCount})
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
