@@ -20,6 +20,7 @@ export default function ExamWindowsPage() {
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingWindow, setEditingWindow] = useState(null);
+  const [copiedCodeId, setCopiedCodeId] = useState(null);
   const [formData, setFormData] = useState({
     examId: '',
     nombre: '',
@@ -492,6 +493,16 @@ export default function ExamWindowsPage() {
     return 0;
   };
 
+  const handleCopyCode = async (windowId, codigo) => {
+    try {
+      await navigator.clipboard.writeText(codigo);
+      setCopiedCodeId(windowId);
+      setTimeout(() => setCopiedCodeId((current) => (current === windowId ? null : current)), 1500);
+    } catch (error) {
+      console.error('No se pudo copiar el código:', error);
+    }
+  };
+
   const renderWindowCard = (window, index) => (
     <div key={window.id} className="exam-window-card-wrapper">
       {(() => {
@@ -633,6 +644,23 @@ export default function ExamWindowsPage() {
                     )}
                   </>
                 )}
+                <div className="exam-info-item">
+                  <i className="fas fa-key"></i>
+                  <span>
+                    <strong>Código:</strong>{' '}
+                    <span style={{ fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '1px', color: 'var(--primary-color)' }}>
+                      {window.codigo}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    className="copy-code-btn ms-2"
+                    onClick={() => handleCopyCode(window.id, window.codigo)}
+                    title="Copiar código"
+                  >
+                    <i className={`fas ${copiedCodeId === window.id ? 'fa-check text-success' : 'fa-copy'}`}></i>
+                  </button>
+                </div>
                 <div className="exam-info-item">
                   <i className="fas fa-laptop"></i>
                   <span><strong>Modalidad:</strong> {window.modalidad ? window.modalidad.charAt(0).toUpperCase() + window.modalidad.slice(1) : ''}</span>

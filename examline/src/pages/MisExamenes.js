@@ -179,10 +179,30 @@ const MisExamenes = () => {
                   <div className={`exam-card fade-in-up`} style={{animationDelay: `${Math.min(index, 8) * 0.1}s`}}>
                     <div className="exam-card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                       <h5 className="exam-title mb-0">{exam.titulo}</h5>
-                      <span className="text-muted" style={{ fontSize: '0.85rem' }}>
-                        <i className="fas fa-hashtag me-1"></i>
-                        Código: {exam.id}
-                      </span>
+                      <div className="d-flex gap-1">
+                        <button
+                          className="modern-btn modern-btn-primary modern-btn-sm exam-icon-btn"
+                          onClick={() => handleVerExamen(exam.id)}
+                          title="Ver"
+                        >
+                          <i className="fas fa-eye"></i>
+                        </button>
+                        <button
+                          className="modern-btn modern-btn-primary modern-btn-sm exam-icon-btn"
+                          onClick={() => handleEditarExamen(exam.id)}
+                          title="Editar"
+                        >
+                          <i className="fas fa-edit"></i>
+                        </button>
+                        <button
+                          className="modern-btn modern-btn-danger modern-btn-sm exam-icon-btn"
+                          onClick={() => handleEliminarExamen(exam)}
+                          disabled={deletingId === exam.id}
+                          title="Eliminar"
+                        >
+                          <i className="fas fa-trash"></i>
+                        </button>
+                      </div>
                     </div>
                     <div className="exam-card-body">
                       <div className="exam-info">
@@ -193,37 +213,13 @@ const MisExamenes = () => {
                           </div>
                         ))}
                       </div>
-                      <div className="d-flex gap-2">
-                        <button
-                          className="modern-btn modern-btn-primary modern-btn-sm flex-fill view-exam-btn"
-                          onClick={() => handleVerExamen(exam.id)}
-                        >
-                          <i className="fas fa-eye me-2"></i>
-                          <span className="btn-text">Ver</span>
-                        </button>
-                        <button
-                          className="modern-btn modern-btn-secondary modern-btn-sm flex-fill"
-                          onClick={() => handleEditarExamen(exam.id)}
-                        >
-                          <i className="fas fa-edit me-2"></i>
-                          <span className="btn-text">Editar</span>
-                        </button>
-                        <button
-                          className="modern-btn modern-btn-secondary modern-btn-sm flex-fill"
-                          onClick={() => handleVerVentanas(exam.id)}
-                        >
-                          <i className="fas fa-calendar-alt me-2"></i>
-                          <span className="btn-text">Ventanas</span>
-                        </button>
-                        <button
-                          className="modern-btn modern-btn-danger modern-btn-sm flex-fill"
-                          onClick={() => handleEliminarExamen(exam)}
-                          disabled={deletingId === exam.id}
-                        >
-                          <i className="fas fa-trash me-2"></i>
-                          <span className="btn-text">Eliminar</span>
-                        </button>
-                      </div>
+                      <button
+                        className="modern-btn modern-btn-secondary modern-btn-sm w-100"
+                        onClick={() => handleVerVentanas(exam.id)}
+                      >
+                        <i className="fas fa-calendar-alt me-2"></i>
+                        <span className="btn-text">Ventanas</span>
+                      </button>
                     </div>
                   </div>
                 </div>

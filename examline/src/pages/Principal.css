@@ -99,11 +99,6 @@
   .exam-card .exam-badge .badge-text {
     font-size: 0.7rem;
   }
-  
-  .view-exam-btn {
-    font-size: 0.85rem;
-    padding: 0.6rem 1rem;
-  }
 }
 
 @media (max-width: 400px) {
@@ -119,11 +114,6 @@
     padding: 0.6rem 1rem;
   }
   
-  .view-exam-btn {
-    font-size: 0.8rem;
-    padding: 0.7rem 1rem;
-  }
-  
   .exams-grid {
     gap: 0.75rem;
   }
@@ -134,10 +124,6 @@
   .profesor-panel-header .modern-btn {
     min-height: 44px;
     touch-action: manipulation;
-  }
-  
-  .view-exam-btn {
-    min-height: 48px;
   }
 }
 
@@ -151,11 +137,6 @@
   .instructivo-header .modern-btn {
     font-size: 0.75rem;
     padding: 0.4rem 0.6rem;
-  }
-  
-  .view-exam-btn {
-    font-size: 0.75rem;
-    padding: 0.6rem 0.8rem;
   }
   
   .profesor-panel-header .page-title .title-text {

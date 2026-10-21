@@ -82,7 +82,7 @@ const Principal = () => {
         </div>
         <div className="modern-card-body">
           <div className="row g-3">
-            <div className="col-md-4">
+            <div className="col-md-6">
               <div className="action-card">
                 <div className="action-content">
                   <h5 className="action-title">
@@ -102,7 +102,7 @@ const Principal = () => {
                 </div>
               </div>
             </div>
-            <div className="col-md-4">
+            <div className="col-md-6">
               <div className="action-card">
                 <div className="action-content">
                   <h5 className="action-title">
@@ -118,26 +118,6 @@ const Principal = () => {
                   >
                     <i className="fas fa-database me-2"></i>
                     <span className="btn-text">Banco de Preguntas</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-            <div className="col-md-4">
-              <div className="action-card">
-                <div className="action-content">
-                  <h5 className="action-title">
-                    <i className="fas fa-tasks me-2" style={{ color: 'var(--accent-color)' }}></i>
-                    Ventanas de Exámenes
-                  </h5>
-                  <p className="action-description text-muted mb-3">
-                    Entrá a cada examen para crear sus ventanas, inscribir alumnos y corregir
-                  </p>
-                  <button
-                    className="modern-btn modern-btn-primary w-100"
-                    onClick={() => navigate("/mis-examenes")}
-                  >
-                    <i className="fas fa-calendar-check me-2"></i>
-                    <span className="btn-text">Ir a Mis Exámenes</span>
                   </button>
                 </div>
               </div>
