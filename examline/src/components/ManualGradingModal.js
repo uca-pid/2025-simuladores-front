@@ -7,7 +7,7 @@ import '../styles/base.css';
 const MAIN_FILE_NAMES = { python: 'main.py', javascript: 'main.js', c: 'main.c' };
 const getMainFileName = (lenguaje) => MAIN_FILE_NAMES[lenguaje] || 'main.js';
 
-export default function ManualGradingModal({ attemptId, onClose, onSave }) {
+export default function ManualGradingModal({ attemptId, onBack, onSave }) {
   const {
     loading,
     attempt,
@@ -24,16 +24,15 @@ export default function ManualGradingModal({ attemptId, onClose, onSave }) {
   const programmingPart = attempt?.exam?.partes?.find(p => p.tipo === 'programming');
   const lenguajeProgramacion = programmingPart?.lenguajeProgramacion || attempt?.exam?.lenguajeProgramacion;
   const enunciadoProgramacion = programmingPart?.enunciadoProgramacion || attempt?.exam?.enunciadoProgramacion;
-  const mcPartes = attempt?.exam?.partes?.filter(p => p.tipo === 'multiple_choice') || [];
-  const programmingOrder = programmingPart?.orden ?? 0;
-  const mcOrder = mcPartes.length > 0 ? Math.min(...mcPartes.map(p => p.orden)) : 1;
-  const [collapsedSections, setCollapsedSections] = useState({ programming: false, multipleChoice: false });
-  const toggleSection = (key) => setCollapsedSections(prev => ({ ...prev, [key]: !prev[key] }));
+  const partesOrdenadas = [...(attempt?.exam?.partes || [])].sort((a, b) => a.orden - b.orden);
+  const [selectedTab, setSelectedTab] = useState(0);
+  const selectedParte = selectedTab !== 'grade' ? partesOrdenadas[selectedTab] : null;
 
   const [selectedFileIndex, setSelectedFileIndex] = useState(0);
   const [fileVersion, setFileVersion] = useState('submission');
   const [editedCode, setEditedCode] = useState('');
   const [calificacionManual, setCalificacionManual] = useState('');
+  const [editingGrade, setEditingGrade] = useState(false);
   const [customInput, setCustomInput] = useState('');
   const [useCustomInput, setUseCustomInput] = useState(false);
   const [currentReferenceFile, setCurrentReferenceFile] = useState('');
@@ -74,6 +73,9 @@ export default function ManualGradingModal({ attemptId, onClose, onSave }) {
     // Pre-llenar calificación manual si ya existe
     if (attempt.calificacionManual !== null) {
       setCalificacionManual(attempt.calificacionManual.toString());
+      setEditingGrade(false);
+    } else {
+      setEditingGrade(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attempt]);
@@ -156,19 +158,17 @@ export default function ManualGradingModal({ attemptId, onClose, onSave }) {
 
     const success = await saveGrade(grade);
     if (success) {
+      setEditingGrade(false);
       if (onSave) onSave();
-      if (onClose) onClose();
     }
   };
 
   if (loading) {
     return (
-      <div style={styles.overlay}>
-        <div style={styles.modal}>
-          <div className="loading-container">
-            <div className="modern-spinner"></div>
-            <p>Cargando intento...</p>
-          </div>
+      <div style={styles.page}>
+        <div className="loading-container">
+          <div className="modern-spinner"></div>
+          <p>Cargando intento...</p>
         </div>
       </div>
     );
@@ -176,14 +176,12 @@ export default function ManualGradingModal({ attemptId, onClose, onSave }) {
 
   if (!attempt) {
     return (
-      <div style={styles.overlay}>
-        <div style={styles.modal}>
-          <div className="modern-card-body text-center">
-            <h4>Error al cargar el intento</h4>
-            <button className="modern-btn modern-btn-secondary mt-3" onClick={onClose}>
-              Cerrar
-            </button>
-          </div>
+      <div style={styles.page}>
+        <div className="modern-card-body text-center">
+          <h4>Error al cargar el intento</h4>
+          <button className="modern-btn modern-btn-secondary mt-3" onClick={onBack}>
+            Volver a la lista
+          </button>
         </div>
       </div>
     );
@@ -193,25 +191,49 @@ export default function ManualGradingModal({ attemptId, onClose, onSave }) {
   const currentFile = currentFiles[selectedFileIndex];
 
   return (
-    <div style={styles.overlay}>
-      <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
-        <div className="modern-card-header">
-          <div className="d-flex justify-content-between align-items-center">
-            <h3 className="modern-card-title mb-0">
-              <i className="fas fa-user-edit me-2"></i>
-              Corrección Manual - {attempt.user.nombre}
-            </h3>
-            <button 
-              className="btn-close" 
-              onClick={onClose}
-              aria-label="Cerrar"
-            ></button>
+    <div style={styles.page}>
+          {/* Selector de partes (tabs) */}
+          <div className="d-flex align-items-center gap-2 flex-wrap mb-3">
+            {partesOrdenadas.map((parte, idx) => {
+              const isSelected = selectedTab === idx;
+              return (
+                <button
+                  key={parte.id || idx}
+                  type="button"
+                  onClick={() => setSelectedTab(idx)}
+                  style={{
+                    border: `2px solid ${isSelected ? 'var(--primary-color)' : 'var(--border-color, #dee2e6)'}`,
+                    borderRadius: '8px',
+                    padding: '0.4rem 0.75rem',
+                    backgroundColor: isSelected ? 'rgba(30, 41, 85, 0.08)' : 'transparent',
+                    fontWeight: isSelected ? 'bold' : 'normal',
+                    color: 'inherit',
+                  }}
+                >
+                  <i className={`fas ${parte.tipo === 'programming' ? 'fa-code' : 'fa-question-circle'} me-2`}></i>
+                  Parte {parte.orden}
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              onClick={() => setSelectedTab('grade')}
+              style={{
+                border: `2px solid ${selectedTab === 'grade' ? 'var(--primary-color)' : 'var(--border-color, #dee2e6)'}`,
+                borderRadius: '8px',
+                padding: '0.4rem 0.75rem',
+                backgroundColor: selectedTab === 'grade' ? 'rgba(30, 41, 85, 0.08)' : 'transparent',
+                fontWeight: selectedTab === 'grade' ? 'bold' : 'normal',
+                color: 'inherit',
+              }}
+            >
+              <i className="fas fa-clipboard-check me-2"></i>
+              Calificación
+            </button>
           </div>
-        </div>
 
-        <div className="modern-card-body" style={{ maxHeight: 'calc(90vh - 180px)', overflowY: 'auto' }}>
           {/* Información de calificaciones */}
+          {selectedTab === 'grade' && (
           <div className="row mb-4">
             {attempt.puntaje !== null && (
               <div className="col-md-6 mb-3">
@@ -259,64 +281,101 @@ export default function ManualGradingModal({ attemptId, onClose, onSave }) {
             )}
             
             <div className={attempt.puntaje !== null ? "col-md-6 mb-3" : "col-12 mb-3"}>
-              <div className="modern-card" style={{ 
+              <div className="modern-card" style={{
                 height: '100%',
-                border: attempt.calificacionManual !== null ? '2px solid #198754' : '2px solid #ffc107',
-                background: attempt.calificacionManual !== null 
+                border: calificacionManual !== '' ? '2px solid #198754' : '2px solid #ffc107',
+                background: calificacionManual !== ''
                   ? 'linear-gradient(135deg, rgba(25, 135, 84, 0.05) 0%, rgba(25, 135, 84, 0.02) 100%)'
                   : 'linear-gradient(135deg, rgba(255, 193, 7, 0.05) 0%, rgba(255, 193, 7, 0.02) 100%)'
               }}>
                 <div className="modern-card-body text-center">
-                  <div style={{ 
-                    fontSize: '1.8rem', 
-                    color: attempt.calificacionManual !== null ? '#198754' : '#ffc107',
+                  <div style={{
+                    fontSize: '1.8rem',
+                    color: calificacionManual !== '' ? '#198754' : '#ffc107',
                     marginBottom: '8px'
                   }}>
-                    <i className={attempt.calificacionManual !== null ? "fas fa-check-circle" : "fas fa-exclamation-triangle"}></i>
+                    <i className={calificacionManual !== '' ? "fas fa-check-circle" : "fas fa-exclamation-triangle"}></i>
                   </div>
-                  <h6 className="text-muted mb-2" style={{ fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  <h6 className="text-muted mb-3" style={{ fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     Calificación Manual
                   </h6>
-                  {attempt.calificacionManual !== null ? (
-                    <h2 className="mb-0" style={{ 
-                      color: '#198754',
-                      fontWeight: 'bold',
-                      fontSize: '2.5rem'
-                    }}>
-                      {attempt.calificacionManual}
-                    </h2>
+                  {!editingGrade ? (
+                    <>
+                      {calificacionManual !== '' ? (
+                        <h2 className="mb-2" style={{ color: '#198754', fontWeight: 'bold', fontSize: '2.5rem' }}>
+                          {Number(calificacionManual).toFixed(1)}%
+                        </h2>
+                      ) : (
+                        <h4 className="mb-2" style={{ color: '#ffc107', fontWeight: '600', fontSize: '1.2rem' }}>
+                          Pendiente de corrección
+                        </h4>
+                      )}
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline-secondary"
+                        onClick={() => setEditingGrade(true)}
+                      >
+                        <i className="fas fa-pencil-alt me-2"></i>
+                        Editar
+                      </button>
+                    </>
                   ) : (
-                    <h4 className="mb-0" style={{ 
-                      color: '#ffc107',
-                      fontWeight: '600',
-                      fontSize: '1.2rem'
-                    }}>
-                      Pendiente de corrección
-                    </h4>
+                    <>
+                      <input
+                        type="number"
+                        className="form-control form-control-lg text-center fw-bold mb-2"
+                        step="0.1"
+                        value={calificacionManual}
+                        onChange={(e) => setCalificacionManual(e.target.value)}
+                        placeholder="Ingrese la calificación..."
+                        disabled={saving}
+                        style={{
+                          color: calificacionManual !== '' ? '#198754' : '#ffc107',
+                          fontSize: '1.8rem'
+                        }}
+                      />
+                      <div className="d-flex gap-2 justify-content-center flex-wrap">
+                        {attempt.puntaje !== null && (
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-outline-primary"
+                            onClick={handleUseAutomaticGrade}
+                            title="Usar la nota automática como calificación manual"
+                          >
+                            <i className="fas fa-robot me-2"></i>
+                            Usar nota automática ({attempt.puntaje.toFixed(1)}%)
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-success"
+                          onClick={handleSaveGrade}
+                          disabled={saving || !calificacionManual}
+                        >
+                          {saving ? (
+                            <>
+                              <span className="spinner-border spinner-border-sm me-2"></span>
+                              Guardando...
+                            </>
+                          ) : (
+                            <>
+                              <i className="fas fa-save me-2"></i>
+                              Guardar Calificación
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </>
                   )}
                 </div>
               </div>
             </div>
           </div>
+          )}
 
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
           {/* Para exámenes de programación */}
-          {attempt.exam.partes?.some(p => p.tipo === 'programming') && (
-            <div style={{ order: programmingOrder }}>
-              <button
-                type="button"
-                className="w-100 d-flex justify-content-between align-items-center mb-2"
-                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
-                onClick={() => toggleSection('programming')}
-              >
-                <h6 className="mb-0" style={{ fontWeight: '600' }}>
-                  <i className="fas fa-code me-2"></i>
-                  Parte {programmingPart.orden + 1}: Programación
-                </h6>
-                <i className={`fas fa-chevron-${collapsedSections.programming ? 'down' : 'up'}`}></i>
-              </button>
-              {!collapsedSections.programming && (
-              <>
+          {selectedParte?.tipo === 'programming' && (
+            <div className="mb-3">
               {/* Enunciado */}
               <div className="modern-card mb-3">
                 <div className="modern-card-header">
@@ -950,35 +1009,13 @@ export default function ManualGradingModal({ attemptId, onClose, onSave }) {
                   </div>
                 </div>
               )}
-              </>
-              )}
             </div>
           )}
 
-          {/* Para exámenes múltiple choice (incluye todas las partes no-programación) */}
-          {attempt.exam.partes?.some(p => p.tipo === 'multiple_choice') && (
-            <div className="modern-card mb-3" style={{ order: mcOrder }}>
-              <div className="modern-card-header">
-                <button
-                  type="button"
-                  className="w-100 d-flex justify-content-between align-items-center"
-                  style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
-                  onClick={() => toggleSection('multipleChoice')}
-                >
-                  <h5 className="modern-card-title mb-0">
-                    <i className="fas fa-list-check me-2"></i>
-                    {mcPartes.length > 1
-                      ? `Partes ${mcPartes.map(p => p.orden + 1).sort((a, b) => a - b).join(', ')}: Multiple Choice`
-                      : `Parte ${mcOrder + 1}: Multiple Choice`}
-                  </h5>
-                  <i className={`fas fa-chevron-${collapsedSections.multipleChoice ? 'down' : 'up'}`}></i>
-                </button>
-              </div>
-              {!collapsedSections.multipleChoice && (
-              <div className="modern-card-body">
-                {attempt.exam.partes
-                  .filter(p => p.tipo === 'multiple_choice')
-                  .flatMap(p => p.preguntas)
+          {/* Para partes de multiple choice (y tipos afines) */}
+          {selectedParte && selectedParte.tipo !== 'programming' && (
+            <div className="mb-3">
+                {(selectedParte.preguntas || [])
                   .map((pregunta, idx) => {
                     const respuestaRow = attempt.respuestas?.find(r => r.preguntaId === pregunta.id);
                     const respuestaEstudiante = respuestaRow?.valor;
@@ -1004,7 +1041,7 @@ export default function ManualGradingModal({ attemptId, onClose, onSave }) {
                     }
 
                     return (
-                      <div key={pregunta.id} className="mb-3 p-3 border rounded">
+                      <div key={pregunta.id} className="mb-3 p-3 border rounded bg-white">
                         <div className="d-flex justify-content-between align-items-start mb-2">
                           <h6 className="mb-1">Pregunta {idx + 1}</h6>
                           {esManual ? (
@@ -1113,107 +1150,15 @@ export default function ManualGradingModal({ attemptId, onClose, onSave }) {
                       </div>
                     );
                   })}
-              </div>
-              )}
             </div>
           )}
-          </div>
 
-          {/* Calificación Manual */}
-          <div className="modern-card">
-            <div className="modern-card-header">
-              <h5 className="modern-card-title mb-0">
-                <i className="fas fa-clipboard-check me-2"></i>
-                Calificación Manual
-              </h5>
-            </div>
-            <div className="modern-card-body">
-              <div className="mb-3">
-                <label className="form-label fw-bold">
-                  Calificación:
-                </label>
-                <input
-                  type="number"
-                  className="form-control"
-                  step="0.1"
-                  value={calificacionManual}
-                  onChange={(e) => setCalificacionManual(e.target.value)}
-                  placeholder="Ingrese la calificación..."
-                  disabled={saving}
-                />
-                {attempt && attempt.puntaje !== null && (
-                  <div className="mt-2">
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-outline-primary"
-                      onClick={handleUseAutomaticGrade}
-                      title="Usar la nota automática como calificación manual"
-                    >
-                      <i className="fas fa-robot me-2"></i>
-                      Usar nota automática ({attempt.puntaje.toFixed(1)}%)
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer con botones */}
-        <div className="modern-card-footer" style={{ 
-          padding: '20px 24px',
-          borderTop: '2px solid #e5e7eb'
-        }}>
-          <div className="d-flex justify-content-end gap-3">
-            <button 
-              className="modern-btn modern-btn-success modern-btn-lg"
-              onClick={handleSaveGrade}
-              disabled={saving || !calificacionManual}
-              style={{ minWidth: '200px' }}
-            >
-              {saving ? (
-                <>
-                  <span className="spinner-border spinner-border-sm me-2"></span>
-                  Guardando...
-                </>
-              ) : (
-                <>
-                  <i className="fas fa-save me-2"></i>
-                  Guardar Calificación
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
 
 const styles = {
-  overlay: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-    backdropFilter: 'blur(4px)',
-    padding: '20px'
-  },
-  modal: {
-    backgroundColor: 'white',
-    borderRadius: '12px',
-    width: '95%',
-    maxWidth: '1400px',
-    maxHeight: '95vh',
-    display: 'flex',
-    flexDirection: 'column',
-    boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)',
-    overflow: 'hidden'
+  page: {
+    width: '100%'
   }
 };

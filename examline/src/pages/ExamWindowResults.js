@@ -4,7 +4,6 @@ import { useAuth } from '../contexts/AuthContext';
 import BackToMainButton from '../components/BackToMainButton';
 import Modal from '../components/Modal';
 import MoodleIntegration from '../components/MoodleIntegration';
-import ManualGradingModal from '../components/ManualGradingModal';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './ExamResults.css';
 
@@ -21,8 +20,6 @@ export default function ExamWindowResultsPage() {
   const [attempts, setAttempts] = useState([]);
   const [attemptsLoading, setAttemptsLoading] = useState(false);
   const [attemptsLoaded, setAttemptsLoaded] = useState(false);
-  const [selectedAttemptId, setSelectedAttemptId] = useState(null);
-  const [showGradingModal, setShowGradingModal] = useState(false);
   const [showOnlyGrades, setShowOnlyGrades] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [modal, setModal] = useState({
@@ -116,18 +113,7 @@ export default function ExamWindowResultsPage() {
   }, [examWindow, attemptsLoading, attemptsLoaded, loadAttempts]);
 
   const handleOpenGrading = (attemptId) => {
-    setSelectedAttemptId(attemptId);
-    setShowGradingModal(true);
-  };
-
-  const handleCloseGrading = () => {
-    setShowGradingModal(false);
-    setSelectedAttemptId(null);
-  };
-
-  const handleSaveGrade = async () => {
-    // Recargar datos después de guardar
-    await loadAttempts();
+    navigate(`/exam-windows/${windowId}/results/${attemptId}`);
   };
 
   const showModal = (type, title, message, onConfirm = null, showCancel = false) => {
@@ -646,15 +632,6 @@ export default function ExamWindowResultsPage() {
             onClose={() => setShowMoodleModal(false)}
           />
         </>
-      )}
-
-      {/* Manual Grading Modal */}
-      {showGradingModal && selectedAttemptId && (
-        <ManualGradingModal
-          attemptId={selectedAttemptId}
-          onClose={handleCloseGrading}
-          onSave={handleSaveGrade}
-        />
       )}
     </div>
   );
