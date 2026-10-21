@@ -47,7 +47,7 @@ export default function ExamWindowsPage() {
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [calendarView, setCalendarView] = useState('week');
-  const [viewMode, setViewMode] = useState('calendar');
+  const [viewMode, setViewMode] = useState('list');
   const [formData, setFormData] = useState({
     examId: '',
     nombre: '',
@@ -894,19 +894,19 @@ export default function ExamWindowsPage() {
               <div className="btn-group" role="group">
                 <button
                   type="button"
-                  className={`modern-btn modern-btn-sm ${viewMode === 'calendar' ? 'modern-btn-primary' : 'modern-btn-secondary'}`}
-                  onClick={() => setViewMode('calendar')}
-                >
-                  <i className="fas fa-calendar-alt me-2"></i>
-                  Calendario
-                </button>
-                <button
-                  type="button"
                   className={`modern-btn modern-btn-sm ${viewMode === 'list' ? 'modern-btn-primary' : 'modern-btn-secondary'}`}
                   onClick={() => setViewMode('list')}
                 >
                   <i className="fas fa-list me-2"></i>
                   Lista
+                </button>
+                <button
+                  type="button"
+                  className={`modern-btn modern-btn-sm ${viewMode === 'calendar' ? 'modern-btn-primary' : 'modern-btn-secondary'}`}
+                  onClick={() => setViewMode('calendar')}
+                >
+                  <i className="fas fa-calendar-alt me-2"></i>
+                  Calendario
                 </button>
               </div>
             </div>
@@ -945,6 +945,7 @@ export default function ExamWindowsPage() {
                       >
                         <div style={{ fontWeight: '600', fontSize: '0.85rem' }}>{w.nombre}</div>
                         <div style={{ fontSize: '0.75rem', color: '#6c757d' }}>{w.exam?.titulo}</div>
+                        <div style={{ fontSize: '0.75rem', fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '1px', color: 'var(--primary-color)' }}>{w.codigo}</div>
                       </button>
                     ))}
                   </div>
@@ -997,6 +998,7 @@ export default function ExamWindowsPage() {
                       <tr>
                         <th>Nombre</th>
                         <th>Examen</th>
+                        <th>Código</th>
                         <th>Fecha y hora</th>
                         <th>Estado</th>
                         <th>Inscriptos</th>
@@ -1010,6 +1012,19 @@ export default function ExamWindowsPage() {
                           <tr key={w.id} style={{ cursor: 'pointer' }} onClick={() => handleEditWindow(w)}>
                             <td>{w.nombre}</td>
                             <td>{w.exam?.titulo}</td>
+                            <td onClick={(e) => e.stopPropagation()}>
+                              <span style={{ fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '1px', color: 'var(--primary-color)' }}>
+                                {w.codigo}
+                              </span>
+                              <button
+                                type="button"
+                                className="copy-code-btn ms-2"
+                                onClick={() => handleCopyCode(w.id, w.codigo)}
+                                title="Copiar código"
+                              >
+                                <i className={`fas ${copiedCodeId === w.id ? 'fa-check text-success' : 'fa-copy'}`}></i>
+                              </button>
+                            </td>
                             <td>
                               {w.sinTiempo
                                 ? <span className="text-muted fst-italic">Sin horario fijo</span>
@@ -1070,10 +1085,27 @@ export default function ExamWindowsPage() {
                   alignItems: 'center',
                   flexShrink: 0
                 }}>
-                  <h5 className="modern-card-title" style={{ color: 'white', margin: 0 }}>
-                    <i className="fas fa-calendar-plus me-2"></i>
-                    {editingWindow ? 'Editar Ventana' : 'Nueva Ventana de Examen'}
-                  </h5>
+                  <div>
+                    <h5 className="modern-card-title" style={{ color: 'white', margin: 0 }}>
+                      <i className="fas fa-calendar-plus me-2"></i>
+                      {editingWindow ? 'Editar Ventana' : 'Nueva Ventana de Examen'}
+                    </h5>
+                    {editingWindow && (
+                      <div className="d-flex align-items-center gap-2 mt-1" style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.85)' }}>
+                        <span>
+                          Código: <span style={{ fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '1px' }}>{editingWindow.codigo}</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyCode(editingWindow.id, editingWindow.codigo)}
+                          title="Copiar código"
+                          style={{ background: 'none', border: 'none', color: 'inherit', padding: 0, cursor: 'pointer' }}
+                        >
+                          <i className={`fas ${copiedCodeId === editingWindow.id ? 'fa-check' : 'fa-copy'}`}></i>
+                        </button>
+                      </div>
+                    )}
+                  </div>
                   <button 
                     type="button" 
                     className="modern-btn"
