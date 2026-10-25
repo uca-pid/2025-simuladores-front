@@ -1,5 +1,6 @@
 // src/pages/ExamCreator.jsx
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./ExamCreator.css";
@@ -115,19 +116,32 @@ const ExamCreator = () => {
   const [activeProgTab, setActiveProgTab] = useState(PROG_TABS[0].key);
 
   const [isPublishing, setIsPublishing] = useState(false);
+  const [showCreateWindowPrompt, setShowCreateWindowPrompt] = useState(false);
+  const [publishedExamId, setPublishedExamId] = useState(null);
   const [hasDraft, setHasDraft] = useState(!!draft);
   const [showAddPartMenu, setShowAddPartMenu] = useState(false);
+  const [addPartMenuPos, setAddPartMenuPos] = useState(null);
+  const addPartButtonRef = useRef(null);
   const [draggedPartId, setDraggedPartId] = useState(null);
   const [isLoadingExam, setIsLoadingExam] = useState(isEditMode);
   const [loadExamError, setLoadExamError] = useState("");
 
   // Wizard: los profesores pueden moverse libremente entre los 3 pasos
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStepRaw] = useState(1);
   const STEPS = [
     { id: 1, label: "Datos generales" },
     { id: 2, label: "Partes del examen" },
     { id: 3, label: "Revisar y publicar" },
   ];
+
+  // Cada vez que cambiamos de paso/parte/pestaña, volvemos el scroll arriba
+  // del todo para que el profesor no quede viendo el contenido a mitad de
+  // scroll de la sección anterior.
+  const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+  const setCurrentStep = (step) => {
+    scrollToTop();
+    setCurrentStepRaw(step);
+  };
 
   // Modales de confirmación de borrado de parte
   const [partToDelete, setPartToDelete] = useState(null);
@@ -369,10 +383,11 @@ const ExamCreator = () => {
         return;
       }
 
-      await createExam(examData);
+      const createdExam = await createExam(examData);
 
       localStorage.removeItem(DRAFT_KEY);
-      navigate("/mis-examenes");
+      setPublishedExamId(createdExam.id);
+      setShowCreateWindowPrompt(true);
     } catch (err) {
       console.error(err);
       showModal(
@@ -575,11 +590,175 @@ const ExamCreator = () => {
 
       {!isLoadingExam && !loadExamError && (
       <>
-      {/* Stepper del wizard: navegación libre entre pasos */}
-      <div className="modern-card mb-4">
+      <div className="exam-creator-layout">
+      <aside className="exam-creator-sidebar">
+      {/* Stepper del wizard: navegación libre entre pasos. La "2" muestra, anidada
+          debajo suyo, la lista de partes cuando es el paso activo. */}
+      <div className="modern-card mb-3" style={{ overflow: 'visible' }}>
         <div className="modern-card-body p-0">
-          <div className="exam-wizard-steps">
-            {STEPS.map((step) => (
+          <div className="exam-wizard-steps exam-wizard-steps--vertical">
+            {STEPS.slice(0, 2).map((step) => (
+              <button
+                key={step.id}
+                type="button"
+                className={`exam-wizard-step-button ${currentStep === step.id ? 'active' : ''}`}
+                onClick={() => setCurrentStep(step.id)}
+              >
+                <span className="exam-wizard-step-number">{step.id}</span>
+                <span className="exam-wizard-step-label">{step.label}</span>
+              </button>
+            ))}
+          </div>
+
+      {currentStep === 2 && (
+        <div className="exam-wizard-nested-parts">
+          <div style={{ position: 'relative' }}>
+            <div className="exam-parts-list-vertical">
+              {partes.map((p, idx) => {
+                const isSelected = selectedPartId === p.localId;
+                return (
+                  <div key={p.localId} className={`exam-parts-list-group ${isSelected ? 'active' : ''}`}>
+                    <div
+                      className="exam-parts-list-item"
+                      draggable={!isPublishing}
+                      onDragStart={handlePartDragStart(p.localId)}
+                      onDragOver={handlePartDragOver}
+                      onDrop={handlePartDrop(p.localId)}
+                      onDragEnd={() => setDraggedPartId(null)}
+                      title="Arrastrá para reordenar"
+                      style={{ opacity: draggedPartId === p.localId ? 0.4 : 1 }}
+                    >
+                      <span style={{ fontWeight: isSelected ? 'bold' : 'normal', flexShrink: 0 }}>{String.fromCharCode(97 + idx)})</span>
+
+                      {isSelected ? (
+                        <select
+                          className="form-select form-select-sm"
+                          value={p.tipo}
+                          disabled={isPublishing}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => requestChangePartType(p.localId, e.target.value)}
+                          title="Cambiar el tipo de esta parte"
+                          style={{ fontSize: '0.8rem', flex: 1, minWidth: 0, padding: '0.2rem 1.4rem 0.2rem 0.4rem' }}
+                        >
+                          <option value="multiple_choice">Preguntas</option>
+                          <option value="programming">Programación</option>
+                        </select>
+                      ) : (
+                        <span
+                          onClick={() => { setSelectedPartId(p.localId); setActiveProgTab(PROG_TABS[0].key); }}
+                          style={{ cursor: 'pointer', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                        >
+                          {TIPO_LABEL[p.tipo]}
+                        </span>
+                      )}
+
+                      {isSelected && (
+                        <>
+                          <button
+                            type="button"
+                            className="exam-parts-list-icon-btn"
+                            disabled={idx === 0 || isPublishing}
+                            onClick={() => handleMovePart(p.localId, -1)}
+                            title="Mover arriba"
+                          >
+                            <i className="fas fa-arrow-up"></i>
+                          </button>
+                          <button
+                            type="button"
+                            className="exam-parts-list-icon-btn"
+                            disabled={idx === partes.length - 1 || isPublishing}
+                            onClick={() => handleMovePart(p.localId, 1)}
+                            title="Mover abajo"
+                          >
+                            <i className="fas fa-arrow-down"></i>
+                          </button>
+                        </>
+                      )}
+
+                      <button
+                        type="button"
+                        className="exam-parts-list-icon-btn text-danger"
+                        disabled={isPublishing}
+                        onClick={() => requestDeletePart(p.localId)}
+                        title="Eliminar parte"
+                      >
+                        <i className="fas fa-times"></i>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {partes.length > 0 && (
+            <div className="mt-2">
+              <button
+                ref={addPartButtonRef}
+                type="button"
+                className="exam-parts-add-button"
+                onClick={() => {
+                  if (!showAddPartMenu && addPartButtonRef.current) {
+                    const rect = addPartButtonRef.current.getBoundingClientRect();
+                    setAddPartMenuPos({ top: rect.bottom + 8, left: rect.left, width: rect.width });
+                  }
+                  setShowAddPartMenu(prev => !prev);
+                }}
+                disabled={isPublishing}
+                title="Agregar parte"
+              >
+                <i className="fas fa-plus me-2"></i>
+                Agregar Parte
+              </button>
+              {showAddPartMenu && addPartMenuPos && createPortal(
+                <>
+                  <div
+                    onClick={() => setShowAddPartMenu(false)}
+                    style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1049 }}
+                  />
+                  <div
+                    className="modern-card"
+                    style={{
+                      position: 'fixed',
+                      top: addPartMenuPos.top,
+                      left: addPartMenuPos.left,
+                      width: addPartMenuPos.width,
+                      zIndex: 1050,
+                      padding: '0.5rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.25rem',
+                      transition: 'none',
+                      transform: 'none',
+                    }}
+                  >
+                    <button
+                      type="button"
+                      className="btn btn-sm text-start"
+                      onClick={() => { handleAddPart('multiple_choice'); setShowAddPartMenu(false); }}
+                    >
+                      <i className="fas fa-question-circle me-2"></i>
+                      Preguntas
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-sm text-start"
+                      onClick={() => { handleAddPart('programming'); setShowAddPartMenu(false); }}
+                    >
+                      <i className="fas fa-code me-2"></i>
+                      Programación
+                    </button>
+                  </div>
+                </>,
+                document.body
+              )}
+            </div>
+            )}
+          </div>
+        </div>
+      )}
+
+          <div className="exam-wizard-steps exam-wizard-steps--vertical">
+            {STEPS.slice(2).map((step) => (
               <button
                 key={step.id}
                 type="button"
@@ -593,7 +772,9 @@ const ExamCreator = () => {
           </div>
         </div>
       </div>
+      </aside>
 
+      <div className="exam-creator-main">
       {/* Paso 1: Datos generales */}
       {currentStep === 1 && (
         <div className="modern-card mb-4">
@@ -641,153 +822,37 @@ const ExamCreator = () => {
       {/* Paso 2: Partes del examen */}
       {currentStep === 2 && (
         <>
-          <div className="modern-card mb-4" style={{ overflow: 'visible', transform: 'none' }}>
-            <div className="modern-card-header">
-              <h3 className="modern-card-title">
-                <i className="fas fa-layer-group me-2"></i>
-                Partes del Examen
-              </h3>
-            </div>
-            <div className="modern-card-body">
-              <div className="d-flex align-items-center gap-2 flex-wrap mb-3">
-                {partes.map((p, idx) => {
-                  const isSelected = selectedPartId === p.localId;
-                  return (
-                    <div
-                      key={p.localId}
-                      className="d-flex align-items-center gap-2"
-                      draggable={!isPublishing}
-                      onDragStart={handlePartDragStart(p.localId)}
-                      onDragOver={handlePartDragOver}
-                      onDrop={handlePartDrop(p.localId)}
-                      onDragEnd={() => setDraggedPartId(null)}
-                      title="Arrastrá para reordenar"
-                      style={{
-                        border: `2px solid ${isSelected ? 'var(--primary-color)' : 'var(--border-color)'}`,
-                        borderRadius: '8px',
-                        padding: '0.4rem 0.75rem',
-                        backgroundColor: isSelected ? 'rgba(30, 41, 85, 0.08)' : 'transparent',
-                        opacity: draggedPartId === p.localId ? 0.4 : 1,
-                        cursor: isPublishing ? 'default' : 'grab',
-                      }}
-                    >
-                      <i className="fas fa-grip-vertical text-muted" style={{ fontSize: '0.75rem' }}></i>
-                      <span
-                        onClick={() => { setSelectedPartId(p.localId); setActiveProgTab(PROG_TABS[0].key); }}
-                        style={{ fontWeight: isSelected ? 'bold' : 'normal', cursor: 'pointer' }}
-                      >
-                        <i className={`fas ${p.tipo === 'multiple_choice' ? 'fa-question-circle' : 'fa-code'} me-2`}></i>
-                        Parte {idx + 1}
-                      </span>
-                      {isSelected && (
-                        <>
-                          <select
-                            className="form-select form-select-sm"
-                            value={p.tipo}
-                            disabled={isPublishing}
-                            onChange={(e) => requestChangePartType(p.localId, e.target.value)}
-                            title="Cambiar el tipo de esta parte"
-                            style={{ width: 'auto', minWidth: '140px', padding: '0.2rem 2rem 0.2rem 0.5rem', fontSize: '0.85rem' }}
-                          >
-                            <option value="multiple_choice">Preguntas</option>
-                            <option value="programming">Programación</option>
-                          </select>
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-link p-1"
-                            disabled={idx === 0 || isPublishing}
-                            onClick={() => handleMovePart(p.localId, -1)}
-                            title="Mover a la izquierda"
-                          >
-                            <i className="fas fa-arrow-left"></i>
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-link p-1"
-                            disabled={idx === partes.length - 1 || isPublishing}
-                            onClick={() => handleMovePart(p.localId, 1)}
-                            title="Mover a la derecha"
-                          >
-                            <i className="fas fa-arrow-right"></i>
-                          </button>
-                        </>
-                      )}
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-link text-danger p-1"
-                        disabled={isPublishing}
-                        onClick={() => requestDeletePart(p.localId)}
-                        title="Eliminar parte"
-                      >
-                        <i className="fas fa-times"></i>
-                      </button>
-                    </div>
-                  );
-                })}
-
-                <div style={{ position: 'relative' }}>
+          {!selectedPart && (
+            <div className="modern-card">
+              <div className="modern-card-body text-center py-5">
+                <i className="fas fa-layer-group text-muted mb-3" style={{ fontSize: '2.5rem' }}></i>
+                <h4 className="mb-2">Todavía no agregaste ninguna parte</h4>
+                <p className="text-muted mb-4">
+                  Un examen necesita al menos una parte de "Preguntas" o "Programación" para poder publicarse.
+                </p>
+                <div className="d-flex justify-content-center gap-2 flex-wrap">
                   <button
                     type="button"
-                    className="modern-btn modern-btn-secondary modern-btn-sm"
-                    onClick={() => setShowAddPartMenu(prev => !prev)}
+                    className="modern-btn modern-btn-primary"
+                    onClick={() => handleAddPart('multiple_choice')}
                     disabled={isPublishing}
-                    title="Agregar parte"
                   >
-                    <i className="fas fa-plus me-2"></i>
-                    Agregar Parte
+                    <i className="fas fa-question-circle me-2"></i>
+                    Agregar parte de Preguntas
                   </button>
-                  {showAddPartMenu && (
-                    <>
-                    <div
-                      onClick={() => setShowAddPartMenu(false)}
-                      style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9 }}
-                    />
-                    <div
-                      className="modern-card"
-                      style={{
-                        position: 'absolute',
-                        top: 'calc(100% + 0.5rem)',
-                        left: 0,
-                        zIndex: 10,
-                        padding: '0.5rem',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '0.25rem',
-                        minWidth: '180px',
-                        transition: 'none',
-                        transform: 'none',
-                      }}
-                    >
-                      <button
-                        type="button"
-                        className="btn btn-sm text-start"
-                        onClick={() => handleAddPart('multiple_choice')}
-                      >
-                        <i className="fas fa-question-circle me-2"></i>
-                        Preguntas
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-sm text-start"
-                        onClick={() => handleAddPart('programming')}
-                      >
-                        <i className="fas fa-code me-2"></i>
-                        Programación
-                      </button>
-                    </div>
-                    </>
-                  )}
+                  <button
+                    type="button"
+                    className="modern-btn modern-btn-secondary"
+                    onClick={() => handleAddPart('programming')}
+                    disabled={isPublishing}
+                  >
+                    <i className="fas fa-code me-2"></i>
+                    Agregar parte de Programación
+                  </button>
                 </div>
               </div>
-
-              {partes.length === 0 && (
-                <div className="text-center py-4">
-                  <i className="fas fa-layer-group text-muted mb-3" style={{ fontSize: '2rem' }}></i>
-                  <p className="mb-0">Agregá una parte de "Preguntas" o "Programación" con el botón de arriba para empezar.</p>
-                </div>
-              )}
             </div>
-          </div>
+          )}
 
           {selectedPart && (
             <ExamPartBuilder
@@ -820,12 +885,13 @@ const ExamCreator = () => {
             );
 
             const irA = (nuevoIdx) => {
+              scrollToTop();
               if (nuevoIdx < 0) {
-                setCurrentStep(1);
+                setCurrentStepRaw(1);
                 return;
               }
               if (nuevoIdx >= secuencia.length) {
-                setCurrentStep(3);
+                setCurrentStepRaw(3);
                 return;
               }
               const destino = secuencia[nuevoIdx];
@@ -891,33 +957,7 @@ const ExamCreator = () => {
             </div>
           </div>
 
-          {partes.length > 1 && (
-            <div className="d-flex align-items-center gap-2 flex-wrap mb-4">
-              {partes.map((p, idx) => {
-                const isSelected = (selectedPartId ?? partes[0]?.localId) === p.localId;
-                return (
-                  <div
-                    key={p.localId}
-                    onClick={() => setSelectedPartId(p.localId)}
-                    style={{
-                      border: `2px solid ${isSelected ? 'var(--primary-color)' : 'var(--border-color)'}`,
-                      borderRadius: '8px',
-                      padding: '0.4rem 0.75rem',
-                      backgroundColor: isSelected ? 'rgba(30, 41, 85, 0.08)' : 'transparent',
-                      fontWeight: isSelected ? 'bold' : 'normal',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <i className={`fas ${p.tipo === 'multiple_choice' ? 'fa-question-circle' : 'fa-code'} me-2`}></i>
-                    Parte {idx + 1}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-                {partes.filter(p => (selectedPartId ?? partes[0]?.localId) === p.localId).map((p) => {
-                  const idx = partes.findIndex(x => x.localId === p.localId);
+                {partes.map((p, idx) => {
                   const modoSeleccionParte = p.cantidadPreguntas != null
                     ? 'aleatorio'
                     : (p.cantidadFaciles != null || p.cantidadMedias != null || p.cantidadDificiles != null)
@@ -1148,6 +1188,8 @@ const ExamCreator = () => {
           </div>
         </>
       )}
+      </div>
+      </div>
       </>
       )}
 
@@ -1162,6 +1204,19 @@ const ExamCreator = () => {
         showCancel={modal.showCancel}
         confirmText={modal.confirmText || ((modal.type === 'warning') ? 'Confirmar' : 'Entendido')}
         cancelText="Cancelar"
+      />
+
+      {/* Modal: ¿crear una ventana de examen ahora que se publicó? */}
+      <Modal
+        show={showCreateWindowPrompt}
+        onClose={() => navigate("/mis-examenes")}
+        onConfirm={() => navigate(`/exam-windows?examId=${publishedExamId}&openCreate=1`)}
+        title="Examen publicado"
+        message="¿Querés crear ahora una ventana de examen para que los alumnos puedan inscribirse y rendirlo?"
+        type="confirm"
+        showCancel={true}
+        confirmText="Sí, crear ventana"
+        cancelText="Ahora no"
       />
 
       {/* Modal para eliminar una parte */}

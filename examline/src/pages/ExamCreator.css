@@ -1,7 +1,162 @@
+/* Layout de 2 columnas: sidebar fijo (pasos + partes) + contenido principal */
+.exam-creator-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+}
+
+.exam-creator-sidebar {
+  width: 290px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 1.5rem;
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
+}
+
+.exam-creator-main {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .exam-creator-layout {
+    flex-direction: column;
+  }
+
+  .exam-creator-sidebar {
+    width: 100%;
+    position: static;
+    max-height: none;
+  }
+}
+
+/* Bloque de "Partes del Examen" anidado debajo del paso 2 en el stepper */
+.exam-wizard-nested-parts {
+  padding: 0.25rem 0;
+  border-top: 1px solid rgba(226, 232, 240, 0.6);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+  background: #f8fafc;
+}
+
+/* Lista vertical de partes dentro del sidebar */
+.exam-parts-list-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.exam-parts-list-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.exam-parts-list-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 8px;
+  padding: 0.875rem 0.75rem;
+  min-height: 60px;
+  cursor: grab;
+  color: #64748b;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.exam-parts-list-group:not(.active) .exam-parts-list-item:hover {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.exam-parts-list-group.active .exam-parts-list-item {
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  color: white;
+  font-weight: 600;
+}
+
+.exam-parts-list-icon-btn {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: 0.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+}
+
+.exam-parts-list-icon-btn:disabled {
+  opacity: 0.4;
+}
+
+.exam-parts-list-icon-btn.text-danger {
+  border-color: transparent;
+  background: transparent;
+  color: #fca5a5;
+}
+
+.exam-parts-add-button {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 0.875rem 0.5rem;
+  min-height: 60px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.exam-parts-add-button:hover:not(:disabled) {
+  background: #f8fafc;
+  color: #334155;
+}
+
+.exam-parts-add-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 /* ExamCreator Wizard Stepper */
 .exam-wizard-steps {
   display: flex;
   width: 100%;
+}
+
+.exam-wizard-steps--vertical {
+  flex-direction: column;
+}
+
+.exam-wizard-steps--vertical .exam-wizard-step-button {
+  justify-content: flex-start;
+  min-height: auto;
+  padding: 0.75rem 1rem;
+}
+
+.exam-wizard-steps--vertical .exam-wizard-step-button {
+  border-radius: 0;
+  border-top: 1px solid rgba(226, 232, 240, 0.5);
+}
+
+.exam-wizard-steps--vertical:first-of-type .exam-wizard-step-button:first-child {
+  border-radius: 12px 12px 0 0;
+  border-top: none;
+}
+
+.exam-wizard-steps--vertical:last-of-type .exam-wizard-step-button:last-child {
+  border-radius: 0 0 12px 12px;
 }
 
 .exam-wizard-step-button {

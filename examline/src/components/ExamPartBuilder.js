@@ -412,7 +412,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
     return (
       <>
             <div className="modern-card mb-4">
-              <div className="modern-card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+              <div className="modern-card-header">
                 <h3 className="modern-card-title mb-0">
                   <i className="fas fa-clipboard-list me-2"></i>
                   Preguntas Agregadas ({part.preguntas.length})
@@ -422,24 +422,6 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                     </span>
                   )}
                 </h3>
-                <div className="d-flex gap-2">
-                  <button
-                    type="button"
-                    className="modern-btn modern-btn-secondary modern-btn-sm"
-                    onClick={() => setShowBankSelector(true)}
-                  >
-                    <i className="fas fa-database me-2"></i>
-                    <span className="button-text">Agregar Pregunta del Banco</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="modern-btn modern-btn-primary modern-btn-sm"
-                    onClick={handleOpenNewQuestion}
-                  >
-                    <i className="fas fa-plus me-2"></i>
-                    <span className="button-text">Agregar Pregunta</span>
-                  </button>
-                </div>
               </div>
               <div className="modern-card-body">
                 {part.preguntas.length > 0 && (
@@ -694,6 +676,25 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                 ))}
               </div>
             )}
+
+              <div className="d-flex gap-2 justify-content-center flex-wrap mt-4 pt-3" style={{ borderTop: part.preguntas.length > 0 ? '1px solid var(--border-color)' : 'none' }}>
+                <button
+                  type="button"
+                  className="modern-btn modern-btn-secondary modern-btn-sm"
+                  onClick={() => setShowBankSelector(true)}
+                >
+                  <i className="fas fa-database me-2"></i>
+                  <span className="button-text">Agregar Pregunta del Banco</span>
+                </button>
+                <button
+                  type="button"
+                  className="modern-btn modern-btn-primary modern-btn-sm"
+                  onClick={handleOpenNewQuestion}
+                >
+                  <i className="fas fa-plus me-2"></i>
+                  <span className="button-text">Agregar Pregunta</span>
+                </button>
+              </div>
               </div>
             </div>
 
@@ -1192,23 +1193,13 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
           <div className="modern-card-header">
             <h3 className="modern-card-title">
               <i className="fas fa-check-double me-2"></i>
-              Validación de Casos de Prueba y Solución de Referencia
+              Solución de Referencia
             </h3>
             <p className="text-muted mb-0" style={{ fontSize: '0.85rem' }}>
-              Espacio privado para vos: el alumno nunca ve este código ni estos archivos.
+              Escribí y ejecutá acá tu propia solución para validar que los casos de prueba están bien planteados. El alumno nunca ve este código ni estos archivos.
             </p>
           </div>
           <div className="modern-card-body">
-            <div className="alert alert-info mb-3">
-              <i className="fas fa-info-circle me-2"></i>
-              <strong>Prueba tu solución antes de publicar</strong>
-              <ul className="mb-0 mt-2">
-                <li><strong>Ejecuta tests</strong> para verificar que funcionan correctamente</li>
-                <li><strong>Guarda tu solución</strong> como referencia o prueba sin guardar</li>
-                <li><strong>Múltiples archivos:</strong> Organiza tu código en varios archivos si lo necesitas</li>
-              </ul>
-            </div>
-
             <div className="tab-pane-custom fade show active">
               <div style={{
                     border: '1px solid var(--border-color)',
@@ -1313,6 +1304,25 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                         </button>
                       </div>
 
+                      {part.showTestPanel && part.testResults && (
+                        <div
+                          className="d-flex align-items-center gap-2"
+                          style={{
+                            fontSize: '12px',
+                            padding: '4px 10px',
+                            borderRadius: '4px',
+                            color: 'white',
+                            backgroundColor: part.testResults.score === 100 ? '#1e7e34' : part.testResults.score >= 50 ? '#b38600' : '#a71d2a',
+                          }}
+                        >
+                          <i className={`fas ${part.testResults.score === 100 ? 'fa-check-circle' : 'fa-exclamation-triangle'}`}></i>
+                          <span>
+                            <strong>{part.testResults.score.toFixed(0)}%</strong>
+                            {' '}({part.testResults.passedTests}/{part.testResults.totalTests})
+                          </span>
+                        </div>
+                      )}
+
                       <button
                         type="button"
                         className="btn btn-sm btn-success"
@@ -1384,25 +1394,6 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                   <i className="fas fa-chart-bar me-2"></i>
                   Resultados de la Ejecución
                 </h5>
-
-                <div className={`alert ${part.testResults.score === 100 ? 'alert-success' : part.testResults.score >= 50 ? 'alert-warning' : 'alert-danger'}`}>
-                  <div className="d-flex justify-content-between align-items-center">
-                    <div>
-                      <strong>Puntaje: {part.testResults.score.toFixed(1)}%</strong>
-                      <br />
-                      <small>
-                        {part.testResults.passedTests} de {part.testResults.totalTests} tests pasados
-                      </small>
-                    </div>
-                    <div>
-                      {part.testResults.score === 100 ? (
-                        <i className="fas fa-check-circle fa-2x text-success"></i>
-                      ) : (
-                        <i className="fas fa-exclamation-triangle fa-2x text-warning"></i>
-                      )}
-                    </div>
-                  </div>
-                </div>
 
                 {part.testResults.testResults.map((result, index) => (
                   <div key={index} className="card mb-2" style={{ border: `2px solid ${result.passed ? '#28a745' : '#dc3545'}` }}>
