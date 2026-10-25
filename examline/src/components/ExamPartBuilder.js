@@ -4,7 +4,7 @@ import Editor from '@monaco-editor/react';
 import QuestionCreator from "./QuestionCreator";
 import QuestionBankSelector from "./QuestionBankSelector";
 import { testSolutionPreview, uploadEnunciado, uploadDataset } from "../services/api";
-import { TIPO_BADGE, DIFICULTAD_BADGE } from "../utils/questionBadges";
+import { TIPO_BADGE } from "../utils/questionBadges";
 import Modal from "./Modal";
 
 const LANGUAGE_EXTENSIONS = { python: '.py', javascript: '.js', c: '.c' };
@@ -24,7 +24,7 @@ export const PROG_TABS = [
 // `part` / `onChange` lift this part's whole local state up into ExamCreator's
 // `partes` array, so every setter below reads `part.<field>` and calls
 // `onChange({ ...part, <field>: value })` instead of owning local state.
-const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, partLabel, ordenAleatorio, onOrdenAleatorioChange, activeProgTab, onActiveProgTabChange }) => {
+const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, partLabel, activeProgTab, onActiveProgTabChange }) => {
   const [showBankSelector, setShowBankSelector] = useState(false);
   const [showNewReferenceFileModal, setShowNewReferenceFileModal] = useState(false);
   const [newReferenceFileName, setNewReferenceFileName] = useState('');
@@ -125,13 +125,6 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
 
   const handleChangeQuestionDificultad = (index, dificultad) => {
     update({ preguntas: part.preguntas.map((p, i) => i === index ? { ...p, dificultad } : p) });
-  };
-
-  const handleTogglePuntajePersonalizado = (activo) => {
-    update({
-      puntajePersonalizado: activo,
-      preguntas: activo ? part.preguntas : part.preguntas.map(p => ({ ...p, puntos: 1 })),
-    });
   };
 
   // ---- Programming: enunciado / dataset ----
@@ -322,92 +315,13 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
   };
 
   if (part.tipo === "multiple_choice") {
-    const conteoPorDificultad = { facil: 0, media: 0, dificil: 0 };
-    part.preguntas.forEach(p => { conteoPorDificultad[p.dificultad || 'media']++; });
     const modoSeleccion = part.cantidadPreguntas != null
       ? 'aleatorio'
       : (part.cantidadFaciles != null || part.cantidadMedias != null || part.cantidadDificiles != null)
         ? 'dificultad'
         : 'todas';
 
-    const setCantidad = (nivel, valorStr) => {
-      const valor = valorStr === '' ? 0 : Math.max(0, parseInt(valorStr, 10) || 0);
-      update({ [nivel]: valor });
-    };
-
     const totalPuntosPool = part.preguntas.reduce((acc, p) => acc + (p.puntos ?? 1), 0);
-
-    const modoSeleccionSelect = (
-      <select
-        id={`modoSeleccion-${part.localId}`}
-        className="form-select"
-        style={{ maxWidth: '240px' }}
-        value={modoSeleccion}
-        onChange={(e) => {
-          const nuevoModo = e.target.value;
-          if (nuevoModo === 'todas') {
-            update({ cantidadPreguntas: null, cantidadFaciles: null, cantidadMedias: null, cantidadDificiles: null });
-          } else if (nuevoModo === 'aleatorio') {
-            update({ cantidadPreguntas: Math.min(1, part.preguntas.length), cantidadFaciles: null, cantidadMedias: null, cantidadDificiles: null });
-          } else {
-            update({ cantidadPreguntas: null, cantidadFaciles: 0, cantidadMedias: 0, cantidadDificiles: 0 });
-          }
-        }}
-      >
-        <option value="todas">Todas</option>
-        <option value="aleatorio">Cantidad fija</option>
-        <option value="dificultad">Distribuidas por dificultad</option>
-      </select>
-    );
-
-    const cantidadFijaInline = modoSeleccion === 'aleatorio' && (
-      <div className="d-flex align-items-center flex-wrap gap-2 ms-2">
-        <input
-          type="number"
-          min="1"
-          max={part.preguntas.length}
-          className="form-control"
-          style={{ width: '90px' }}
-          value={part.cantidadPreguntas ?? 1}
-          onChange={(e) => update({ cantidadPreguntas: Math.max(1, Math.min(part.preguntas.length, parseInt(e.target.value, 10) || 1)) })}
-        />
-        <small className="text-muted">
-          de {part.preguntas.length} disponibles, elegidas al azar para cada alumno.
-        </small>
-      </div>
-    );
-
-    const dificultadInline = modoSeleccion === 'dificultad' && (
-      <div className="d-flex align-items-center flex-wrap gap-3 ms-2">
-        {[
-          { key: 'cantidadFaciles', nivel: 'facil', label: 'Fáciles' },
-          { key: 'cantidadMedias', nivel: 'media', label: 'Medias' },
-          { key: 'cantidadDificiles', nivel: 'dificil', label: 'Difíciles' },
-        ].map(({ key, nivel, label }) => (
-          <div key={key} className="d-flex align-items-center gap-2">
-            <span className="badge" style={{ backgroundColor: DIFICULTAD_BADGE[nivel].color, color: 'white' }}>
-              {label}
-            </span>
-            <input
-              type="number"
-              min="0"
-              max={conteoPorDificultad[nivel]}
-              className={`form-control form-control-sm ${(part[key] || 0) > conteoPorDificultad[nivel] ? 'is-invalid' : ''}`}
-              style={{ width: '70px' }}
-              value={part[key] ?? 0}
-              onChange={(e) => setCantidad(key, e.target.value)}
-            />
-            <small className="text-muted">/{conteoPorDificultad[nivel]}</small>
-          </div>
-        ))}
-      </div>
-    );
-
-    const dificultadSubmenu = part.preguntas.length > 0 && modoSeleccion === 'dificultad' && (
-      <small className="form-text text-muted d-block mt-2">
-        Marcá la dificultad de cada pregunta (en la lista de abajo) y elegí cuántas de cada nivel recibe cada alumno.
-      </small>
-    );
 
     return (
       <>
@@ -424,60 +338,6 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                 </h3>
               </div>
               <div className="modern-card-body">
-                {part.preguntas.length > 0 && (
-                  <div className="mb-4 pb-3" style={{ borderBottom: '1px solid var(--border-color)' }}>
-                    <div className="d-flex align-items-center gap-2 mb-3">
-                      <span className="text-muted" style={{ fontSize: '1.3rem', lineHeight: 1 }}>&bull;</span>
-                      <strong>Puntaje personalizado</strong>
-                      <div className="form-check form-switch mb-0 ms-2">
-                        <input
-                          className="form-check-input"
-                          type="checkbox"
-                          role="switch"
-                          id={`puntajePersonalizado-${part.localId}`}
-                          checked={!!part.puntajePersonalizado}
-                          onChange={(e) => handleTogglePuntajePersonalizado(e.target.checked)}
-                          style={{
-                            width: '2.5rem',
-                            height: '1.2rem',
-                            backgroundColor: part.puntajePersonalizado ? 'var(--primary-color)' : '#fff',
-                            borderColor: part.puntajePersonalizado ? 'var(--primary-color)' : '#6c757d'
-                          }}
-                        />
-                      </div>
-                    </div>
-                    <div className="d-flex align-items-center gap-2 mb-3">
-                      <span className="text-muted" style={{ fontSize: '1.3rem', lineHeight: 1 }}>&bull;</span>
-                      <strong>Orden aleatorio para cada alumno</strong>
-                      <div className="form-check form-switch mb-0 ms-2">
-                        <input
-                          className="form-check-input"
-                          type="checkbox"
-                          role="switch"
-                          id={`randomOrder-${part.localId}`}
-                          checked={ordenAleatorio}
-                          onChange={(e) => onOrdenAleatorioChange?.(e.target.checked)}
-                          style={{
-                            width: '2.5rem',
-                            height: '1.2rem',
-                            backgroundColor: ordenAleatorio ? 'var(--primary-color)' : '#fff',
-                            borderColor: ordenAleatorio ? 'var(--primary-color)' : '#6c757d'
-                          }}
-                        />
-                      </div>
-                    </div>
-                    <div className="d-flex align-items-center flex-wrap gap-2 mb-2">
-                      <span className="text-muted" style={{ fontSize: '1.3rem', lineHeight: 1 }}>&bull;</span>
-                      <strong>Cuántas preguntas recibirá el alumno</strong>
-                      <div className="ms-2">{modoSeleccionSelect}</div>
-                      {cantidadFijaInline}
-                      {dificultadInline}
-                    </div>
-                    <div className="ps-4">
-                      {dificultadSubmenu}
-                    </div>
-                  </div>
-                )}
                 {part.preguntas.length === 0 ? (
                   <div className="empty-state">
                     <div className="empty-icon">

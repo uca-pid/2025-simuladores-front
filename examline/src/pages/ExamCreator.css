@@ -10,8 +10,7 @@
   flex-shrink: 0;
   position: sticky;
   top: 1.5rem;
-  max-height: calc(100vh - 3rem);
-  overflow-y: auto;
+  align-self: flex-start;
 }
 
 .exam-creator-main {
@@ -27,7 +26,6 @@
   .exam-creator-sidebar {
     width: 100%;
     position: static;
-    max-height: none;
   }
 }
 

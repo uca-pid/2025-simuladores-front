@@ -8,10 +8,88 @@ import { useModal } from "../hooks";
 import BackToMainButton from "../components/BackToMainButton";
 import Modal from "../components/Modal";
 import ExamPartBuilder, { PROG_TABS } from "../components/ExamPartBuilder";
+import ExamPartQuestionSettings from "../components/ExamPartQuestionSettings";
 import { createExam, updateExam, getExamById } from "../services/api";
 import { getTipoBadge, getDificultadBadge } from "../utils/questionBadges";
 
 const DRAFT_KEY = 'examCreatorDraft';
+
+// Botón "Agregar Parte" con su propio desplegable (Preguntas/Programación),
+// reutilizable en cualquier punto de la pantalla (sidebar, navegación inferior).
+const AddPartButton = ({ onAdd, disabled, label = 'Agregar Parte', className = 'modern-btn modern-btn-secondary' }) => {
+  const buttonRef = useRef(null);
+  const [show, setShow] = useState(false);
+  const [pos, setPos] = useState(null);
+
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        type="button"
+        className={className}
+        disabled={disabled}
+        onClick={() => {
+          if (!show && buttonRef.current) {
+            const rect = buttonRef.current.getBoundingClientRect();
+            const menuHeight = 96; // alto aprox. del menú (2 opciones)
+            const cabeEnAbajo = rect.bottom + 8 + menuHeight <= window.innerHeight;
+            setPos({
+              top: cabeEnAbajo ? rect.bottom + 8 : rect.top - menuHeight - 8,
+              left: rect.left,
+              width: rect.width,
+            });
+          }
+          setShow(prev => !prev);
+        }}
+      >
+        <i className="fas fa-plus me-2"></i>
+        {label}
+      </button>
+      {show && pos && createPortal(
+        <>
+          <div
+            onClick={() => setShow(false)}
+            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1049 }}
+          />
+          <div
+            className="modern-card"
+            style={{
+              position: 'fixed',
+              top: pos.top,
+              left: pos.left,
+              width: Math.max(pos.width, 180),
+              zIndex: 1050,
+              padding: '0.5rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.25rem',
+              transition: 'none',
+              transform: 'none',
+            }}
+          >
+            <button
+              type="button"
+              className="btn btn-sm text-start"
+              onClick={() => { onAdd('multiple_choice'); setShow(false); }}
+            >
+              <i className="fas fa-question-circle me-2"></i>
+              Preguntas
+            </button>
+            <button
+              type="button"
+              className="btn btn-sm text-start"
+              onClick={() => { onAdd('programming'); setShow(false); }}
+            >
+              <i className="fas fa-code me-2"></i>
+              Programación
+            </button>
+          </div>
+        </>,
+        document.body
+      )}
+    </>
+  );
+};
 
 const MAIN_FILE_NAMES = { python: 'main.py', javascript: 'main.js', c: 'main.c' };
 const mainFileNameForLanguage = (lenguaje) => MAIN_FILE_NAMES[lenguaje] || 'main.js';
@@ -699,7 +777,13 @@ const ExamCreator = () => {
                 onClick={() => {
                   if (!showAddPartMenu && addPartButtonRef.current) {
                     const rect = addPartButtonRef.current.getBoundingClientRect();
-                    setAddPartMenuPos({ top: rect.bottom + 8, left: rect.left, width: rect.width });
+                    const menuHeight = 96;
+                    const cabeEnAbajo = rect.bottom + 8 + menuHeight <= window.innerHeight;
+                    setAddPartMenuPos({
+                      top: cabeEnAbajo ? rect.bottom + 8 : rect.top - menuHeight - 8,
+                      left: rect.left,
+                      width: rect.width,
+                    });
                   }
                   setShowAddPartMenu(prev => !prev);
                 }}
@@ -772,6 +856,15 @@ const ExamCreator = () => {
           </div>
         </div>
       </div>
+
+      {currentStep === 2 && selectedPart && selectedPart.tipo === 'multiple_choice' && (
+        <ExamPartQuestionSettings
+          part={selectedPart}
+          onChange={handlePartChange}
+          ordenAleatorio={ordenAleatorio}
+          onOrdenAleatorioChange={setOrdenAleatorio}
+        />
+      )}
       </aside>
 
       <div className="exam-creator-main">
@@ -862,8 +955,6 @@ const ExamCreator = () => {
               isPublishing={isPublishing}
               showModal={showModal}
               partLabel={`Parte ${partes.findIndex(p => p.localId === selectedPart.localId) + 1}`}
-              ordenAleatorio={ordenAleatorio}
-              onOrdenAleatorioChange={setOrdenAleatorio}
               activeProgTab={activeProgTab}
               onActiveProgTabChange={setActiveProgTab}
             />
@@ -922,14 +1013,19 @@ const ExamCreator = () => {
                     <i className="fas fa-arrow-left me-2"></i>
                     Atrás: {anterior ? labelPara(anterior) : 'Datos generales'}
                   </button>
-                  <button
-                    type="button"
-                    className="modern-btn modern-btn-primary"
-                    onClick={() => irA(idxActual + 1)}
-                  >
-                    Siguiente: {siguiente ? labelPara(siguiente) : 'Revisar y publicar'}
-                    <i className="fas fa-arrow-right ms-2"></i>
-                  </button>
+                  <div className="d-flex flex-column flex-md-row gap-2">
+                    {!siguiente && (
+                      <AddPartButton onAdd={handleAddPart} disabled={isPublishing} />
+                    )}
+                    <button
+                      type="button"
+                      className="modern-btn modern-btn-primary"
+                      onClick={() => irA(idxActual + 1)}
+                    >
+                      Siguiente: {siguiente ? labelPara(siguiente) : 'Revisar y publicar'}
+                      <i className="fas fa-arrow-right ms-2"></i>
+                    </button>
+                  </div>
                 </div>
               </div>
             );
