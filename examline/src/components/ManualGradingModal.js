@@ -7,7 +7,7 @@ import '../styles/base.css';
 const MAIN_FILE_NAMES = { python: 'main.py', javascript: 'main.js', c: 'main.c' };
 const getMainFileName = (lenguaje) => MAIN_FILE_NAMES[lenguaje] || 'main.js';
 
-export default function ManualGradingModal({ attemptId, onBack, onSave }) {
+export default function ManualGradingModal({ attemptId, onBack, onSave, onPrev, onNext, hasPrev, hasNext }) {
   const {
     loading,
     attempt,
@@ -25,8 +25,6 @@ export default function ManualGradingModal({ attemptId, onBack, onSave }) {
   const lenguajeProgramacion = programmingPart?.lenguajeProgramacion || attempt?.exam?.lenguajeProgramacion;
   const enunciadoProgramacion = programmingPart?.enunciadoProgramacion || attempt?.exam?.enunciadoProgramacion;
   const partesOrdenadas = [...(attempt?.exam?.partes || [])].sort((a, b) => a.orden - b.orden);
-  const [selectedTab, setSelectedTab] = useState(0);
-  const selectedParte = selectedTab !== 'grade' ? partesOrdenadas[selectedTab] : null;
 
   const [selectedFileIndex, setSelectedFileIndex] = useState(0);
   const [fileVersion, setFileVersion] = useState('submission');
@@ -192,190 +190,18 @@ export default function ManualGradingModal({ attemptId, onBack, onSave }) {
 
   return (
     <div style={styles.page}>
-          {/* Selector de partes (tabs) */}
-          <div className="d-flex align-items-center gap-2 flex-wrap mb-3">
-            {partesOrdenadas.map((parte, idx) => {
-              const isSelected = selectedTab === idx;
-              return (
-                <button
-                  key={parte.id || idx}
-                  type="button"
-                  onClick={() => setSelectedTab(idx)}
-                  style={{
-                    border: `2px solid ${isSelected ? 'var(--primary-color)' : 'var(--border-color, #dee2e6)'}`,
-                    borderRadius: '8px',
-                    padding: '0.4rem 0.75rem',
-                    backgroundColor: isSelected ? 'rgba(30, 41, 85, 0.08)' : 'transparent',
-                    fontWeight: isSelected ? 'bold' : 'normal',
-                    color: 'inherit',
-                  }}
-                >
-                  <i className={`fas ${parte.tipo === 'programming' ? 'fa-code' : 'fa-question-circle'} me-2`}></i>
-                  Parte {parte.orden}
-                </button>
-              );
-            })}
-            <button
-              type="button"
-              onClick={() => setSelectedTab('grade')}
-              style={{
-                border: `2px solid ${selectedTab === 'grade' ? 'var(--primary-color)' : 'var(--border-color, #dee2e6)'}`,
-                borderRadius: '8px',
-                padding: '0.4rem 0.75rem',
-                backgroundColor: selectedTab === 'grade' ? 'rgba(30, 41, 85, 0.08)' : 'transparent',
-                fontWeight: selectedTab === 'grade' ? 'bold' : 'normal',
-                color: 'inherit',
-              }}
-            >
-              <i className="fas fa-clipboard-check me-2"></i>
-              Calificación
-            </button>
-          </div>
 
-          {/* Información de calificaciones */}
-          {selectedTab === 'grade' && (
-          <div className="row mb-4">
-            {attempt.puntaje !== null && (
-              <div className="col-md-6 mb-3">
-                <div className="modern-card" style={{ 
-                  height: '100%',
-                  border: '2px solid #0d6efd',
-                  background: 'linear-gradient(135deg, rgba(13, 110, 253, 0.05) 0%, rgba(13, 110, 253, 0.02) 100%)'
-                }}>
-                  <div className="modern-card-body text-center">
-                    <div style={{ 
-                      fontSize: '1.8rem', 
-                      color: '#0d6efd',
-                      marginBottom: '8px'
-                    }}>
-                      <i className="fas fa-robot"></i>
-                    </div>
-                    <h6 className="text-muted mb-2" style={{ fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                      Puntaje Automático
-                    </h6>
-                    <h2 className="mb-2" style={{ 
-                      color: '#0d6efd',
-                      fontWeight: 'bold',
-                      fontSize: '2.5rem'
-                    }}>
-                      {attempt.puntaje.toFixed(1)}%
-                    </h2>
-                    {programmingPart && (
-                      <div style={{
-                        marginTop: '12px',
-                        padding: '8px 12px',
-                        backgroundColor: '#e7f3ff',
-                        border: '1px solid #0d6efd',
-                        borderRadius: '6px',
-                        fontSize: '0.75rem',
-                        color: '#084298',
-                        textAlign: 'left'
-                      }}>
-                        <i className="fas fa-info-circle me-1"></i>
-                        Calculado sobre <strong>{getMainFileName(lenguajeProgramacion)}</strong> (versión manual guardada)
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            <div className={attempt.puntaje !== null ? "col-md-6 mb-3" : "col-12 mb-3"}>
-              <div className="modern-card" style={{
-                height: '100%',
-                border: calificacionManual !== '' ? '2px solid #198754' : '2px solid #ffc107',
-                background: calificacionManual !== ''
-                  ? 'linear-gradient(135deg, rgba(25, 135, 84, 0.05) 0%, rgba(25, 135, 84, 0.02) 100%)'
-                  : 'linear-gradient(135deg, rgba(255, 193, 7, 0.05) 0%, rgba(255, 193, 7, 0.02) 100%)'
-              }}>
-                <div className="modern-card-body text-center">
-                  <div style={{
-                    fontSize: '1.8rem',
-                    color: calificacionManual !== '' ? '#198754' : '#ffc107',
-                    marginBottom: '8px'
-                  }}>
-                    <i className={calificacionManual !== '' ? "fas fa-check-circle" : "fas fa-exclamation-triangle"}></i>
-                  </div>
-                  <h6 className="text-muted mb-3" style={{ fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    Calificación Manual
-                  </h6>
-                  {!editingGrade ? (
-                    <>
-                      {calificacionManual !== '' ? (
-                        <h2 className="mb-2" style={{ color: '#198754', fontWeight: 'bold', fontSize: '2.5rem' }}>
-                          {Number(calificacionManual).toFixed(1)}%
-                        </h2>
-                      ) : (
-                        <h4 className="mb-2" style={{ color: '#ffc107', fontWeight: '600', fontSize: '1.2rem' }}>
-                          Pendiente de corrección
-                        </h4>
-                      )}
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-outline-secondary"
-                        onClick={() => setEditingGrade(true)}
-                      >
-                        <i className="fas fa-pencil-alt me-2"></i>
-                        Editar
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <input
-                        type="number"
-                        className="form-control form-control-lg text-center fw-bold mb-2"
-                        step="0.1"
-                        value={calificacionManual}
-                        onChange={(e) => setCalificacionManual(e.target.value)}
-                        placeholder="Ingrese la calificación..."
-                        disabled={saving}
-                        style={{
-                          color: calificacionManual !== '' ? '#198754' : '#ffc107',
-                          fontSize: '1.8rem'
-                        }}
-                      />
-                      <div className="d-flex gap-2 justify-content-center flex-wrap">
-                        {attempt.puntaje !== null && (
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-outline-primary"
-                            onClick={handleUseAutomaticGrade}
-                            title="Usar la nota automática como calificación manual"
-                          >
-                            <i className="fas fa-robot me-2"></i>
-                            Usar nota automática ({attempt.puntaje.toFixed(1)}%)
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-success"
-                          onClick={handleSaveGrade}
-                          disabled={saving || !calificacionManual}
-                        >
-                          {saving ? (
-                            <>
-                              <span className="spinner-border spinner-border-sm me-2"></span>
-                              Guardando...
-                            </>
-                          ) : (
-                            <>
-                              <i className="fas fa-save me-2"></i>
-                              Guardar Calificación
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-          )}
-
-          {/* Para exámenes de programación */}
-          {selectedParte?.tipo === 'programming' && (
-            <div className="mb-3">
+          {/* Partes del examen, en el orden en que fueron creadas */}
+          {partesOrdenadas.map((selectedParte) => (
+          <div className="mb-3" key={selectedParte.id}>
+            {selectedParte.tipo === 'programming' ? (
+            <>
+              {partesOrdenadas.length > 1 && (
+                <h5 className="mb-3">
+                  <i className="fas fa-code me-2"></i>
+                  Parte {selectedParte.orden}
+                </h5>
+              )}
               {/* Enunciado */}
               <div className="modern-card mb-3">
                 <div className="modern-card-header">
@@ -411,9 +237,9 @@ export default function ManualGradingModal({ attemptId, onBack, onSave }) {
                         <i className="fas fa-user me-2"></i>
                         Código del Alumno
                       </h5>
-                      <small className="text-muted" style={{ fontSize: '0.8rem', fontWeight: 'normal' }}>
+                      <small className="text-muted" style={{ fontSize: '0.8rem', fontWeight: 'normal', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
                         <i className="fas fa-info-circle me-1"></i>
-                        El código puede editarse temporalmente para pruebas sin modificar el archivo original
+                        Editable temporalmente, sin modificar el original
                       </small>
                     </div>
                     <div className="modern-card-body">
@@ -530,7 +356,7 @@ export default function ManualGradingModal({ attemptId, onBack, onSave }) {
                             <i className="fas fa-check-double me-2"></i>
                             Solución de Referencia
                           </h5>
-                          <small className="text-muted" style={{ fontSize: '0.8rem', fontWeight: 'normal' }}>
+                          <small className="text-muted" style={{ fontSize: '0.8rem', fontWeight: 'normal', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
                             <i className="fas fa-info-circle me-1"></i>
                             Solución guardada al crear el examen
                           </small>
@@ -1009,12 +835,15 @@ export default function ManualGradingModal({ attemptId, onBack, onSave }) {
                   </div>
                 </div>
               )}
-            </div>
-          )}
-
-          {/* Para partes de multiple choice (y tipos afines) */}
-          {selectedParte && selectedParte.tipo !== 'programming' && (
-            <div className="mb-3">
+            </>
+            ) : (
+            <>
+                {partesOrdenadas.length > 1 && (
+                  <h5 className="mb-3">
+                    <i className="fas fa-question-circle me-2"></i>
+                    Parte {selectedParte.orden}
+                  </h5>
+                )}
                 {(selectedParte.preguntas || [])
                   .map((pregunta, idx) => {
                     const respuestaRow = attempt.respuestas?.find(r => r.preguntaId === pregunta.id);
@@ -1150,6 +979,122 @@ export default function ManualGradingModal({ attemptId, onBack, onSave }) {
                       </div>
                     );
                   })}
+            </>
+            )}
+          </div>
+          ))}
+
+          {/* Calificación final, al terminar de revisar todo el examen */}
+          <div className="modern-card mb-3">
+            <div className="modern-card-header">
+              <h5 className="modern-card-title mb-0">
+                <i className="fas fa-flag-checkered me-2"></i>
+                Calificación Final
+              </h5>
+            </div>
+            <div className="modern-card-body">
+              <div className="row align-items-center">
+                {attempt.puntaje !== null && (
+                  <div className="col-md-4 mb-3 mb-md-0 text-center text-md-start">
+                    <small className="text-muted d-block">
+                      <i className="fas fa-robot me-1"></i>Puntaje automático
+                    </small>
+                    <span style={{ fontWeight: 'bold', fontSize: '1.5rem', color: 'var(--primary-color)' }}>
+                      {attempt.puntaje.toFixed(1)}%
+                    </span>
+                  </div>
+                )}
+                <div className={attempt.puntaje !== null ? "col-md-8" : "col-12"}>
+                  {!editingGrade ? (
+                    <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                      {calificacionManual !== '' ? (
+                        <span style={{ fontWeight: 'bold', fontSize: '1.8rem', color: 'var(--primary-color)' }}>
+                          <i className="fas fa-check-circle me-2"></i>{Number(calificacionManual).toFixed(1)}%
+                        </span>
+                      ) : (
+                        <span style={{ fontWeight: 600, fontSize: '1.2rem', color: 'var(--primary-color)' }}>
+                          <i className="fas fa-exclamation-triangle me-2"></i>Pendiente de corrección
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        className="modern-btn modern-btn-secondary modern-btn-sm"
+                        onClick={() => setEditingGrade(true)}
+                      >
+                        <i className="fas fa-pencil-alt me-2"></i>
+                        Editar
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="d-flex align-items-center flex-wrap gap-2">
+                      <input
+                        type="number"
+                        className="form-control fw-bold"
+                        style={{ maxWidth: '140px' }}
+                        step="0.1"
+                        value={calificacionManual}
+                        onChange={(e) => setCalificacionManual(e.target.value)}
+                        placeholder="Nota manual"
+                        disabled={saving}
+                      />
+                      {attempt.puntaje !== null && (
+                        <button
+                          type="button"
+                          className="modern-btn modern-btn-secondary modern-btn-sm"
+                          onClick={handleUseAutomaticGrade}
+                          title="Usar la nota automática como calificación manual"
+                        >
+                          <i className="fas fa-robot me-2"></i>
+                          Usar automática ({attempt.puntaje.toFixed(0)}%)
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="modern-btn modern-btn-primary modern-btn-sm"
+                        onClick={handleSaveGrade}
+                        disabled={saving || !calificacionManual}
+                      >
+                        {saving ? (
+                          <>
+                            <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                            Guardando...
+                          </>
+                        ) : (
+                          <>
+                            <i className="fas fa-save me-2"></i>
+                            Guardar Calificación
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {(onPrev || onNext) && (
+            <div className="modern-card mt-3">
+              <div className="modern-card-body d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="modern-btn modern-btn-secondary"
+                  onClick={onPrev}
+                  disabled={!hasPrev}
+                >
+                  <i className="fas fa-chevron-left me-2"></i>
+                  Anterior
+                </button>
+                <button
+                  type="button"
+                  className="modern-btn modern-btn-secondary"
+                  onClick={onNext}
+                  disabled={!hasNext}
+                >
+                  Siguiente
+                  <i className="fas fa-chevron-right ms-2"></i>
+                </button>
+              </div>
             </div>
           )}
 

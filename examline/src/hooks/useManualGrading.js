@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   getAttemptProfessorView,
   getReferenceFiles,
@@ -23,36 +23,48 @@ export const useManualGrading = (attemptId) => {
   const [referenceFiles, setReferenceFiles] = useState([]);
   const [loadingReferenceFiles, setLoadingReferenceFiles] = useState(false);
 
+  // La solución de referencia es del examen, no del intento: es la misma para
+  // todos los alumnos. La cacheamos por examId para no volver a pedirla cada
+  // vez que el profesor pasa de un alumno a otro del mismo examen.
+  const referenceFilesCache = useRef(new Map());
+
   const loadAttemptDetails = useCallback(async () => {
     try {
       setLoading(true);
       const data = await getAttemptProfessorView(attemptId);
-
-      console.log('🔍 Datos del intento recibidos:', data);
-      console.log('🔍 Solución de referencia:', data.exam?.solucionReferencia);
       setAttempt(data);
+      // No bloqueamos la pantalla esperando la solución de referencia: el
+      // detalle del intento ya está listo para mostrarse.
+      setLoading(false);
 
-      // Cargar archivos de referencia si el examen tiene una parte de programación
       if (data.exam.partes?.some(p => p.tipo === 'programming')) {
-        try {
+        const cached = referenceFilesCache.current.get(data.examId);
+        if (cached) {
+          setReferenceFiles(cached);
+        } else {
+          setReferenceFiles([]);
           setLoadingReferenceFiles(true);
-          const refFiles = await getReferenceFiles(data.examId);
-          if (refFiles && refFiles.length > 0) {
-            setReferenceFiles(refFiles);
+          try {
+            const refFiles = await getReferenceFiles(data.examId);
+            referenceFilesCache.current.set(data.examId, refFiles || []);
+            if (refFiles && refFiles.length > 0) {
+              setReferenceFiles(refFiles);
+            }
+          } catch (error) {
+            console.error('Error loading reference files:', error);
+          } finally {
+            setLoadingReferenceFiles(false);
           }
-        } catch (error) {
-          console.error('Error loading reference files:', error);
-        } finally {
-          setLoadingReferenceFiles(false);
         }
+      } else {
+        setReferenceFiles([]);
       }
 
       return data;
     } catch (error) {
       console.error('Error loading attempt:', error);
-      return null;
-    } finally {
       setLoading(false);
+      return null;
     }
   }, [attemptId]);
 

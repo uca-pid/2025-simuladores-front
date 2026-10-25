@@ -18,7 +18,6 @@ import ExamResults from "./pages/ExamResults";
 import ProgrammingExamView from "./pages/ProgrammingExamView";
 import ExamWindows from "./pages/ExamWindows";
 import StudentInscriptions from "./pages/StudentInscriptions";
-import ExamWindowResults from "./pages/ExamWindowResults";
 import GradingPage from "./pages/GradingPage";
 import SEBExamLauncher from "./pages/SEBExamLauncher";
 import QuestionBank from "./pages/QuestionBank";
@@ -127,7 +126,7 @@ function App() {
           } />
           <Route path="/exam-windows/:windowId/results" element={
             <ProfessorRoute>
-              <ExamWindowResults />
+              <GradingPage />
             </ProfessorRoute>
           } />
           <Route path="/exam-windows/:windowId/results/:attemptId" element={

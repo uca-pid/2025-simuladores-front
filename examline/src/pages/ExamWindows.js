@@ -727,9 +727,13 @@ export default function ExamWindowsPage() {
                     key={w.id}
                     type="button"
                     className="modern-btn modern-btn-secondary modern-btn-sm"
-                    onClick={() => navigate(`/exam-windows/${w.id}/results`)}
+                    onClick={() => navigate(
+                      w.primerIntentoPendienteId
+                        ? `/exam-windows/${w.id}/results/${w.primerIntentoPendienteId}`
+                        : `/exam-windows/${w.id}/results`
+                    )}
                   >
-                    {w.nombre} · {w.exam?.titulo}
+                    {w.nombre}
                     <span className="badge bg-warning text-dark ms-2">{w.pendientesCorreccionCount}</span>
                   </button>
                 ))}
@@ -1042,9 +1046,15 @@ export default function ExamWindowsPage() {
                                   type="button"
                                   className="modern-btn modern-btn-sm"
                                   style={{ backgroundColor: 'var(--primary-color)', borderColor: 'var(--primary-color)', color: '#fff' }}
-                                  onClick={(e) => { e.stopPropagation(); navigate(`/exam-windows/${w.id}/results`); }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(
+                                      w.primerIntentoPendienteId
+                                        ? `/exam-windows/${w.id}/results/${w.primerIntentoPendienteId}`
+                                        : `/exam-windows/${w.id}/results`
+                                    );
+                                  }}
                                 >
-                                  <i className="fas fa-trophy me-2"></i>
                                   Corregir ({w.pendientesCorreccionCount})
                                 </button>
                               )}

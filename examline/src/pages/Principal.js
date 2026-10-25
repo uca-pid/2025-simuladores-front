@@ -1,13 +1,30 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "../components/action-cards.css";
 import "./Principal.css";
 import UserHeader from "../components/UserHeader";
+import { getExamWindowsProfesor } from "../services/api";
+import { useAuth } from "../contexts/AuthContext";
 
 const Principal = () => {
   const [showInstructivo, setShowInstructivo] = useState(false);
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [pendientesCorreccion, setPendientesCorreccion] = useState(0);
+
+  useEffect(() => {
+    if (user?.rol !== 'professor') return;
+    let cancelled = false;
+    getExamWindowsProfesor()
+      .then((windows) => {
+        if (cancelled || !Array.isArray(windows)) return;
+        const total = windows.reduce((acc, w) => acc + (w.pendientesCorreccionCount || 0), 0);
+        setPendientesCorreccion(total);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [user]);
 
   return (
     <div className="container-fluid container-lg py-5 px-3 px-md-4">
@@ -106,26 +123,6 @@ const Principal = () => {
               <div className="action-card">
                 <div className="action-content">
                   <h5 className="action-title">
-                    <i className="fas fa-calendar-alt me-2" style={{ color: 'var(--accent-color)' }}></i>
-                    Ventanas de Examen
-                  </h5>
-                  <p className="action-description text-muted mb-3">
-                    Programá horarios en un calendario y corregí las entregas de tus exámenes
-                  </p>
-                  <button
-                    className="modern-btn modern-btn-primary w-100"
-                    onClick={() => navigate("/exam-windows")}
-                  >
-                    <i className="fas fa-calendar-alt me-2"></i>
-                    <span className="btn-text">Ir a Ventanas de Examen</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-            <div className="col-md-4">
-              <div className="action-card">
-                <div className="action-content">
-                  <h5 className="action-title">
                     <i className="fas fa-database me-2" style={{ color: 'var(--accent-color)' }}></i>
                     Banco de Preguntas
                   </h5>
@@ -138,6 +135,43 @@ const Principal = () => {
                   >
                     <i className="fas fa-database me-2"></i>
                     <span className="btn-text">Banco de Preguntas</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="col-md-4">
+              <div className="action-card">
+                <div className="action-content">
+                  <h5 className="action-title">
+                    <i className="fas fa-calendar-alt me-2" style={{ color: 'var(--accent-color)' }}></i>
+                    Ventanas de Examen
+                  </h5>
+                  <p className="action-description text-muted mb-3">
+                    Programá horarios en un calendario y corregí las entregas de tus exámenes
+                  </p>
+                  {pendientesCorreccion > 0 && (
+                    <div
+                      className="d-flex align-items-center gap-2 mb-3"
+                      style={{
+                        backgroundColor: '#dc3545',
+                        color: 'white',
+                        padding: '0.5rem 0.75rem',
+                        borderRadius: '8px',
+                        fontWeight: 'bold',
+                        fontSize: '0.9rem',
+                        animation: 'pulse-warning 1.6s infinite',
+                      }}
+                    >
+                      <i className="fas fa-exclamation-triangle"></i>
+                      <span>{pendientesCorreccion} examen{pendientesCorreccion === 1 ? '' : 'es'} pendiente{pendientesCorreccion === 1 ? '' : 's'} de corrección</span>
+                    </div>
+                  )}
+                  <button
+                    className="modern-btn modern-btn-primary w-100"
+                    onClick={() => navigate("/exam-windows")}
+                  >
+                    <i className="fas fa-calendar-alt me-2"></i>
+                    <span className="btn-text">Ir a Ventanas de Examen</span>
                   </button>
                 </div>
               </div>
