@@ -3,6 +3,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import BackToMainButton from "../components/BackToMainButton";
 import QuestionCreator from "../components/QuestionCreator";
 import TagInput from "../components/TagInput";
+import { autoTitulo, displayTitulo } from "../utils/questionTitle";
 import Modal from "../components/Modal";
 import { useModal } from "../hooks";
 
@@ -34,9 +35,9 @@ const QuestionBank = () => {
   const [successMessage, setSuccessMessage] = useState("");
   const [showQuestionModal, setShowQuestionModal] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState(null);
-  const [formTitulo, setFormTitulo] = useState("");
   const [formTags, setFormTags] = useState([]);
   const [searchFilter, setSearchFilter] = useState("");
+  const [tagFilter, setTagFilter] = useState("");
 
   // Cargar preguntas del banco al montar el componente
   useEffect(() => {
@@ -79,7 +80,12 @@ const QuestionBank = () => {
   };
 
   // Filtrar preguntas basándose en el texto o tags
+  const allTags = [...new Set(questions.flatMap((q) => (Array.isArray(q.tags) ? q.tags : [])))].sort((a, b) =>
+    a.localeCompare(b)
+  );
+
   const filteredQuestions = questions.filter((question) => {
+    if (tagFilter && !(Array.isArray(question.tags) && question.tags.includes(tagFilter))) return false;
     if (!searchFilter.trim()) return true;
     
     const searchTerm = searchFilter.toLowerCase();
@@ -93,14 +99,12 @@ const QuestionBank = () => {
 
   const handleOpenNewQuestion = () => {
     setEditingQuestion(null);
-    setFormTitulo("");
     setFormTags([]);
     setShowQuestionModal(true);
   };
 
   const handleEditQuestion = (question) => {
     setEditingQuestion(question);
-    setFormTitulo(question.titulo || "");
     setFormTags(Array.isArray(question.tags) ? [...question.tags] : []);
     setShowQuestionModal(true);
   };
@@ -108,8 +112,18 @@ const QuestionBank = () => {
   const handleCloseQuestionModal = () => {
     setShowQuestionModal(false);
     setEditingQuestion(null);
-    setFormTitulo("");
     setFormTags([]);
+  };
+
+  // El título se genera del texto. Al editar se conserva el que ya tenía,
+  // salvo que fuera el generado automáticamente (en ese caso sigue al texto).
+  const resolveTitulo = (texto) => {
+    if (!editingQuestion) return autoTitulo(texto);
+    const actual = editingQuestion.titulo;
+    if (!actual || actual === autoTitulo(editingQuestion.texto) || actual === "Sin título") {
+      return autoTitulo(texto);
+    }
+    return actual;
   };
 
   const handleSaveQuestion = async (questionData) => {
@@ -126,7 +140,7 @@ const QuestionBank = () => {
           },
           body: JSON.stringify({
             ...questionData,
-            titulo: formTitulo.trim() || "Sin título",
+            titulo: resolveTitulo(questionData.texto),
             tags: formTags,
           }),
         }
@@ -259,7 +273,7 @@ const QuestionBank = () => {
             <input
               type="text"
               className="form-control"
-              placeholder="Buscar por título, texto o etiquetas..."
+              placeholder="Buscar por texto o etiquetas..."
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
               style={{
@@ -279,7 +293,26 @@ const QuestionBank = () => {
               </button>
             )}
           </div>
-          {searchFilter && (
+          {allTags.length > 0 && (
+            <div className="d-flex flex-wrap align-items-center gap-2 mt-3">
+              <span className="text-muted small">
+                <i className="fas fa-tags me-1"></i>
+                Etiquetas:
+              </span>
+              {allTags.map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  className={`btn btn-sm ${tagFilter === tag ? 'btn-primary' : 'btn-outline-primary'}`}
+                  onClick={() => setTagFilter(tagFilter === tag ? '' : tag)}
+                  style={{ borderRadius: '999px', padding: '0.15rem 0.7rem', fontSize: '0.8rem' }}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          )}
+          {(searchFilter || tagFilter) && (
             <div className="mt-2 text-muted small">
               <i className="fas fa-info-circle me-1"></i>
               Mostrando {filteredQuestions.length} de {questions.length} preguntas
@@ -303,33 +336,33 @@ const QuestionBank = () => {
                 Crea tu primera pregunta con el botón "Agregar Pregunta"
               </p>
             </div>
-          ) : filteredQuestions.length === 0 && searchFilter ? (
+          ) : filteredQuestions.length === 0 && (searchFilter || tagFilter) ? (
             <div className="empty-state">
               <div className="empty-icon">
                 <i className="fas fa-search"></i>
               </div>
               <h4 className="empty-title">No se encontraron preguntas</h4>
               <p className="empty-subtitle">
-                No hay preguntas que coincidan con "<strong>{searchFilter}</strong>"
+                No hay preguntas que coincidan con los filtros aplicados
               </p>
               <button
                 className="btn btn-outline-primary mt-3"
-                onClick={() => setSearchFilter('')}
+                onClick={() => { setSearchFilter(''); setTagFilter(''); }}
               >
                 <i className="fas fa-times me-2"></i>
-                Limpiar búsqueda
+                Limpiar filtros
               </button>
             </div>
           ) : (
             <div className="questions-list">
-              {filteredQuestions.map((question, index) => (
+              {filteredQuestions.map((question) => (
                 <div key={question.id} className="modern-card mb-3" style={{ boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
                   <div className="modern-card-body">
                     <div className="d-flex justify-content-between align-items-start mb-3">
                       <div>
                         <h5 className="mb-2">
                           <i className="fas fa-question-circle me-2 text-primary"></i>
-                          {question.titulo || `Pregunta #${index + 1}`}
+                          {displayTitulo(question)}
                         </h5>
                         <span
                           className="badge me-2"
@@ -558,26 +591,12 @@ const QuestionBank = () => {
                     </h3>
                   </div>
                   <div className="modern-card-body">
-                    <div className="mb-4">
-                      <label className="form-label d-flex align-items-center gap-2">
-                        <i className="fas fa-heading text-muted"></i>
-                        Título de la pregunta (opcional)
-                      </label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        placeholder="Ej: Pregunta sobre matemáticas básicas"
-                        value={formTitulo}
-                        onChange={(e) => setFormTitulo(e.target.value)}
-                        style={{ padding: '0.75rem 1rem', border: '1px solid var(--border-color)', borderRadius: '8px', fontSize: '1rem' }}
-                      />
-                    </div>
                     <div>
                       <label className="form-label d-flex align-items-center gap-2">
                         <i className="fas fa-tags text-muted"></i>
                         Etiquetas
                       </label>
-                      <TagInput tags={formTags} onChange={setFormTags} />
+                      <TagInput tags={formTags} onChange={setFormTags} suggestions={allTags} />
                     </div>
                   </div>
                 </div>

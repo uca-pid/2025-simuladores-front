@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useId, useState } from "react";
 
-const TagInput = ({ tags, onChange, placeholder = "Agregar etiqueta (presiona Enter)" }) => {
+const TagInput = ({ tags, onChange, suggestions = [], placeholder = "Agregar etiqueta (presiona Enter)" }) => {
   const [input, setInput] = useState("");
+  const listId = useId();
 
   const addTag = () => {
     const value = input.trim();
@@ -25,6 +26,7 @@ const TagInput = ({ tags, onChange, placeholder = "Agregar etiqueta (presiona En
           type="text"
           className="form-control"
           placeholder={placeholder}
+          list={suggestions.length > 0 ? listId : undefined}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -34,6 +36,13 @@ const TagInput = ({ tags, onChange, placeholder = "Agregar etiqueta (presiona En
             borderRadius: "8px",
           }}
         />
+        {suggestions.length > 0 && (
+          <datalist id={listId}>
+            {suggestions.filter((t) => !tags.includes(t)).map((t) => (
+              <option key={t} value={t} />
+            ))}
+          </datalist>
+        )}
         <button
           type="button"
           className="btn btn-outline-primary btn-sm"

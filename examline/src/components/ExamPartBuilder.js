@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect, memo } from "react";
 import Editor from '@monaco-editor/react';
 import QuestionCreator from "./QuestionCreator";
 import QuestionBankSelector from "./QuestionBankSelector";
+import SaveToBankModal from "./SaveToBankModal";
 import { testSolutionPreview, uploadEnunciado, uploadDataset } from "../services/api";
 import { TIPO_BADGE } from "../utils/questionBadges";
 import Modal from "./Modal";
@@ -26,6 +27,8 @@ export const PROG_TABS = [
 // `onChange({ ...part, <field>: value })` instead of owning local state.
 const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, partLabel, activeProgTab, onActiveProgTabChange }) => {
   const [showBankSelector, setShowBankSelector] = useState(false);
+  const [questionToSave, setQuestionToSave] = useState(null);
+  const [savedToBankMessage, setSavedToBankMessage] = useState(false);
   const [showNewReferenceFileModal, setShowNewReferenceFileModal] = useState(false);
   const [newReferenceFileName, setNewReferenceFileName] = useState('');
   const [referenceFileToDelete, setReferenceFileToDelete] = useState('');
@@ -431,6 +434,15 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                             <i className="fas fa-arrow-down"></i>
                           </button>
                           <button
+                            className="btn btn-sm btn-outline-success"
+                            onClick={() => setQuestionToSave(p)}
+                            disabled={isPublishing}
+                            title="Guardar en el banco de preguntas"
+                            style={{ padding: '0.25rem 0.5rem' }}
+                          >
+                            <i className="fas fa-database"></i>
+                          </button>
+                          <button
                             className="btn btn-sm btn-outline-primary"
                             onClick={() => handleOpenEditQuestion(idx)}
                             disabled={isPublishing}
@@ -557,6 +569,25 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
               </div>
               </div>
             </div>
+
+        {questionToSave && (
+          <SaveToBankModal
+            question={questionToSave}
+            onClose={() => setQuestionToSave(null)}
+            onSaved={() => {
+              setQuestionToSave(null);
+              setSavedToBankMessage(true);
+              setTimeout(() => setSavedToBankMessage(false), 3000);
+            }}
+          />
+        )}
+
+        {savedToBankMessage && (
+          <div className="alert alert-success position-fixed bottom-0 end-0 m-3 mb-0" style={{ zIndex: 2000 }} role="alert">
+            <i className="fas fa-check-circle me-2"></i>
+            Pregunta guardada en el banco
+          </div>
+        )}
 
         <QuestionBankSelector
           show={showBankSelector}

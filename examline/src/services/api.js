@@ -350,6 +350,20 @@ export async function getQuestionBank() {
   }
 }
 
+export async function saveQuestionToBank(question) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/question-bank`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify(question),
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
 export async function getExamById(examId, windowId = null) {
   try {
     let url = `${API_BASE_URL}/exams/${examId}`;
