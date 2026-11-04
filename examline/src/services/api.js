@@ -834,12 +834,13 @@ export async function getAttemptProfessorView(attemptId) {
   }
 }
 
-export async function executeCodeForGrading({ code, language, filename, customInput, testCases }) {
+export async function executeCodeForGrading({ code, language, filename, examId, customInput, testCases }) {
   try {
     const payload = {
       code,
       language,
       filename,
+      ...(examId !== undefined && { examId }),
       ...(customInput !== undefined && { customInput }),
       ...(testCases !== undefined && { testCases }),
     };

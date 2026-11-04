@@ -26,6 +26,94 @@ export default function ManualGradingModal({ attemptId, onBack, onSave, onPrev, 
   const enunciadoProgramacion = programmingPart?.enunciadoProgramacion || attempt?.exam?.enunciadoProgramacion;
   const partesOrdenadas = [...(attempt?.exam?.partes || [])].sort((a, b) => a.orden - b.orden);
 
+  // Evalúa una pregunta contra la respuesta del alumno. `esCorrecta` es null
+  // si la corrección es manual o la pregunta quedó sin responder.
+  const evaluarPregunta = (pregunta) => {
+    const respuestaRow = attempt?.respuestas?.find(r => r.preguntaId === pregunta.id);
+    const respuestaEstudiante = respuestaRow?.valor;
+    const sinResponder = respuestaRow === undefined || respuestaEstudiante === null || respuestaEstudiante === undefined;
+    const esManual = pregunta.tipo === 'essay' || pregunta.tipo === 'file_upload';
+
+    let esCorrecta = null;
+    if (!sinResponder && !esManual) {
+      if (pregunta.tipo === 'short_answer') {
+        const aceptadas = (pregunta.opciones || []).map(o => String(o).trim().toLowerCase());
+        esCorrecta = aceptadas.includes(String(respuestaEstudiante).trim().toLowerCase());
+      } else if (pregunta.tipo === 'numeric') {
+        const [valorCorrecto, tolerancia] = pregunta.opciones || [];
+        const diff = Math.abs(Number(respuestaEstudiante) - Number(valorCorrecto));
+        esCorrecta = !isNaN(diff) && diff <= (Number(tolerancia) || 0);
+      } else if (pregunta.tipo === 'multiple_response') {
+        const marcadas = Array.isArray(respuestaEstudiante) ? [...respuestaEstudiante].sort((a, b) => a - b) : [];
+        const esperadas = Array.isArray(pregunta.correctas) ? [...pregunta.correctas].sort((a, b) => a - b) : [];
+        esCorrecta = marcadas.length === esperadas.length && marcadas.every((v, i) => v === esperadas[i]);
+      } else {
+        esCorrecta = respuestaEstudiante === pregunta.correcta;
+      }
+    }
+    return { respuestaEstudiante, sinResponder, esManual, esCorrecta };
+  };
+
+  // Desglose de la nota automática por parte. Se calcula igual que en el backend
+  // (puntos obtenidos / puntos posibles de cada parte); la nota final es el
+  // promedio simple de las partes.
+  const ordenPreguntasIntento = Array.isArray(attempt?.ordenPreguntas) ? attempt.ordenPreguntas : null;
+  const desglosePartes = partesOrdenadas.map((parte, i) => {
+    if (parte.tipo === 'programming') {
+      const casos = Array.isArray(parte.testCases) ? parte.testCases : [];
+      // El intento solo guarda los resultados de los tests de la última parte
+      const resultados = i === partesOrdenadas.length - 1 && Array.isArray(attempt?.testResults) ? attempt.testResults : null;
+      if (!resultados || casos.length === 0) {
+        return { parte, icono: 'fa-code', detalle: 'Sin resultados de casos de prueba', porcentaje: null };
+      }
+      let obtenidos = 0;
+      let total = 0;
+      let pasados = 0;
+      casos.forEach((caso, idx) => {
+        const puntos = caso.puntos ?? 1;
+        total += puntos;
+        if (resultados[idx]?.passed) {
+          obtenidos += puntos;
+          pasados++;
+        }
+      });
+      return {
+        parte,
+        icono: 'fa-code',
+        detalle: `${pasados} de ${casos.length} casos de prueba`,
+        porcentaje: total > 0 ? (obtenidos / total) * 100 : null,
+      };
+    }
+
+    const preguntas = (parte.preguntas || []).filter(p => !ordenPreguntasIntento || ordenPreguntasIntento.includes(p.id));
+    let obtenidos = 0;
+    let total = 0;
+    let correctas = 0;
+    let corregibles = 0;
+    let manuales = 0;
+    preguntas.forEach((pregunta) => {
+      const { esManual, esCorrecta } = evaluarPregunta(pregunta);
+      if (esManual) {
+        manuales++;
+        return;
+      }
+      const puntos = pregunta.puntos ?? 1;
+      corregibles++;
+      total += puntos;
+      if (esCorrecta) {
+        obtenidos += puntos;
+        correctas++;
+      }
+    });
+    const detalleBase = `${correctas} de ${corregibles} preguntas correctas`;
+    return {
+      parte,
+      icono: 'fa-question-circle',
+      detalle: manuales > 0 ? `${detalleBase} (+${manuales} de corrección manual)` : detalleBase,
+      porcentaje: total > 0 ? (obtenidos / total) * 100 : null,
+    };
+  });
+
   const [selectedFileIndex, setSelectedFileIndex] = useState(0);
   const [fileVersion, setFileVersion] = useState('submission');
   const [editedCode, setEditedCode] = useState('');
@@ -140,7 +228,8 @@ export default function ManualGradingModal({ attemptId, onBack, onSave, onPrev, 
       filename: mainFile.filename,
       useCustomInput,
       customInput,
-      testCases: attempt.exam.testCases,
+      // Los casos de prueba viven en la parte de programación, no en el examen.
+      testCases: attempt.exam.partes?.find(p => p.tipo === 'programming')?.testCases,
     });
   };
 
@@ -222,8 +311,21 @@ export default function ManualGradingModal({ attemptId, onBack, onSave, onPrev, 
                     borderRadius: '0.5rem',
                     border: '1px solid #dee2e6'
                   }}>
-                    {enunciadoProgramacion || 'No hay enunciado definido'}
+                    {selectedParte.enunciadoProgramacion || enunciadoProgramacion || (selectedParte.enunciadoUrl ? 'El enunciado de esta parte es un archivo adjunto (ver abajo).' : 'No hay enunciado definido')}
                   </pre>
+                  {selectedParte.enunciadoUrl && (
+                    <div className="mt-3">
+                      <a
+                        href={selectedParte.enunciadoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="modern-btn modern-btn-secondary modern-btn-sm"
+                      >
+                        <i className="fas fa-file-pdf me-2"></i>
+                        {selectedParte.enunciadoArchivoNombre || 'Ver enunciado'}
+                      </a>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -846,28 +948,7 @@ export default function ManualGradingModal({ attemptId, onBack, onSave, onPrev, 
                 )}
                 {(selectedParte.preguntas || [])
                   .map((pregunta, idx) => {
-                    const respuestaRow = attempt.respuestas?.find(r => r.preguntaId === pregunta.id);
-                    const respuestaEstudiante = respuestaRow?.valor;
-                    const sinResponder = respuestaRow === undefined || respuestaEstudiante === null || respuestaEstudiante === undefined;
-                    const esManual = pregunta.tipo === 'essay' || pregunta.tipo === 'file_upload';
-
-                    let esCorrecta = null; // null = no aplica (manual) o sin responder
-                    if (!sinResponder && !esManual) {
-                      if (pregunta.tipo === 'short_answer') {
-                        const aceptadas = (pregunta.opciones || []).map(o => String(o).trim().toLowerCase());
-                        esCorrecta = aceptadas.includes(String(respuestaEstudiante).trim().toLowerCase());
-                      } else if (pregunta.tipo === 'numeric') {
-                        const [valorCorrecto, tolerancia] = pregunta.opciones || [];
-                        const diff = Math.abs(Number(respuestaEstudiante) - Number(valorCorrecto));
-                        esCorrecta = !isNaN(diff) && diff <= (Number(tolerancia) || 0);
-                      } else if (pregunta.tipo === 'multiple_response') {
-                        const marcadas = Array.isArray(respuestaEstudiante) ? [...respuestaEstudiante].sort((a, b) => a - b) : [];
-                        const esperadas = Array.isArray(pregunta.correctas) ? [...pregunta.correctas].sort((a, b) => a - b) : [];
-                        esCorrecta = marcadas.length === esperadas.length && marcadas.every((v, i) => v === esperadas[i]);
-                      } else {
-                        esCorrecta = respuestaEstudiante === pregunta.correcta;
-                      }
-                    }
+                    const { respuestaEstudiante, sinResponder, esManual, esCorrecta } = evaluarPregunta(pregunta);
 
                     return (
                       <div key={pregunta.id} className="mb-3 p-3 border rounded bg-white">
@@ -887,6 +968,15 @@ export default function ManualGradingModal({ attemptId, onBack, onSave, onPrev, 
                           )}
                         </div>
                         <p className="mb-2">{pregunta.texto}</p>
+                        {pregunta.imagenUrl && (
+                          <div className="mb-3">
+                            <img
+                              src={pregunta.imagenUrl}
+                              alt={`Imagen de la pregunta ${idx + 1}`}
+                              style={{ maxWidth: '100%', maxHeight: '300px', borderRadius: '0.5rem', border: '1px solid #dee2e6' }}
+                            />
+                          </div>
+                        )}
 
                         {pregunta.tipo === 'short_answer' && (
                           <div className="ms-3">
@@ -993,6 +1083,44 @@ export default function ManualGradingModal({ attemptId, onBack, onSave, onPrev, 
               </h5>
             </div>
             <div className="modern-card-body">
+              {desglosePartes.length > 0 && attempt.puntaje !== null && (
+                <div className="mb-4">
+                  <small className="text-muted d-block mb-2">
+                    <i className="fas fa-list-ol me-1"></i>Desglose de la nota automática por parte
+                  </small>
+                  <div className="table-responsive">
+                    <table className="table table-sm align-middle mb-0">
+                      <thead>
+                        <tr>
+                          <th>Parte</th>
+                          <th>Resultado</th>
+                          <th className="text-end">Nota</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {desglosePartes.map(({ parte, icono, detalle, porcentaje }) => (
+                          <tr key={parte.id}>
+                            <td>
+                              <i className={`fas ${icono} me-2 text-muted`}></i>
+                              Parte {parte.orden} · {parte.tipo === 'programming' ? 'Programación' : 'Preguntas'}
+                            </td>
+                            <td className="text-muted">{detalle}</td>
+                            <td className="text-end fw-bold">{porcentaje === null ? '—' : `${porcentaje.toFixed(1)}%`}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      {desglosePartes.length > 1 && (
+                        <tfoot>
+                          <tr>
+                            <td colSpan={2} className="text-muted">Promedio de las partes (nota automática)</td>
+                            <td className="text-end fw-bold" style={{ color: 'var(--primary-color)' }}>{attempt.puntaje.toFixed(1)}%</td>
+                          </tr>
+                        </tfoot>
+                      )}
+                    </table>
+                  </div>
+                </div>
+              )}
               <div className="row align-items-center">
                 {attempt.puntaje !== null && (
                   <div className="col-md-4 mb-3 mb-md-0 text-center text-md-start">
@@ -1045,7 +1173,7 @@ export default function ManualGradingModal({ attemptId, onBack, onSave, onPrev, 
                           title="Usar la nota automática como calificación manual"
                         >
                           <i className="fas fa-robot me-2"></i>
-                          Usar automática ({attempt.puntaje.toFixed(0)}%)
+                          Usar automática ({attempt.puntaje.toFixed(1)}%)
                         </button>
                       )}
                       <button

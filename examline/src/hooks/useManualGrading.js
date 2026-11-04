@@ -81,6 +81,7 @@ export const useManualGrading = (attemptId) => {
         code,
         language,
         filename,
+        examId: attempt?.examId,
         ...(useCustomInput && customInput && { customInput }),
         ...(!useCustomInput && testCases && { testCases }),
       });
