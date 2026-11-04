@@ -688,7 +688,7 @@ const ExamCreator = () => {
             ))}
           </div>
 
-      {currentStep === 2 && (
+      {currentStep === 2 && partes.length > 0 && (
         <div className="exam-wizard-nested-parts">
           <div style={{ position: 'relative' }}>
             <div className="exam-parts-list-vertical">
@@ -1014,8 +1014,12 @@ const ExamCreator = () => {
                     Atrás: {anterior ? labelPara(anterior) : 'Datos generales'}
                   </button>
                   <div className="d-flex flex-column flex-md-row gap-2">
-                    {!siguiente && (
-                      <AddPartButton onAdd={handleAddPart} disabled={isPublishing} />
+                    {!siguiente && partes.length > 0 && (
+                      <AddPartButton
+                        onAdd={handleAddPart}
+                        disabled={isPublishing}
+                        className="modern-btn exam-add-part-btn"
+                      />
                     )}
                     <button
                       type="button"

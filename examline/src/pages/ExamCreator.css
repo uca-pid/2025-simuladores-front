@@ -29,6 +29,19 @@
   }
 }
 
+/* "Agregar Parte" en la navegación inferior: outline navy para distinguirlo
+   de "Atrás" (gris, navegación) y de "Siguiente" (navy lleno, avanzar). */
+.modern-btn.exam-add-part-btn {
+  background: white;
+  color: var(--primary-color);
+  border: 1px solid var(--primary-color);
+}
+
+.modern-btn.exam-add-part-btn:hover:not(:disabled) {
+  background: rgba(30, 41, 85, 0.08);
+  color: var(--primary-color);
+}
+
 /* Bloque de "Partes del Examen" anidado debajo del paso 2 en el stepper */
 .exam-wizard-nested-parts {
   padding: 0.25rem 0;
@@ -187,6 +200,16 @@
 
 .exam-wizard-step-button:last-child {
   border-radius: 0 12px 12px 0;
+}
+
+/* En el stepper vertical, el paso 2 es el último de su grupo pero no del
+   sidebar: sin esto hereda las esquinas redondeadas del modo horizontal y se
+   ve como una "píldora" que no ocupa todo el ancho. */
+.exam-wizard-steps--vertical .exam-wizard-step-button:nth-child(2),
+.exam-wizard-steps--vertical .exam-wizard-step-button:last-child {
+  border-left: none;
+  border-right: none;
+  border-radius: 0;
 }
 
 .exam-wizard-step-button.active {

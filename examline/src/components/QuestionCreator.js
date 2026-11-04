@@ -378,7 +378,7 @@ const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion }) =
   };
 
   return (
-    <div className="modern-card mb-4">
+    <div className={`modern-card ${onSave ? '' : 'mb-4'}`} style={onSave ? { marginBottom: 0 } : undefined}>
       <div className="modern-card-header">
         <h3 className="modern-card-title">
           <i className="fas fa-question-circle me-2"></i>

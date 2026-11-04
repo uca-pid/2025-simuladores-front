@@ -601,8 +601,8 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
               className="modal-dialog modal-lg modal-dialog-scrollable"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="modal-content" style={{ border: 'none', borderRadius: '12px', overflow: 'hidden', backgroundColor: 'transparent' }}>
-                <div className="modal-body p-0">
+              <div className="modal-content" style={{ border: 'none', borderRadius: '12px', overflow: 'hidden', backgroundColor: 'white' }}>
+                <div className="modal-body p-0" style={{ overscrollBehavior: 'contain' }}>
                   <QuestionCreator
                     editingQuestion={editingQuestionIndex != null ? part.preguntas[editingQuestionIndex] : null}
                     onSave={handleSaveQuestion}

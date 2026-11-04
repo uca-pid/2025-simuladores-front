@@ -148,7 +148,8 @@ const QuestionBankSelector = ({ show, onClose, onSelectQuestions }) => {
                 </div>
                 {filteredQuestions.length > 0 && (
                   <button
-                    className="btn btn-sm btn-outline-primary"
+                    className="btn btn-sm"
+                    style={{ color: 'var(--primary-color)', border: '1px solid var(--primary-color)', backgroundColor: 'white' }}
                     onClick={handleSelectAll}
                   >
                     <i className={`fas fa-${selectedIds.length === filteredQuestions.length ? 'times' : 'check-double'} me-1`}></i>
@@ -161,7 +162,7 @@ const QuestionBankSelector = ({ show, onClose, onSelectQuestions }) => {
             {/* Lista de preguntas */}
             {loading ? (
               <div className="text-center py-5">
-                <div className="spinner-border text-primary" role="status">
+                <div className="spinner-border" role="status" style={{ color: 'var(--primary-color)' }}>
                   <span className="visually-hidden">Cargando...</span>
                 </div>
               </div>
@@ -175,7 +176,8 @@ const QuestionBankSelector = ({ show, onClose, onSelectQuestions }) => {
                 </h5>
                 {searchFilter && (
                   <button
-                    className="btn btn-outline-primary mt-3"
+                    className="btn mt-3"
+                    style={{ color: 'var(--primary-color)', border: '1px solid var(--primary-color)', backgroundColor: 'white' }}
                     onClick={() => setSearchFilter('')}
                   >
                     <i className="fas fa-times me-2"></i>
@@ -188,11 +190,12 @@ const QuestionBankSelector = ({ show, onClose, onSelectQuestions }) => {
                 {filteredQuestions.map((question) => (
                   <div key={question.id} className="col-12">
                     <div 
-                      className={`card h-100 ${selectedIds.includes(question.id) ? 'border-primary' : ''}`}
-                      style={{ 
+                      className="card h-100"
+                      style={{
                         cursor: 'pointer',
                         transition: 'all 0.2s',
-                        boxShadow: selectedIds.includes(question.id) ? '0 4px 12px rgba(124, 58, 237, 0.3)' : '0 2px 4px rgba(0,0,0,0.1)'
+                        borderColor: selectedIds.includes(question.id) ? 'var(--primary-color)' : undefined,
+                        boxShadow: selectedIds.includes(question.id) ? '0 4px 12px rgba(30, 41, 85, 0.3)' : '0 2px 4px rgba(0,0,0,0.1)'
                       }}
                       onClick={() => handleToggleQuestion(question.id)}
                     >
@@ -204,10 +207,13 @@ const QuestionBankSelector = ({ show, onClose, onSelectQuestions }) => {
                               type="checkbox"
                               checked={selectedIds.includes(question.id)}
                               onChange={() => handleToggleQuestion(question.id)}
-                              style={{ 
-                                width: '1.25rem', 
+                              style={{
+                                width: '1.25rem',
                                 height: '1.25rem',
-                                cursor: 'pointer'
+                                cursor: 'pointer',
+                                ...(selectedIds.includes(question.id)
+                                  ? { backgroundColor: 'var(--primary-color)', borderColor: 'var(--primary-color)', boxShadow: '0 0 0 0.2rem rgba(30, 41, 85, 0.25)' }
+                                  : {})
                               }}
                             />
                           </div>
@@ -215,13 +221,13 @@ const QuestionBankSelector = ({ show, onClose, onSelectQuestions }) => {
                           <div className="flex-grow-1">
                             <div className="d-flex align-items-center gap-2 mb-2">
                               <h6 className="mb-0">
-                                <i className="fas fa-question-circle me-2 text-primary"></i>
+                                <i className="fas fa-question-circle me-2" style={{ color: 'var(--primary-color)' }}></i>
                                 {question.titulo || "Sin título"}
                               </h6>
                               <span
                                 className="badge"
                                 style={{
-                                  backgroundColor: getTipoBadge(question.tipo).color,
+                                  backgroundColor: 'var(--primary-color)',
                                   color: 'white',
                                   padding: '0.25rem 0.5rem',
                                   fontSize: '0.7rem',
@@ -270,11 +276,11 @@ const QuestionBankSelector = ({ show, onClose, onSelectQuestions }) => {
                                     const respuesta = question.opciones[question.correcta + i];
                                     return (
                                       <div key={i} className="d-flex align-items-center gap-2 mb-1">
-                                        <span className="badge bg-primary" style={{ fontSize: '0.7rem', minWidth: '25px' }}>
+                                        <span className="badge" style={{ fontSize: '0.7rem', minWidth: '25px', backgroundColor: 'var(--primary-color)' }}>
                                           {i + 1}
                                         </span>
                                         <span style={{ fontSize: '0.85rem' }}>{concepto}</span>
-                                        <i className="fas fa-arrow-right text-primary" style={{ fontSize: '0.7rem' }}></i>
+                                        <i className="fas fa-arrow-right" style={{ fontSize: '0.7rem', color: 'var(--primary-color)' }}></i>
                                         <span className="badge bg-success" style={{ fontSize: '0.7rem', minWidth: '25px' }}>
                                           {String.fromCharCode(65 + i)}
                                         </span>
@@ -320,7 +326,7 @@ const QuestionBankSelector = ({ show, onClose, onSelectQuestions }) => {
           <div className="modal-footer" style={{ borderTop: '1px solid var(--border-color)', backgroundColor: '#f8f9fa' }}>
             <div className="d-flex justify-content-between align-items-center w-100">
               <div>
-                <strong className="text-primary">
+                <strong style={{ color: 'var(--primary-color)' }}>
                   <i className="fas fa-check-circle me-2"></i>
                   {selectedIds.length} pregunta{selectedIds.length !== 1 ? 's' : ''} seleccionada{selectedIds.length !== 1 ? 's' : ''}
                 </strong>
