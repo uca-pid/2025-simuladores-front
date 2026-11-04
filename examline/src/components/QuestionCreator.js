@@ -7,7 +7,10 @@ import { uploadQuestionImage } from "../services/api";
 // (modo alta, usado por QuestionBank.js y, antes de esta función, por
 // ExamPartBuilder). `onCancel` solo se usa en modo modal (edición o alta
 // dentro de ExamPartBuilder); QuestionBank.js no lo pasa y no muestra el botón.
-const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion }) => {
+// `variant="card"`: se muestra con el mismo aspecto que la tarjeta de pregunta
+// ya guardada (encabezado con número, tipo y botones), para editar "en el lugar".
+const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion, variant, numero }) => {
+  const isCard = variant === 'card';
   const [tipoPregunta, setTipoPregunta] = useState(editingQuestion?.tipo || "multiple_choice");
   // Guarda el último tipo "visto" por el efecto de reseteo de abajo, en vez de
   // un simple flag de "primer render": con ese flag, el doble-invocado de
@@ -378,14 +381,47 @@ const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion }) =
   };
 
   return (
-    <div className={`modern-card ${onSave ? '' : 'mb-4'}`} style={onSave ? { marginBottom: 0 } : undefined}>
-      <div className="modern-card-header">
-        <h3 className="modern-card-title">
-          <i className="fas fa-question-circle me-2"></i>
-          {editingQuestion ? 'Editar Pregunta' : 'Agregar Pregunta'}
-        </h3>
-      </div>
-      <div className="modern-card-body">
+    <div className={isCard ? 'exam-card mb-3' : 'modern-card mb-4'}>
+      {isCard ? (
+        <div className="exam-card-header" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: '0.5rem' }}>
+          <div className="d-flex align-items-center flex-wrap gap-2">
+            <h5 className="exam-title mb-0">
+              <span className="question-number">{numero ? `Pregunta ${numero}` : 'Nueva pregunta'}</span>
+            </h5>
+            <select
+              className="form-select form-select-sm"
+              style={{ width: 'auto', maxWidth: '260px' }}
+              value={tipoPregunta}
+              onChange={(e) => setTipoPregunta(e.target.value)}
+              title="Cambiar el tipo de pregunta"
+            >
+              <optgroup label="Corrección automática — selección">
+                <option value="multiple_choice">Múltiple (una correcta)</option>
+                <option value="multiple_response">Múltiple (varias correctas)</option>
+                <option value="true_false">Verdadero / Falso</option>
+                <option value="matching">Emparejar</option>
+              </optgroup>
+              <optgroup label="Corrección automática — texto/número">
+                <option value="fill_in_blank">Completar espacios</option>
+                <option value="short_answer">Respuesta corta</option>
+                <option value="numeric">Numérica</option>
+              </optgroup>
+              <optgroup label="Corrección manual">
+                <option value="essay">Desarrollo / Ensayo</option>
+                <option value="file_upload">Adjuntar archivo</option>
+              </optgroup>
+            </select>
+          </div>
+        </div>
+      ) : (
+        <div className="modern-card-header">
+          <h3 className="modern-card-title">
+            <i className="fas fa-question-circle me-2"></i>
+            {editingQuestion ? 'Editar Pregunta' : 'Agregar Pregunta'}
+          </h3>
+        </div>
+      )}
+      <div className={isCard ? 'exam-card-body' : 'modern-card-body'}>
         {error && (
           <div className="error-message mb-3">
             <i className="fas fa-exclamation-triangle"></i>
@@ -393,6 +429,7 @@ const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion }) =
           </div>
         )}
 
+        {!isCard && (
         <div className="row g-3 mb-4">
           <div className={onSave ? "col-md-12" : "col-md-6"}>
             <label className="form-label d-flex align-items-center gap-2">
@@ -459,12 +496,15 @@ const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion }) =
             </div>
           )}
         </div>
+        )}
 
         <div className="mb-4">
+          {!isCard && (
           <label className="form-label d-flex align-items-center gap-2">
             <i className="fas fa-comment-alt text-muted"></i>
             Texto de la pregunta
           </label>
+          )}
           <div className="d-flex gap-2">
             <input
               type="text"

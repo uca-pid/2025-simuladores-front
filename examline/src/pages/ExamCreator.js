@@ -9,6 +9,7 @@ import BackToMainButton from "../components/BackToMainButton";
 import Modal from "../components/Modal";
 import ExamPartBuilder, { PROG_TABS } from "../components/ExamPartBuilder";
 import ExamPartQuestionSettings from "../components/ExamPartQuestionSettings";
+import ExamPartProgrammingSettings from "../components/ExamPartProgrammingSettings";
 import { createExam, updateExam, getExamById } from "../services/api";
 import { getTipoBadge, getDificultadBadge } from "../utils/questionBadges";
 
@@ -863,6 +864,13 @@ const ExamCreator = () => {
           onChange={handlePartChange}
           ordenAleatorio={ordenAleatorio}
           onOrdenAleatorioChange={setOrdenAleatorio}
+        />
+      )}
+
+      {currentStep === 2 && selectedPart && selectedPart.tipo === 'programming' && (
+        <ExamPartProgrammingSettings
+          part={selectedPart}
+          onChange={handlePartChange}
         />
       )}
       </aside>

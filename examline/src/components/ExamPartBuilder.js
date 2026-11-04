@@ -22,6 +22,21 @@ export const PROG_TABS = [
   { key: 'solucion', label: 'Solución de Referencia', icon: 'fa-check-double' },
 ];
 
+// Contenedor del formulario de pregunta que se muestra dentro de la lista
+// (crear o editar en la tarjeta). Al montarse se desplaza hasta el formulario
+// para que no quede fuera de la vista.
+const InlineQuestionForm = ({ fullWidth, ...props }) => {
+  const ref = useRef(null);
+  useEffect(() => {
+    ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
+  return (
+    <div ref={ref} style={{ scrollMarginTop: '1rem', ...(fullWidth ? { gridColumn: '1 / -1' } : {}) }}>
+      <QuestionCreator {...props} />
+    </div>
+  );
+};
+
 // `part` / `onChange` lift this part's whole local state up into ExamCreator's
 // `partes` array, so every setter below reads `part.<field>` and calls
 // `onChange({ ...part, <field>: value })` instead of owning local state.
@@ -43,7 +58,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
   // Bloquea el scroll de la página de fondo mientras cualquiera de los
   // modales de esta parte está abierto, para que la rueda del mouse solo
   // scrollee el contenido del modal.
-  const anyModalOpen = showBankSelector || showNewReferenceFileModal || showDeleteReferenceFileModal || showQuestionModal;
+  const anyModalOpen = showBankSelector || showNewReferenceFileModal || showDeleteReferenceFileModal;
   useEffect(() => {
     if (anyModalOpen) {
       document.body.style.overflow = 'hidden';
@@ -264,13 +279,6 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
     update({ testCases: part.testCases.map((tc, i) => i === index ? { ...tc, puntos: valor } : tc) });
   };
 
-  const handleToggleTestCasesPuntajePersonalizado = (activo) => {
-    update({
-      testCasesPuntajePersonalizado: activo,
-      testCases: activo ? part.testCases : part.testCases.map(tc => ({ ...tc, puntos: 1 })),
-    });
-  };
-
   const handleTestCaseChange = (index, field, value) => {
     const updatedTestCases = [...part.testCases];
     updatedTestCases[index][field] = value;
@@ -307,7 +315,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
     try {
       const validTestCases = part.testCases.filter(tc => tc.expectedOutput && tc.expectedOutput.trim());
       const mainFile = part.referenceFiles.find(f => f.filename === part.currentReferenceFile) || part.referenceFiles[0];
-      const results = await testSolutionPreview(mainFile.content, part.lenguajeProgramacion, validTestCases);
+      const results = await testSolutionPreview(mainFile.content, part.lenguajeProgramacion, validTestCases, part.datasetFiles);
       update({ testResults: results, showTestPanel: true });
     } catch (err) {
       console.error("Error ejecutando tests:", err);
@@ -341,16 +349,26 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                 </h3>
               </div>
               <div className="modern-card-body">
-                {part.preguntas.length === 0 ? (
+                {part.preguntas.length === 0 ? (showQuestionModal ? null : (
                   <div className="empty-state">
                     <div className="empty-icon">
                       <i className="fas fa-question-circle"></i>
                     </div>
                     <h4 className="empty-title">No hay preguntas aún</h4>
                   </div>
-            ) : (
+            )) : (
               <div className="exam-creator-questions-grid">
-                {part.preguntas.map((p, idx) => (
+                {part.preguntas.map((p, idx) => idx === editingQuestionIndex ? (
+                  <InlineQuestionForm
+                    key={idx}
+                    fullWidth
+                    variant="card"
+                    numero={idx + 1}
+                    editingQuestion={p}
+                    onSave={handleSaveQuestion}
+                    onCancel={handleCloseQuestionModal}
+                  />
+                ) : (
                   <div
                     key={idx}
                     className="exam-creator-question-card"
@@ -445,7 +463,7 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                           <button
                             className="btn btn-sm btn-outline-primary"
                             onClick={() => handleOpenEditQuestion(idx)}
-                            disabled={isPublishing}
+                            disabled={isPublishing || showQuestionModal}
                             title="Editar pregunta"
                             style={{ padding: '0.25rem 0.5rem' }}
                           >
@@ -549,11 +567,23 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
               </div>
             )}
 
+              {showQuestionModal && editingQuestionIndex == null ? (
+                <div className="mt-4">
+                  <InlineQuestionForm
+                    variant="card"
+                    numero={part.preguntas.length + 1}
+                    editingQuestion={null}
+                    onSave={handleSaveQuestion}
+                    onCancel={handleCloseQuestionModal}
+                  />
+                </div>
+              ) : (
               <div className="d-flex gap-2 justify-content-center flex-wrap mt-4 pt-3" style={{ borderTop: part.preguntas.length > 0 ? '1px solid var(--border-color)' : 'none' }}>
                 <button
                   type="button"
                   className="modern-btn modern-btn-secondary modern-btn-sm"
                   onClick={() => setShowBankSelector(true)}
+                  disabled={showQuestionModal}
                 >
                   <i className="fas fa-database me-2"></i>
                   <span className="button-text">Agregar Pregunta del Banco</span>
@@ -562,11 +592,13 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                   type="button"
                   className="modern-btn modern-btn-primary modern-btn-sm"
                   onClick={handleOpenNewQuestion}
+                  disabled={showQuestionModal}
                 >
                   <i className="fas fa-plus me-2"></i>
                   <span className="button-text">Agregar Pregunta</span>
                 </button>
               </div>
+              )}
               </div>
             </div>
 
@@ -594,25 +626,6 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
           onClose={() => setShowBankSelector(false)}
           onSelectQuestions={handleAddQuestionsFromBank}
         />
-
-        {showQuestionModal && (
-          <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={handleCloseQuestionModal}>
-            <div
-              className="modal-dialog modal-lg modal-dialog-scrollable"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="modal-content" style={{ border: 'none', borderRadius: '12px', overflow: 'hidden', backgroundColor: 'white' }}>
-                <div className="modal-body p-0" style={{ overscrollBehavior: 'contain' }}>
-                  <QuestionCreator
-                    editingQuestion={editingQuestionIndex != null ? part.preguntas[editingQuestionIndex] : null}
-                    onSave={handleSaveQuestion}
-                    onCancel={handleCloseQuestionModal}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </>
     );
   }
@@ -934,40 +947,8 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
               </span>
             )}
           </h3>
-          <button
-            type="button"
-            className="modern-btn modern-btn-primary modern-btn-sm"
-            onClick={handleAddTestCase}
-            disabled={isPublishing}
-          >
-            <i className="fas fa-plus me-2"></i>
-            <span className="button-text">Agregar Caso de Prueba</span>
-          </button>
         </div>
         <div className="modern-card-body">
-          {part.testCases.length > 0 && (
-            <div className="mb-4 pb-3" style={{ borderBottom: '1px solid var(--border-color)' }}>
-              <div className="d-flex align-items-center gap-2 mb-3">
-                <span className="text-muted" style={{ fontSize: '1.3rem', lineHeight: 1 }}>&bull;</span>
-                <strong>Puntaje personalizado</strong>
-                <div className="form-check form-switch mb-0 ms-2">
-                  <input
-                    className="form-check-input"
-                    type="checkbox"
-                    role="switch"
-                    id={`testCasesPuntajePersonalizado-${part.localId}`}
-                    checked={!!part.testCasesPuntajePersonalizado}
-                    onChange={(e) => handleToggleTestCasesPuntajePersonalizado(e.target.checked)}
-                    style={{
-                      backgroundColor: part.testCasesPuntajePersonalizado ? 'var(--primary-color)' : '#fff',
-                      borderColor: part.testCasesPuntajePersonalizado ? 'var(--primary-color)' : '#6c757d'
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
           {part.testCases.length === 0 ? (
             <div className="empty-state">
               <div className="empty-icon">
@@ -1067,6 +1048,17 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
             </div>
           )}
 
+          <div className="d-flex justify-content-center mt-4 pt-3" style={{ borderTop: part.testCases.length > 0 ? '1px solid var(--border-color)' : 'none' }}>
+            <button
+              type="button"
+              className="modern-btn modern-btn-primary modern-btn-sm"
+              onClick={handleAddTestCase}
+              disabled={isPublishing}
+            >
+              <i className="fas fa-plus me-2"></i>
+              <span className="button-text">Agregar Caso de Prueba</span>
+            </button>
+          </div>
         </div>
       </div>
       )}

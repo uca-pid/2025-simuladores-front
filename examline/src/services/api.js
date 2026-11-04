@@ -751,12 +751,12 @@ export async function testExamSolution(examId, code, useReferenceSolution = fals
   }
 }
 
-export async function testSolutionPreview(code, language, testCases) {
+export async function testSolutionPreview(code, language, testCases, datasetFiles = []) {
   try {
     const res = await fetch(`${API_BASE_URL}/exams/test-solution-preview`, {
       method: "POST",
       headers: getAuthHeaders(),
-      body: JSON.stringify({ code, language, testCases }),
+      body: JSON.stringify({ code, language, testCases, datasetFiles }),
     });
 
     return await handleResponse(res);
