@@ -628,12 +628,12 @@ export async function saveSubmissionFiles(examId, files) {
 }
 
 // Code execution endpoint
-export async function runCode({ code, language, examId, input }) {
+export async function runCode({ code, language, examId, partId, input }) {
   try {
     const res = await fetch(`${API_BASE_URL}/code-execution/run`, {
       method: "POST",
       headers: getAuthHeaders(),
-      body: JSON.stringify({ code, language, examId, input }),
+      body: JSON.stringify({ code, language, examId, partId, input }),
     });
 
     return await handleResponse(res);

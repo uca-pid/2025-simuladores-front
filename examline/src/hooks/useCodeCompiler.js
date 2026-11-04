@@ -28,6 +28,8 @@ export const useCodeCompiler = (examId, exam, code) => {
         code: code,
         language: exam?.lenguajeProgramacion || 'python',
         examId: examId,
+        // `exam` es la parte actual aplanada sobre el examen, así que su id es el de la parte
+        partId: exam?.id,
         input: userInput || '' // Enviar el input del usuario
       });
 
