@@ -392,7 +392,7 @@ const ProgrammingExamView = () => {
                   style={consignaWidth ? { width: `${consignaWidth}px` } : undefined}
                 >
                   <div className="consigna-notice">
-                    <strong>📝 Importante:</strong> Entregar la versión final en el archivo main.py y guardar manualmente antes de finalizar.
+                    <strong>📝 Importante:</strong> Entregar la versión final en el archivo {{ python: 'main.py', javascript: 'main.js', c: 'main.c' }[exam?.lenguajeProgramacion] || 'main.py'} y guardar manualmente antes de finalizar.
                   </div>
 
                   {datasetFilesList.length > 0 && (
