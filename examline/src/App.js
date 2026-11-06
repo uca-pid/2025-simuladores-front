@@ -23,6 +23,7 @@ import SEBExamLauncher from "./pages/SEBExamLauncher";
 import QuestionBank from "./pages/QuestionBank";
 import WindowInscriptions from "./pages/WindowInscriptions";
 import "./styles/base.css";
+import { GAMIFICATION_ENABLED } from "./config/features";
 
 
 // Wrapper para login/registro: redirige si ya está logueado
@@ -89,11 +90,13 @@ function App() {
               <StudentExamPage />
             </StudentRoute>
           } />
+          {GAMIFICATION_ENABLED && (
           <Route path="/student-progress" element={
             <StudentRoute>
               <StudentProgress />
             </StudentRoute>
           } />
+          )}
           <Route path="/seb-exam-launcher" element={
             <StudentRoute>
               <SEBExamLauncher />
