@@ -472,6 +472,16 @@ export async function toggleExamWindowActive(windowId) {
   }
 }
 
+// Cierra el examen para todos: finaliza los intentos en curso con lo que tengan guardado.
+export async function closeExamWindow(windowId) {
+  const res = await fetch(`${API_BASE_URL}/exam-windows/${windowId}/cerrar`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+  });
+
+  return await handleResponse(res);
+}
+
 // Exam attempt endpoints
 export async function getExamAttemptResults(attemptId) {
   try {
@@ -542,6 +552,27 @@ export async function continuePart(attemptId) {
   } catch (err) {
     throw err;
   }
+}
+
+// Autoguarda las respuestas de la parte en curso (índices originales de opciones).
+export async function saveDraftAnswers(attemptId, respuestas) {
+  const res = await fetch(`${API_BASE_URL}/exam-attempts/${attemptId}/draft`, {
+    method: "PUT",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ respuestas }),
+  });
+
+  return await handleResponse(res);
+}
+
+// Estado del intento: si el profesor cerró el examen.
+export async function getAttemptStatus(attemptId) {
+  const res = await fetch(`${API_BASE_URL}/exam-attempts/${attemptId}/status`, {
+    method: "GET",
+    headers: getAuthHeaders(),
+  });
+
+  return await handleResponse(res);
 }
 
 export async function saveAttemptCode(attemptId, codigoProgramacion) {

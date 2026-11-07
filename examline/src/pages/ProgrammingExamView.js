@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
-import { useSEB, useExamAttempt, useExamFiles, useCodeCompiler, useExamFinish } from '../hooks';
+import { useSEB, useExamAttempt, useExamFiles, useCodeCompiler, useExamFinish, useAttemptStatus } from '../hooks';
 import Modal from '../components/Modal';
 import EnunciadoArchivoViewer from '../components/EnunciadoArchivoViewer';
 import CsvDatasetViewer from '../components/CsvDatasetViewer';
@@ -46,6 +46,20 @@ const ProgrammingExamView = () => {
   // programación ya se cerró (código guardado y calificado) y solo queda
   // esperar a que el estudiante confirme el paso a la siguiente.
   const [partBreak, setPartBreak] = useState(null);
+  // true cuando el propio alumno entregó la última parte (no es un cierre del profesor)
+  const [finishedByStudent, setFinishedByStudent] = useState(false);
+  const [closedByProfessor, setClosedByProfessor] = useState(false);
+
+  // Consulta periódica: cierre del examen por el profesor
+  useAttemptStatus(
+    attempt && !finishedByStudent ? attempt.id : null,
+    {
+      onClosed: () => {
+        sessionStorage.removeItem(`exam_${examId}_windowId`);
+        setClosedByProfessor(true);
+      }
+    }
+  );
 
   // Archivos del examen (código, tabs, caché, guardado)
   const {
@@ -275,6 +289,31 @@ const ProgrammingExamView = () => {
       <div className="container mt-5">
         <div className="alert alert-warning">
           No se pudo cargar el examen o el intento.
+        </div>
+      </div>
+    );
+  }
+
+  if (closedByProfessor) {
+    return (
+      <div className="container py-5">
+        <div className="modern-card" style={{ maxWidth: '560px', margin: '0 auto' }}>
+          <div className="modern-card-body text-center py-5">
+            <div className="empty-icon mb-3">
+              <i className="fas fa-lock"></i>
+            </div>
+            <h4 className="mb-3">El profesor cerró el examen</h4>
+            <p className="text-muted mb-4">
+              Se entregó automáticamente la última versión guardada de tu código.
+            </p>
+            <button
+              className="modern-btn modern-btn-primary"
+              onClick={() => (isInSEB ? closeSEB() : navigate('/student-exam'))}
+            >
+              <i className="fas fa-sign-out-alt me-2"></i>
+              Salir del examen
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -2826,6 +2865,9 @@ const ProgrammingExamView = () => {
         onConfirm={async () => {
           setShowFinishModal(false);
           const response = await finishExam();
+          if (response?.estado === 'finalizado') {
+            setFinishedByStudent(true);
+          }
           if (response?.partStatus === 'esperando_continuar') {
             setPartBreak({
               partNumber: (exam?.currentPartIndex ?? 0) + 1,

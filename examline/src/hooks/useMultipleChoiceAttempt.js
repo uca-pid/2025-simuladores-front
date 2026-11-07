@@ -1,5 +1,29 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getExamById, checkExamAttempt, startExamAttempt, advancePart, continuePart } from '../services/api';
+import { getExamById, checkExamAttempt, startExamAttempt, advancePart, continuePart, saveDraftAnswers } from '../services/api';
+
+// PRNG determinístico (mulberry32): con la misma semilla siempre da el mismo
+// orden, así al recargar la página las opciones quedan en el mismo lugar y las
+// respuestas guardadas (por posición) siguen apuntando a la opción correcta.
+const seededRandom = (seed) => {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+};
+
+const shuffleWithSeed = (items, seed) => {
+  const random = seededRandom(seed);
+  const copia = [...items];
+  for (let i = copia.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [copia[i], copia[j]] = [copia[j], copia[i]];
+  }
+  return copia;
+};
 
 /**
  * Hook personalizado para gestionar la toma de un examen NO de programación
@@ -150,21 +174,13 @@ export const useMultipleChoiceAttempt = (examId, windowId, navigate, { propExamI
                 texto,
                 originalIndex: numConceptos + i
               }));
-              for (let i = respuestasConIndice.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [respuestasConIndice[i], respuestasConIndice[j]] = [respuestasConIndice[j], respuestasConIndice[i]];
-              }
-              randomizedMatching[index] = respuestasConIndice;
+              randomizedMatching[index] = shuffleWithSeed(respuestasConIndice, attemptData.id * 100003 + pregunta.id);
             } else if (pregunta.tipo === 'fill_in_blank' && pregunta.opciones && Array.isArray(pregunta.opciones)) {
               const opcionesConIndice = pregunta.opciones.map((texto, i) => ({
                 texto,
                 originalIndex: i
               }));
-              for (let i = opcionesConIndice.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [opcionesConIndice[i], opcionesConIndice[j]] = [opcionesConIndice[j], opcionesConIndice[i]];
-              }
-              randomized[index] = opcionesConIndice;
+              randomized[index] = shuffleWithSeed(opcionesConIndice, attemptData.id * 100003 + pregunta.id);
             } else if (
               pregunta.opciones && Array.isArray(pregunta.opciones) &&
               !['short_answer', 'numeric', 'essay', 'file_upload'].includes(pregunta.tipo)
@@ -173,11 +189,7 @@ export const useMultipleChoiceAttempt = (examId, windowId, navigate, { propExamI
                 texto,
                 originalIndex: i
               }));
-              for (let i = opcionesConIndice.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [opcionesConIndice[i], opcionesConIndice[j]] = [opcionesConIndice[j], opcionesConIndice[i]];
-              }
-              randomized[index] = opcionesConIndice;
+              randomized[index] = shuffleWithSeed(opcionesConIndice, attemptData.id * 100003 + pregunta.id);
             }
           });
           setRandomizedOptions(randomized);
@@ -208,6 +220,22 @@ export const useMultipleChoiceAttempt = (examId, windowId, navigate, { propExamI
     loadExamAndAttempt();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [examId, windowId, reloadIndex]);
+
+  // Autoguardado en el servidor: si el profesor cierra el examen antes de que
+  // el alumno entregue, se corrige lo que haya respondido hasta ese momento.
+  useEffect(() => {
+    if (!attempt || propExamId || !part || part.tipo !== 'multiple_choice' || exam?.partStatus !== 'en_curso') return;
+    if (Object.keys(respuestas).length === 0) return;
+
+    const timeout = setTimeout(() => {
+      saveDraftAnswers(attempt.id, buildFinishBody()).catch(err => {
+        console.error('Error autoguardando respuestas:', err);
+      });
+    }, 1500);
+
+    return () => clearTimeout(timeout);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [respuestas, attempt, part]);
 
   // Construye el body de finalización a partir de las respuestas actuales
   const buildFinishBody = useCallback(() => {

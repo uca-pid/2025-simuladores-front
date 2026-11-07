@@ -6,7 +6,7 @@ import 'moment/locale/es';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { useAuth } from '../contexts/AuthContext';
 import { useModal } from '../hooks';
-import { getExams, getExamWindowsProfesor, createExamWindow, updateExamWindow, toggleExamWindowActive } from '../services/api';
+import { getExams, getExamWindowsProfesor, createExamWindow, updateExamWindow, toggleExamWindowActive, closeExamWindow } from '../services/api';
 import BackToMainButton from '../components/BackToMainButton';
 import Modal from '../components/Modal';
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -25,6 +25,12 @@ const WINDOW_STATUS_STYLES = {
 
 function getEffectiveState(window) {
   return (window.sinTiempo && window.estado === 'programada') ? 'en_curso' : window.estado;
+}
+
+// Ventana en la que los alumnos pueden estar rindiendo ahora (el profesor puede cerrarla)
+function isWindowLive(window) {
+  if (!window || !window.activa || window.estado === 'finalizada') return false;
+  return window.sinTiempo || window.estado === 'en_curso';
 }
 
 export default function ExamWindowsPage() {
@@ -608,6 +614,28 @@ export default function ExamWindowsPage() {
     }
   };
 
+  const handleCloseWindow = (w) => {
+    showModal(
+      'warning',
+      'Cerrar examen',
+      `¿Cerrar "${w.nombre}" para todos? Los alumnos que estén rindiendo no van a poder seguir y se les corregirá lo que tengan guardado. Esta acción no se puede deshacer.`,
+      async () => {
+        closeModal();
+        try {
+          const result = await closeExamWindow(w.id);
+          setExamWindows(prev => prev.map(x => (x.id === w.id ? { ...x, estado: 'finalizada' } : x)));
+          setEditingWindow(prev => (prev && prev.id === w.id ? { ...prev, estado: 'finalizada' } : prev));
+          showModal('success', 'Examen cerrado', result.message);
+          loadData(true);
+        } catch (error) {
+          showModal('error', 'Error', error.message || 'No se pudo cerrar el examen');
+        }
+      },
+      true,
+      'Cerrar examen'
+    );
+  };
+
   const getStatusBadge = (estado) => {
     const badges = {
       programada: 'bg-primary',
@@ -1040,7 +1068,22 @@ export default function ExamWindowsPage() {
                               {statusOpt && <span className={`badge ${statusOpt.badgeClass}`}>{statusOpt.label}</span>}
                             </td>
                             <td>{getInscritosCount(w)}/{w.cupoMaximo}</td>
-                            <td className="text-end">
+                            <td className="text-end" style={{ whiteSpace: 'nowrap' }}>
+                              {isWindowLive(w) && (
+                                <button
+                                  type="button"
+                                  className="modern-btn modern-btn-sm me-2"
+                                  style={{ backgroundColor: 'var(--danger-color, #dc3545)', borderColor: 'var(--danger-color, #dc3545)', color: '#fff' }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCloseWindow(w);
+                                  }}
+                                  title="Cerrar el examen para todos los alumnos"
+                                >
+                                  <i className="fas fa-stop-circle me-1"></i>
+                                  Cerrar
+                                </button>
+                              )}
                               {w.pendientesCorreccionCount > 0 && (
                                 <button
                                   type="button"
@@ -1136,6 +1179,25 @@ export default function ExamWindowsPage() {
                 <form onSubmit={handleSaveWindow} onClick={(e) => e.stopPropagation()} style={{ display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1 }}>
                   <div className="modern-card-body" style={{ padding: '1.5rem', overflowY: 'auto', flex: 1, minHeight: 0 }}>
                     
+                    {/* Control en vivo: cerrar el examen para todos mientras se rinde */}
+                    {editingWindow && isWindowLive(editingWindow) && (
+                      <div className="mb-4 p-3 d-flex align-items-center justify-content-between flex-wrap gap-2" style={{ border: '1.5px solid var(--border-color)', borderRadius: '10px', background: 'rgba(30, 41, 85, 0.04)' }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>
+                          <i className="fas fa-broadcast-tower text-success me-2"></i>
+                          Examen en curso
+                        </div>
+                        <button
+                          type="button"
+                          className="modern-btn modern-btn-sm"
+                          style={{ backgroundColor: 'var(--danger-color, #dc3545)', borderColor: 'var(--danger-color, #dc3545)', color: '#fff' }}
+                          onClick={() => handleCloseWindow(editingWindow)}
+                        >
+                          <i className="fas fa-stop-circle me-1"></i>
+                          Cerrar examen para todos
+                        </button>
+                      </div>
+                    )}
+
                     {/* Nombre de la Ventana */}
                     <div className="row mb-4">
                       <div className="col-12">
@@ -1872,7 +1934,7 @@ export default function ExamWindowsPage() {
         message={modal.message}
         type={modal.type}
         showCancel={modal.showCancel}
-        confirmText={'Aceptar'}
+        confirmText={modal.confirmText || 'Aceptar'}
         cancelText="Cancelar"
       />
     </div>

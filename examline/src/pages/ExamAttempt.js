@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import './ExamAttempt.css';
-import { useModal, useSEB, useMultipleChoiceAttempt } from "../hooks";
+import { useModal, useSEB, useMultipleChoiceAttempt, useAttemptStatus } from "../hooks";
 import Modal from "../components/Modal";
 import PartBreakScreen from "../components/PartBreakScreen";
 import { uploadAnswerFile } from "../services/api";
@@ -86,6 +86,38 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
   // actual ya se cerró y no vuelve a mostrarse, solo queda esperar a que el
   // estudiante confirme el paso a la siguiente.
   const [partBreak, setPartBreak] = useState(null);
+  // Se pone en true cuando el propio alumno entrega la última parte, para no
+  // confundir ese "finalizado" con un cierre del profesor.
+  const [finishedByStudent, setFinishedByStudent] = useState(false);
+
+  // Consulta periódica: cierre del examen por el profesor
+  useAttemptStatus(
+    attempt && !propExamId && !finishedByStudent ? attempt.id : null,
+    {
+      onClosed: () => {
+        sessionStorage.removeItem(`exam_${examId}_respuestas`);
+        sessionStorage.removeItem(`exam_${examId}_windowId`);
+        showModal(
+          'warning',
+          'Examen cerrado',
+          'El profesor cerró el examen. Tus respuestas guardadas fueron entregadas automáticamente.',
+          async () => {
+            closeModal();
+            if (isInSEB) {
+              const closed = await tryCloseSEB();
+              if (!closed) navigate('/login');
+            } else if (onBack) {
+              onBack();
+            } else {
+              navigate('/student-exam');
+            }
+          },
+          false,
+          'Salir del examen'
+        );
+      }
+    }
+  );
 
   // 🔒 Validación inicial de seguridad para estudiantes
   useEffect(() => {
@@ -206,6 +238,9 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
           setModalProcessing(true); // Deshabilitar botón del modal
 
           const response = await finishAttempt();
+          if (response.estado === 'finalizado') {
+            setFinishedByStudent(true);
+          }
 
           closeModal();
 
@@ -369,14 +404,26 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
 
   if (partBreak) {
     return (
-      <PartBreakScreen
-        partNumber={partBreak.partNumber}
-        totalParts={partBreak.totalParts}
-        onContinue={async () => {
-          await continueToNextPart();
-          setPartBreak(null);
-        }}
-      />
+      <>
+        <PartBreakScreen
+          partNumber={partBreak.partNumber}
+          totalParts={partBreak.totalParts}
+          onContinue={async () => {
+            await continueToNextPart();
+            setPartBreak(null);
+          }}
+        />
+        <Modal
+          show={modal.show}
+          onClose={closeModal}
+          onConfirm={modal.onConfirm}
+          title={modal.title}
+          message={modal.message}
+          type={modal.type}
+          showCancel={modal.showCancel}
+          confirmText={modal.confirmText}
+        />
+      </>
     );
   }
 
