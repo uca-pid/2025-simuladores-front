@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { getTipoBadge } from "../utils/questionBadges";
 import { getQuestionBank } from "../services/api";
+import OptionImage from "./OptionImage";
 
 const QuestionBankSelector = ({ show, onClose, onSelectQuestions }) => {
   const [questions, setQuestions] = useState([]);
@@ -71,6 +72,7 @@ const QuestionBankSelector = ({ show, onClose, onSelectQuestions }) => {
         correcta: q.correcta,
         correctas: q.correctas ?? null,
         imagenUrl: q.imagenUrl || null,
+        imagenesOpciones: q.imagenesOpciones ?? null,
         puntos: 1
       }));
     
@@ -308,6 +310,7 @@ const QuestionBankSelector = ({ show, onClose, onSelectQuestions }) => {
                                       <span className={i === question.correcta ? "text-success fw-bold" : ""}>
                                         {opcion}
                                       </span>
+                                      <OptionImage url={question.imagenesOpciones?.[i]} maxHeight={80} />
                                     </li>
                                   ))}
                                 </ul>

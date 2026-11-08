@@ -36,6 +36,16 @@ const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion, var
   const [imagenUrl, setImagenUrl] = useState(editingQuestion?.imagenUrl || null);
   const [isUploadingImagen, setIsUploadingImagen] = useState(false);
 
+  // Imagen opcional por opción (multiple_choice/multiple_response): array
+  // paralelo a `opciones` con la URL de cada una, o null si no tiene.
+  const [imagenesOpciones, setImagenesOpciones] = useState(() => {
+    if (["multiple_choice", "multiple_response"].includes(editingQuestion?.tipo) && Array.isArray(editingQuestion.imagenesOpciones)) {
+      return editingQuestion.imagenesOpciones;
+    }
+    return [];
+  });
+  const [uploadingOpcion, setUploadingOpcion] = useState(null); // índice de la opción cuya imagen se está subiendo
+
   // Estados adicionales para fill_in_blank
   const [respuestasCorrectas, setRespuestasCorrectas] = useState(() => {
     if (editingQuestion?.tipo === "fill_in_blank") {
@@ -96,6 +106,7 @@ const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion, var
       return;
     }
     prevTipoPregunta.current = tipoPregunta;
+    setImagenesOpciones([]);
     if (tipoPregunta === "true_false") {
       setOpciones(["Verdadero", "Falso"]);
       setCorrecta(0);
@@ -148,6 +159,7 @@ const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion, var
     if (opciones.length > 2) { // Mínimo 2 opciones
       const nuevasOpciones = opciones.filter((_, i) => i !== index);
       setOpciones(nuevasOpciones);
+      setImagenesOpciones(prev => prev.filter((_, i) => i !== index));
       // Ajustar la respuesta correcta si es necesario
       if (correcta >= nuevasOpciones.length) {
         setCorrecta(nuevasOpciones.length - 1);
@@ -211,6 +223,35 @@ const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion, var
     setImagenUrl(null);
   };
 
+  const handleImagenOpcionChange = async (index, e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingOpcion(index);
+    try {
+      const { url } = await uploadQuestionImage(file);
+      setImagenesOpciones(prev => {
+        const nuevas = [...prev];
+        nuevas[index] = url;
+        return nuevas;
+      });
+    } catch (err) {
+      console.error(err);
+      setError(err.message || "No se pudo subir la imagen");
+    } finally {
+      setUploadingOpcion(null);
+      e.target.value = '';
+    }
+  };
+
+  const handleQuitarImagenOpcion = (index) => {
+    setImagenesOpciones(prev => {
+      const nuevas = [...prev];
+      nuevas[index] = null;
+      return nuevas;
+    });
+  };
+
   // Agregar pregunta al listado
   const handleAgregarPregunta = () => {
     if (!textoPregunta.trim()) {
@@ -229,12 +270,13 @@ const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion, var
         return;
       }
 
-      if (opciones.some(o => !o.trim())) {
-        setError("Complete todas las opciones antes de agregar la pregunta");
+      if (opciones.some((o, i) => !o.trim() && !imagenesOpciones[i])) {
+        setError("Cada opción necesita un texto o una imagen");
         return;
       }
 
-      const opcionesNormalizadas = opciones.map(o => o.trim().toLowerCase());
+      // Las opciones que son solo imagen no cuentan para detectar duplicados
+      const opcionesNormalizadas = opciones.map(o => o.trim().toLowerCase()).filter(o => o);
       const hayDuplicados = opcionesNormalizadas.some((o, i) => opcionesNormalizadas.indexOf(o) !== i);
       if (hayDuplicados) {
         setError("No se permiten opciones duplicadas (ignorando mayúsculas/minúsculas y espacios).");
@@ -313,7 +355,8 @@ const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion, var
       texto: textoPregunta,
       opciones: [],
       correcta: correcta,
-      imagenUrl: imagenUrl || null
+      imagenUrl: imagenUrl || null,
+      imagenesOpciones: null
     };
 
     if (tipoPregunta === "fill_in_blank") {
@@ -342,6 +385,11 @@ const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion, var
     } else {
       preguntaData.opciones = [...opciones];
       preguntaData.correcta = correcta;
+    }
+
+    if (tipoPregunta === "multiple_choice" || tipoPregunta === "multiple_response") {
+      const imagenes = opciones.map((_, i) => imagenesOpciones[i] || null);
+      preguntaData.imagenesOpciones = imagenes.some(Boolean) ? imagenes : null;
     }
 
     // En modo edición/modal (ExamPartBuilder) avisamos con onSave y listo: el
@@ -376,6 +424,7 @@ const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion, var
     }
     setCorrecta(0);
     setImagenUrl(null);
+    setImagenesOpciones([]);
     setPuntos("1");
     setError("");
   };
@@ -596,7 +645,7 @@ const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion, var
               </small>
               <div className="exam-creator-options-list">
                 {opciones.map((op, i) => (
-                  <div key={i} className="exam-creator-option-item mb-2 d-flex align-items-center gap-2">
+                  <div key={i} className="exam-creator-option-item mb-2 d-flex align-items-start gap-2">
                     {tipoPregunta === "multiple_choice" ? (
                       <input
                         type="radio"
@@ -605,7 +654,7 @@ const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion, var
                         checked={correcta === i}
                         onChange={() => setCorrecta(i)}
                         title="Marcar como respuesta correcta"
-                        style={{ width: '1.15rem', height: '1.15rem', accentColor: 'var(--primary-color)', cursor: 'pointer' }}
+                        style={{ width: '1.15rem', height: '1.15rem', accentColor: 'var(--primary-color)', cursor: 'pointer', marginTop: '0.7rem' }}
                       />
                     ) : (
                       <input
@@ -618,33 +667,72 @@ const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion, var
                           );
                         }}
                         title="Marcar como respuesta correcta"
-                        style={{ width: '1.15rem', height: '1.15rem', accentColor: 'var(--primary-color)', cursor: 'pointer' }}
+                        style={{ width: '1.15rem', height: '1.15rem', accentColor: 'var(--primary-color)', cursor: 'pointer', marginTop: '0.7rem' }}
                       />
                     )}
-                    <input
-                      type="text"
-                      className="form-control"
-                      placeholder={`Opción ${i + 1}`}
-                      value={op}
-                      onChange={(e) => {
-                        const nuevasOpciones = [...opciones];
-                        nuevasOpciones[i] = e.target.value;
-                        setOpciones(nuevasOpciones);
-                      }}
-                      style={{
-                        padding: '0.6rem 0.8rem',
-                        border: '1px solid var(--border-color)',
-                        borderRadius: '6px',
-                        fontSize: '0.9rem'
-                      }}
-                    />
+                    <div className="flex-grow-1">
+                      <input
+                        type="text"
+                        className="form-control"
+                        placeholder={imagenesOpciones[i] ? `Opción ${i + 1} (texto opcional)` : `Opción ${i + 1}`}
+                        value={op}
+                        onChange={(e) => {
+                          const nuevasOpciones = [...opciones];
+                          nuevasOpciones[i] = e.target.value;
+                          setOpciones(nuevasOpciones);
+                        }}
+                        style={{
+                          padding: '0.6rem 0.8rem',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '6px',
+                          fontSize: '0.9rem'
+                        }}
+                      />
+                      {uploadingOpcion === i && (
+                        <small className="text-muted d-block mt-1">
+                          <i className="fas fa-spinner fa-spin me-1"></i>
+                          Subiendo imagen...
+                        </small>
+                      )}
+                      {uploadingOpcion !== i && imagenesOpciones[i] && (
+                        <div className="d-flex align-items-start gap-2 mt-2">
+                          <img
+                            src={imagenesOpciones[i]}
+                            alt={`Imagen de la opción ${i + 1}`}
+                            style={{ maxHeight: '90px', maxWidth: '200px', borderRadius: '6px', border: '1px solid var(--border-color)' }}
+                          />
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-outline-danger"
+                            onClick={() => handleQuitarImagenOpcion(i)}
+                            title="Quitar imagen de la opción"
+                          >
+                            <i className="fas fa-times"></i>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <label
+                      className="btn btn-outline-secondary btn-sm mb-0 align-self-start"
+                      title={imagenesOpciones[i] ? "Cambiar imagen de la opción" : "Agregar imagen a la opción"}
+                      style={{ minWidth: '40px', cursor: uploadingOpcion !== null ? 'not-allowed' : 'pointer', marginTop: '0.25rem' }}
+                    >
+                      <i className="fas fa-image"></i>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        hidden
+                        disabled={uploadingOpcion !== null}
+                        onChange={(e) => handleImagenOpcionChange(i, e)}
+                      />
+                    </label>
                     {opciones.length > 2 && (
                       <button
                         type="button"
                         className="btn btn-outline-danger btn-sm"
                         onClick={() => handleEliminarOpcion(i)}
                         title="Eliminar opción"
-                        style={{ minWidth: '40px' }}
+                        style={{ minWidth: '40px', marginTop: '0.25rem' }}
                       >
                         <i className="fas fa-trash"></i>
                       </button>

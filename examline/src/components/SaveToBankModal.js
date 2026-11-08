@@ -30,6 +30,7 @@ const SaveToBankModal = ({ question, onClose, onSaved }) => {
         correcta: question.correcta,
         correctas: question.correctas ?? null,
         imagenUrl: question.imagenUrl || null,
+        imagenesOpciones: question.imagenesOpciones ?? null,
         titulo: autoTitulo(question.texto),
         tags,
       });

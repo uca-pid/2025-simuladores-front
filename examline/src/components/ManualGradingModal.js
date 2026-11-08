@@ -3,6 +3,7 @@ import Editor from '@monaco-editor/react';
 import { useManualGrading } from '../hooks/useManualGrading';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../styles/base.css';
+import OptionImage from "./OptionImage";
 
 const MAIN_FILE_NAMES = { python: 'main.py', javascript: 'main.js', c: 'main.c' };
 const getMainFileName = (lenguaje) => MAIN_FILE_NAMES[lenguaje] || 'main.js';
@@ -1029,6 +1030,7 @@ export default function ManualGradingModal({ attemptId, onBack, onSave, onPrev, 
                                 {opIdx === pregunta.correcta && <i className="fas fa-check-circle text-success me-2"></i>}
                                 {opIdx === respuestaEstudiante && opIdx !== pregunta.correcta && <i className="fas fa-times-circle text-danger me-2"></i>}
                                 {opcion}
+                                <OptionImage url={pregunta.imagenesOpciones?.[opIdx]} maxHeight={120} />
                               </div>
                             ))}
                           </div>
@@ -1053,6 +1055,7 @@ export default function ManualGradingModal({ attemptId, onBack, onSave, onPrev, 
                                   {esperada && <i className="fas fa-check-circle text-success me-2"></i>}
                                   {marcada && !esperada && <i className="fas fa-times-circle text-danger me-2"></i>}
                                   {opcion}
+                                  <OptionImage url={pregunta.imagenesOpciones?.[opIdx]} maxHeight={120} />
                                 </div>
                               );
                             })}

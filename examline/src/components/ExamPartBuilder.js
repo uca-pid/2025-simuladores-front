@@ -7,6 +7,7 @@ import SaveToBankModal from "./SaveToBankModal";
 import { testSolutionPreview, uploadEnunciado, uploadDataset } from "../services/api";
 import { TIPO_BADGE } from "../utils/questionBadges";
 import Modal from "./Modal";
+import OptionImage from "./OptionImage";
 
 const LANGUAGE_EXTENSIONS = { python: '.py', javascript: '.js', c: '.c' };
 const getExtensionForLanguage = (lenguaje) => LANGUAGE_EXTENSIONS[lenguaje] || '.js';
@@ -554,7 +555,10 @@ const ExamPartBuilderComponent = ({ part, onChange, isPublishing, showModal, par
                               return (
                                 <div key={i} className="exam-info-item">
                                   <i className={esCorrecta ? "fas fa-check-circle text-success" : "fas fa-circle text-muted"}></i>
-                                  <span className={esCorrecta ? "fw-bold text-success" : ""}>{o}</span>
+                                  <div>
+                                    <span className={esCorrecta ? "fw-bold text-success" : ""}>{o}</span>
+                                    <OptionImage url={p.imagenesOpciones?.[i]} maxHeight={100} />
+                                  </div>
                                 </div>
                               );
                             })

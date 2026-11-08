@@ -6,6 +6,7 @@ import BackToMainButton from "../components/BackToMainButton";
 import { useAuth } from "../contexts/AuthContext";
 import { useSEB } from "../hooks/useSEB";
 import { getExamAttemptResults, getExamFiles } from "../services/api";
+import OptionImage from "../components/OptionImage";
 
 const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
   const { attemptId: routeAttemptId } = useParams();
@@ -1291,12 +1292,17 @@ const ExamResults = ({ attemptId: propAttemptId, onBack }) => {
                                                 "fas fa-circle me-2 text-muted"
                                               } 
                                                  style={{fontSize: (isCorrect || isWrongAnswer) ? '14px' : '8px'}}></i>
-                                              <span className={
-                                                isCorrect ? "fw-bold text-success" : 
-                                                isWrongAnswer ? "fw-bold text-danger" : ""
-                                              }>
-                                                {option || "Opción vacía"}
-                                              </span>
+                                              <div>
+                                                {(option || !question.imagenesOpciones?.[optionIndex]) && (
+                                                  <span className={
+                                                    isCorrect ? "fw-bold text-success" : 
+                                                    isWrongAnswer ? "fw-bold text-danger" : ""
+                                                  }>
+                                                    {option || "Opción vacía"}
+                                                  </span>
+                                                )}
+                                                <OptionImage url={question.imagenesOpciones?.[optionIndex]} />
+                                              </div>
                                             </div>
                                             <div>
                                               {isCorrect && (

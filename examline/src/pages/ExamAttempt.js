@@ -6,6 +6,7 @@ import { useModal, useSEB, useMultipleChoiceAttempt, useAttemptStatus } from "..
 import Modal from "../components/Modal";
 import PartBreakScreen from "../components/PartBreakScreen";
 import { uploadAnswerFile } from "../services/api";
+import OptionImage from "../components/OptionImage";
 
 const EXAM_ATTEMPT_TIPO_META = {
   multiple_choice: { label: 'Múltiple', color: '#007bff', icon: 'fa-list-ul' },
@@ -955,13 +956,18 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
                                 transition: 'all 0.2s ease'
                               }}></div>
                             )}
-                            <span style={{
-                              fontSize: '0.95rem',
-                              color: isSelected ? '#0d6efd' : '#212529',
-                              fontWeight: isSelected ? '500' : '400'
-                            }}>
-                              {opcion.texto || "Opción vacía"}
-                            </span>
+                            <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                              {(opcion.texto || !p.imagenesOpciones?.[opcion.originalIndex]) && (
+                                <span style={{
+                                  fontSize: '0.95rem',
+                                  color: isSelected ? '#0d6efd' : '#212529',
+                                  fontWeight: isSelected ? '500' : '400'
+                                }}>
+                                  {opcion.texto || "Opción vacía"}
+                                </span>
+                              )}
+                              <OptionImage url={p.imagenesOpciones?.[opcion.originalIndex]} maxHeight={220} />
+                            </div>
                           </div>
                         );})}
                       </div>

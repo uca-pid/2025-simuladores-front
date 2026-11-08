@@ -12,6 +12,7 @@ import ExamPartQuestionSettings from "../components/ExamPartQuestionSettings";
 import ExamPartProgrammingSettings from "../components/ExamPartProgrammingSettings";
 import { createExam, updateExam, getExamById } from "../services/api";
 import { getTipoBadge, getDificultadBadge } from "../utils/questionBadges";
+import OptionImage from "../components/OptionImage";
 
 const DRAFT_KEY = 'examCreatorDraft';
 
@@ -1164,7 +1165,10 @@ const ExamCreator = () => {
                                     return (
                                       <div key={opIdx} className="exam-info-item">
                                         <i className={esCorrecta ? "fas fa-check-circle text-success" : "fas fa-circle text-muted"}></i>
-                                        <span className={esCorrecta ? "fw-bold text-success" : ""}>{op}</span>
+                                        <div>
+                                          <span className={esCorrecta ? "fw-bold text-success" : ""}>{op}</span>
+                                          <OptionImage url={pregunta.imagenesOpciones?.[opIdx]} maxHeight={100} />
+                                        </div>
                                       </div>
                                     );
                                   })}

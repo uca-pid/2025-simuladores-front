@@ -6,6 +6,7 @@ import TagInput from "../components/TagInput";
 import { autoTitulo, displayTitulo } from "../utils/questionTitle";
 import Modal from "../components/Modal";
 import { useModal } from "../hooks";
+import OptionImage from "../components/OptionImage";
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:4000";
 
@@ -473,6 +474,7 @@ const QuestionBank = () => {
                               <li key={i} className={`list-group-item ${esCorrecta ? 'list-group-item-success' : ''}`}>
                                 {esCorrecta && <i className="fas fa-check-circle me-2 text-success"></i>}
                                 {opcion}
+                                <OptionImage url={question.imagenesOpciones?.[i]} maxHeight={100} />
                               </li>
                             );
                           })}
@@ -553,6 +555,7 @@ const QuestionBank = () => {
                                   <i className="fas fa-check-circle me-2 text-success"></i>
                                 )}
                                 <strong>Opción {i + 1}:</strong> {opcion}
+                                <OptionImage url={question.imagenesOpciones?.[i]} maxHeight={100} />
                               </li>
                             ))
                           ) : (

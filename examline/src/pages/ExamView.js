@@ -9,6 +9,7 @@ import CsvDatasetViewer from "../components/CsvDatasetViewer";
 import { useAuth } from "../contexts/AuthContext";
 import { getExamById, getReferenceFiles } from "../services/api";
 import { getTipoBadge } from "../utils/questionBadges";
+import OptionImage from "../components/OptionImage";
 
 const ExamView = ({ examId: propExamId, onBack }) => {
   const { examId: routeExamId } = useParams();
@@ -477,12 +478,13 @@ const ExamView = ({ examId: propExamId, onBack }) => {
                                 <div key={j} className="exam-info-item option-item">
                                   <i className={esCorrecta ? "fas fa-check-circle text-success" : "fas fa-circle text-muted"}></i>
                                   <span className={`option-text ${esCorrecta ? "fw-bold text-success" : ""}`}>
-                                    {o || "Opción vacía"}
+                                    {o || (p.imagenesOpciones?.[j] ? "" : "Opción vacía")}
                                     {esCorrecta && (
                                       <span className="correct-badge">
                                         Correcta
                                       </span>
                                     )}
+                                    <OptionImage url={p.imagenesOpciones?.[j]} maxHeight={120} />
                                   </span>
                                 </div>
                               );
