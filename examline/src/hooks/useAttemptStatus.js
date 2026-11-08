@@ -3,7 +3,8 @@ import { getAttemptStatus } from '../services/api';
 
 /**
  * Consulta periódicamente el estado del intento en el servidor, para enterarse
- * sin recargar de que el profesor cerró el examen para todos.
+ * de acciones del profesor sin recargar: si cerró el examen para todos o si
+ * habilitó la siguiente parte.
  *
  * @param {number|null} attemptId - Id del intento (no consulta si es null)
  * @param {Object} options

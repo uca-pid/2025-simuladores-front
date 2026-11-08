@@ -90,10 +90,22 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
   // confundir ese "finalizado" con un cierre del profesor.
   const [finishedByStudent, setFinishedByStudent] = useState(false);
 
-  // Consulta periódica: cierre del examen por el profesor
-  useAttemptStatus(
+  // Si se recarga la página estando en la pantalla de corte, el servidor ya
+  // tiene la parte cerrada: volver a mostrar la pantalla de corte.
+  useEffect(() => {
+    if (exam?.partStatus === 'esperando_continuar' && !propExamId) {
+      setPartBreak({
+        partNumber: (exam.currentPartIndex ?? 0) + 1,
+        totalParts: exam.partes?.length
+      });
+    }
+  }, [exam, propExamId]);
+
+  // Consulta periódica: cierre del examen por el profesor y habilitación de la siguiente parte
+  const attemptStatus = useAttemptStatus(
     attempt && !propExamId && !finishedByStudent ? attempt.id : null,
     {
+      intervalMs: partBreak ? 5000 : 15000,
       onClosed: () => {
         sessionStorage.removeItem(`exam_${examId}_respuestas`);
         sessionStorage.removeItem(`exam_${examId}_windowId`);
@@ -408,8 +420,10 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
         <PartBreakScreen
           partNumber={partBreak.partNumber}
           totalParts={partBreak.totalParts}
-          onContinue={async () => {
-            await continueToNextPart();
+          locked={attemptStatus ? !attemptStatus.siguienteParteHabilitada : false}
+          conCodigo={attemptStatus?.modoAvanceParte === 'codigo'}
+          onContinue={async (codigo) => {
+            await continueToNextPart(codigo);
             setPartBreak(null);
           }}
         />

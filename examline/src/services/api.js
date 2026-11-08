@@ -46,6 +46,9 @@ const handleResponse = async (response) => {
       error.code = data.code;
       throw error;
     } catch (parseError) {
+      // El error armado arriba (con el mensaje del backend) se relanza tal cual
+      if (parseError.status) throw parseError;
+
       // Si no se puede parsear el JSON, crear error con mensaje apropiado
       const errorMessage = response.status === 403 
         ? 'No está autorizado para ver este recurso'
@@ -482,6 +485,46 @@ export async function closeExamWindow(windowId) {
   return await handleResponse(res);
 }
 
+// Habilita la siguiente parte del examen para todos los alumnos de la ventana.
+export async function enableNextExamPart(windowId) {
+  const res = await fetch(`${API_BASE_URL}/exam-windows/${windowId}/habilitar-parte`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+  });
+
+  return await handleResponse(res);
+}
+
+// Alumnos que terminaron una parte y esperan la siguiente (con la nota de esa parte).
+export async function getStudentsWaitingNextPart(windowId) {
+  const res = await fetch(`${API_BASE_URL}/exam-windows/${windowId}/esperando-parte`, {
+    method: "GET",
+    headers: getAuthHeaders(),
+  });
+
+  return await handleResponse(res);
+}
+
+// Habilita la siguiente parte a los alumnos elegidos (ids de intento), todos a la vez.
+export async function enableNextPartForStudents(windowId, attemptIds) {
+  const res = await fetch(`${API_BASE_URL}/exam-windows/${windowId}/habilitar-alumnos`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ attemptIds }),
+  });
+
+  return await handleResponse(res);
+}
+
+export async function regeneratePartCode(windowId) {
+  const res = await fetch(`${API_BASE_URL}/exam-windows/${windowId}/regenerar-codigo-parte`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+  });
+
+  return await handleResponse(res);
+}
+
 // Exam attempt endpoints
 export async function getExamAttemptResults(attemptId) {
   try {
@@ -541,11 +584,13 @@ export async function advancePart(attemptId, respuestas = {}) {
 }
 
 // Confirma el paso a la siguiente parte tras el estado "esperando_continuar".
-export async function continuePart(attemptId) {
+// `codigo` solo hace falta si el profesor bloqueó el avance y todavía no habilitó la parte.
+export async function continuePart(attemptId, codigo) {
   try {
     const res = await fetch(`${API_BASE_URL}/exam-attempts/${attemptId}/continue-part`, {
       method: "POST",
       headers: getAuthHeaders(),
+      body: JSON.stringify(codigo ? { codigo } : {}),
     });
 
     return await handleResponse(res);
@@ -565,7 +610,7 @@ export async function saveDraftAnswers(attemptId, respuestas) {
   return await handleResponse(res);
 }
 
-// Estado del intento: si el profesor cerró el examen.
+// Estado del intento: si el profesor cerró el examen o habilitó la siguiente parte.
 export async function getAttemptStatus(attemptId) {
   const res = await fetch(`${API_BASE_URL}/exam-attempts/${attemptId}/status`, {
     method: "GET",

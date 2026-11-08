@@ -6,9 +6,10 @@ import 'moment/locale/es';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { useAuth } from '../contexts/AuthContext';
 import { useModal } from '../hooks';
-import { getExams, getExamWindowsProfesor, createExamWindow, updateExamWindow, toggleExamWindowActive, closeExamWindow } from '../services/api';
+import { getExams, getExamWindowsProfesor, createExamWindow, updateExamWindow, toggleExamWindowActive, closeExamWindow, enableNextExamPart, regeneratePartCode } from '../services/api';
 import BackToMainButton from '../components/BackToMainButton';
 import Modal from '../components/Modal';
+import WaitingStudentsPanel from '../components/WaitingStudentsPanel';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../button-styles.css';
 import './ExamWindows.css';
@@ -27,7 +28,7 @@ function getEffectiveState(window) {
   return (window.sinTiempo && window.estado === 'programada') ? 'en_curso' : window.estado;
 }
 
-// Ventana en la que los alumnos pueden estar rindiendo ahora (el profesor puede cerrarla)
+// Ventana en la que los alumnos pueden estar rindiendo ahora (el profesor puede cerrarla o habilitar partes)
 function isWindowLive(window) {
   if (!window || !window.activa || window.estado === 'finalizada') return false;
   return window.sinTiempo || window.estado === 'en_curso';
@@ -66,6 +67,7 @@ export default function ExamWindowsPage() {
     kioskMode: 0,
     sinTiempo: false,
     requierePresente: false,
+    modoAvanceParte: 'libre',
     // SEB Configuración
     sebKioskMode: 0,
     sebShowTaskBar: false,
@@ -218,6 +220,7 @@ export default function ExamWindowsPage() {
       kioskMode: 0,
       sinTiempo: false,
       requierePresente: false,
+      modoAvanceParte: 'libre',
       // SEB Configuración
       sebKioskMode: 0,
       sebShowTaskBar: false,
@@ -412,6 +415,7 @@ export default function ExamWindowsPage() {
       kioskMode: window.kioskMode || 0,
       sinTiempo: isInfinite,
       requierePresente: isInfinite ? false : (window.requierePresente || false),
+      modoAvanceParte: window.modoAvanceParte ?? 'libre',
       // SEB Configuración
       sebKioskMode: window.sebKioskMode ?? 0,
       sebShowTaskBar: window.sebShowTaskBar ?? false,
@@ -614,6 +618,12 @@ export default function ExamWindowsPage() {
     }
   };
 
+  // Aplica a la lista y a la ventana abierta en el modal los cambios devueltos por el servidor
+  const patchWindow = (windowId, changes) => {
+    setExamWindows(prev => prev.map(x => (x.id === windowId ? { ...x, ...changes } : x)));
+    setEditingWindow(prev => (prev && prev.id === windowId ? { ...prev, ...changes } : prev));
+  };
+
   const handleCloseWindow = (w) => {
     showModal(
       'warning',
@@ -623,8 +633,7 @@ export default function ExamWindowsPage() {
         closeModal();
         try {
           const result = await closeExamWindow(w.id);
-          setExamWindows(prev => prev.map(x => (x.id === w.id ? { ...x, estado: 'finalizada' } : x)));
-          setEditingWindow(prev => (prev && prev.id === w.id ? { ...prev, estado: 'finalizada' } : prev));
+          patchWindow(w.id, { estado: 'finalizada' });
           showModal('success', 'Examen cerrado', result.message);
           loadData(true);
         } catch (error) {
@@ -634,6 +643,24 @@ export default function ExamWindowsPage() {
       true,
       'Cerrar examen'
     );
+  };
+
+  const handleEnableNextPart = async (w) => {
+    try {
+      const result = await enableNextExamPart(w.id);
+      patchWindow(w.id, { partesHabilitadas: result.partesHabilitadas });
+    } catch (error) {
+      showModal('error', 'Error', error.message || 'No se pudo habilitar la parte');
+    }
+  };
+
+  const handleRegeneratePartCode = async (w) => {
+    try {
+      const result = await regeneratePartCode(w.id);
+      patchWindow(w.id, { codigoParte: result.codigoParte });
+    } catch (error) {
+      showModal('error', 'Error', error.message || 'No se pudo generar un nuevo código');
+    }
   };
 
   const getStatusBadge = (estado) => {
@@ -1179,22 +1206,63 @@ export default function ExamWindowsPage() {
                 <form onSubmit={handleSaveWindow} onClick={(e) => e.stopPropagation()} style={{ display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1 }}>
                   <div className="modern-card-body" style={{ padding: '1.5rem', overflowY: 'auto', flex: 1, minHeight: 0 }}>
                     
-                    {/* Control en vivo: cerrar el examen para todos mientras se rinde */}
+                    {/* Control en vivo: cerrar el examen y habilitar partes mientras se rinde */}
                     {editingWindow && isWindowLive(editingWindow) && (
-                      <div className="mb-4 p-3 d-flex align-items-center justify-content-between flex-wrap gap-2" style={{ border: '1.5px solid var(--border-color)', borderRadius: '10px', background: 'rgba(30, 41, 85, 0.04)' }}>
-                        <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>
-                          <i className="fas fa-broadcast-tower text-success me-2"></i>
-                          Examen en curso
+                      <div className="mb-4 p-3" style={{ border: '1.5px solid var(--border-color)', borderRadius: '10px', background: 'rgba(30, 41, 85, 0.04)' }}>
+                        <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                          <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>
+                            <i className="fas fa-broadcast-tower text-success me-2"></i>
+                            Examen en curso
+                          </div>
+                          <button
+                            type="button"
+                            className="modern-btn modern-btn-sm"
+                            style={{ backgroundColor: 'var(--danger-color, #dc3545)', borderColor: 'var(--danger-color, #dc3545)', color: '#fff' }}
+                            onClick={() => handleCloseWindow(editingWindow)}
+                          >
+                            <i className="fas fa-stop-circle me-1"></i>
+                            Cerrar examen para todos
+                          </button>
                         </div>
-                        <button
-                          type="button"
-                          className="modern-btn modern-btn-sm"
-                          style={{ backgroundColor: 'var(--danger-color, #dc3545)', borderColor: 'var(--danger-color, #dc3545)', color: '#fff' }}
-                          onClick={() => handleCloseWindow(editingWindow)}
-                        >
-                          <i className="fas fa-stop-circle me-1"></i>
-                          Cerrar examen para todos
-                        </button>
+                        {editingWindow.modoAvanceParte === 'codigo' && (editingWindow.exam?._count?.partes ?? 0) > 1 && (
+                          <div className="mt-3 pt-3" style={{ borderTop: '1px solid var(--border-color)', fontSize: '0.9rem' }}>
+                            Código para pasar de parte:{' '}
+                            <span style={{ fontFamily: 'monospace', fontWeight: 'bold', fontSize: '1.1rem', letterSpacing: '2px', color: 'var(--primary-color)' }}>
+                              {editingWindow.codigoParte || '—'}
+                            </span>
+                            <button
+                              type="button"
+                              className="btn btn-link btn-sm"
+                              onClick={() => handleRegeneratePartCode(editingWindow)}
+                              title="Generar un código nuevo (el anterior deja de funcionar)"
+                            >
+                              <i className="fas fa-sync-alt"></i>
+                            </button>
+                          </div>
+                        )}
+                        {editingWindow.modoAvanceParte === 'manual' && (editingWindow.exam?._count?.partes ?? 0) > 1 && (
+                          <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 mt-3 pt-3" style={{ borderTop: '1px solid var(--border-color)' }}>
+                            <div className="text-muted" style={{ fontSize: '0.85rem' }}>
+                              Partes habilitadas para todos: {editingWindow.partesHabilitadas ?? 1} de {editingWindow.exam._count.partes}
+                            </div>
+                            {(editingWindow.partesHabilitadas ?? 1) < editingWindow.exam._count.partes && (
+                              <button
+                                type="button"
+                                className="modern-btn modern-btn-primary modern-btn-sm"
+                                onClick={() => handleEnableNextPart(editingWindow)}
+                              >
+                                <i className="fas fa-unlock me-1"></i>
+                                Habilitar parte {(editingWindow.partesHabilitadas ?? 1) + 1} para todos
+                              </button>
+                            )}
+                          </div>
+                        )}
+                        {editingWindow.modoAvanceParte === 'manual' && (editingWindow.exam?._count?.partes ?? 0) > 1 && (
+                          <WaitingStudentsPanel
+                            windowId={editingWindow.id}
+                            onError={(message) => showModal('error', 'Error', message)}
+                          />
+                        )}
                       </div>
                     )}
 
@@ -1274,6 +1342,37 @@ export default function ExamWindowsPage() {
                         </select>
                       </div>
                     </div>
+
+                    {/* Avance entre partes (solo exámenes de varias partes) */}
+                    {(exams.find(e => String(e.id) === String(formData.examId))?.partes?.length ?? 0) > 1 && (
+                      <div className="mb-4">
+                        <label className="form-label" style={{ fontWeight: '600', color: 'var(--text-color-2)', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
+                          Paso entre partes
+                        </label>
+                        {[
+                          { value: 'libre', label: 'Normal', help: 'El alumno continúa con la parte siguiente cuando quiere.' },
+                          { value: 'manual', label: 'Habilitación del profesor', help: 'El alumno espera hasta que lo habilites, a todos juntos o a los que elijas.' },
+                          { value: 'codigo', label: 'Por código', help: 'El alumno continúa cuando ingresa el código que le dictes.' },
+                        ].map(opcion => (
+                          <div className="form-check" key={opcion.value}>
+                            <input
+                              className="form-check-input"
+                              type="radio"
+                              id={`modoAvanceParte-${opcion.value}`}
+                              name="modoAvanceParte"
+                              value={opcion.value}
+                              checked={formData.modoAvanceParte === opcion.value}
+                              onChange={handleInputChange}
+                              disabled={isSavingWindow}
+                            />
+                            <label className="form-check-label" htmlFor={`modoAvanceParte-${opcion.value}`} style={{ fontSize: '0.9rem' }}>
+                              <span style={{ fontWeight: 600 }}>{opcion.label}</span>
+                              <span className="text-muted"> — {opcion.help}</span>
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    )}
 
                     {/* Selector de seguridad SEB */}
                     <div className="mb-4">

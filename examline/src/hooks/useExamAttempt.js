@@ -142,9 +142,9 @@ export const useExamAttempt = (examId, windowId, navigate) => {
 
   // Confirma el paso a la siguiente parte tras "esperando_continuar" y
   // fuerza un refetch (que puede redirigir si la nueva parte no es de programación).
-  const continueToNextPart = useCallback(async () => {
+  const continueToNextPart = useCallback(async (codigo) => {
     if (!attempt) return;
-    const response = await continuePart(attempt.id);
+    const response = await continuePart(attempt.id, codigo);
     setReloadIndex(prev => prev + 1);
     return response;
   }, [attempt]);

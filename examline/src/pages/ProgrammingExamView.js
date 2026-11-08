@@ -50,10 +50,21 @@ const ProgrammingExamView = () => {
   const [finishedByStudent, setFinishedByStudent] = useState(false);
   const [closedByProfessor, setClosedByProfessor] = useState(false);
 
-  // Consulta periódica: cierre del examen por el profesor
-  useAttemptStatus(
+  // Si se recarga estando en la pantalla de corte, volver a mostrarla
+  useEffect(() => {
+    if (exam?.partStatus === 'esperando_continuar') {
+      setPartBreak({
+        partNumber: (exam.currentPartIndex ?? 0) + 1,
+        totalParts: exam.partes?.length
+      });
+    }
+  }, [exam]);
+
+  // Consulta periódica: cierre del examen por el profesor y habilitación de la siguiente parte
+  const attemptStatus = useAttemptStatus(
     attempt && !finishedByStudent ? attempt.id : null,
     {
+      intervalMs: partBreak ? 5000 : 15000,
       onClosed: () => {
         sessionStorage.removeItem(`exam_${examId}_windowId`);
         setClosedByProfessor(true);
@@ -324,8 +335,10 @@ const ProgrammingExamView = () => {
       <PartBreakScreen
         partNumber={partBreak.partNumber}
         totalParts={partBreak.totalParts}
-        onContinue={async () => {
-          await continueToNextPart();
+        locked={attemptStatus ? !attemptStatus.siguienteParteHabilitada : false}
+        conCodigo={attemptStatus?.modoAvanceParte === 'codigo'}
+        onContinue={async (codigo) => {
+          await continueToNextPart(codigo);
           setPartBreak(null);
         }}
       />

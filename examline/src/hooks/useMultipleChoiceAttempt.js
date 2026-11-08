@@ -300,8 +300,8 @@ export const useMultipleChoiceAttempt = (examId, windowId, navigate, { propExamI
   // Confirma el paso a la siguiente parte tras el estado "esperando_continuar"
   // y fuerza un refetch del examen (que puede redirigir a la vista correcta
   // según el tipo de la nueva parte actual).
-  const continueToNextPart = useCallback(async () => {
-    const response = await continuePart(attempt.id);
+  const continueToNextPart = useCallback(async (codigo) => {
+    const response = await continuePart(attempt.id, codigo);
     sessionStorage.removeItem(`exam_${examId}_respuestas`);
     setRespuestas({});
     setReloadIndex(prev => prev + 1);
