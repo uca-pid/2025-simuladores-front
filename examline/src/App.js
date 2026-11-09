@@ -22,6 +22,7 @@ import GradingPage from "./pages/GradingPage";
 import SEBExamLauncher from "./pages/SEBExamLauncher";
 import QuestionBank from "./pages/QuestionBank";
 import WindowInscriptions from "./pages/WindowInscriptions";
+import ExamPreview from "./pages/ExamPreview";
 import "./styles/base.css";
 import { GAMIFICATION_ENABLED } from "./config/features";
 
@@ -102,6 +103,8 @@ function App() {
               <SEBExamLauncher />
             </StudentRoute>
           } />
+          {/* Vista previa dentro de SEB: se autoriza con el token corto del .seb de prueba, sin sesión */}
+          <Route path="/exam-preview/:examId" element={<ExamPreview />} />
           <Route path="/exam-attempt/:examId" element={
             
               <ExamAttempt />

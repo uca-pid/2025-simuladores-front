@@ -6,10 +6,11 @@ import 'moment/locale/es';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { useAuth } from '../contexts/AuthContext';
 import { useModal } from '../hooks';
-import { getExams, getExamWindowsProfesor, createExamWindow, updateExamWindow, toggleExamWindowActive, closeExamWindow, enableNextExamPart, regeneratePartCode } from '../services/api';
+import { getExams, getExamWindowsProfesor, createExamWindow, updateExamWindow, toggleExamWindowActive, closeExamWindow, enableNextExamPart, regeneratePartCode, testSEBConfig } from '../services/api';
 import BackToMainButton from '../components/BackToMainButton';
 import Modal from '../components/Modal';
 import WaitingStudentsPanel from '../components/WaitingStudentsPanel';
+import TimeExtensionPanel from '../components/TimeExtensionPanel';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../button-styles.css';
 import './ExamWindows.css';
@@ -93,11 +94,19 @@ export default function ExamWindowsPage() {
     sebAllowDeveloperConsole: false,
     sebAllowDownloads: true,
     sebAllowUploads: false,
+    sebUnsafeMode: false,
+    sebEnableTaskManager: false,
+    sebAllowZoom: false,
+    sebAllowTeams: false,
+    sebBrowserWindowAllowMinimize: false,
     sebQuitUrl: 'https://ferocarcineto.com.ar/',
     sebQuitPassword: '12345',
     sebSettingsPassword: '12345'
   });
   const [validationErrors, setValidationErrors] = useState({});
+  // Archivo .seb de prueba generado con la configuración del formulario
+  const [pruebaSEB, setPruebaSEB] = useState(null);
+  const [generandoPruebaSEB, setGenerandoPruebaSEB] = useState(false);
   const [isSavingWindow, setIsSavingWindow] = useState(false);
   const [, setIsAutoUpdating] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(null);
@@ -208,6 +217,7 @@ export default function ExamWindowsPage() {
   };
 
   const resetForm = (presetExamId = '') => {
+    setPruebaSEB(null);
     setFormData({
       examId: presetExamId,
       nombre: '',
@@ -246,6 +256,11 @@ export default function ExamWindowsPage() {
       sebAllowDeveloperConsole: false,
       sebAllowDownloads: true,
       sebAllowUploads: false,
+      sebUnsafeMode: false,
+      sebEnableTaskManager: false,
+      sebAllowZoom: false,
+      sebAllowTeams: false,
+      sebBrowserWindowAllowMinimize: false,
       sebQuitUrl: 'https://ferocarcineto.com.ar/',
       sebQuitPassword: '12345',
       sebSettingsPassword: '12345'
@@ -402,6 +417,7 @@ export default function ExamWindowsPage() {
   };
 
   const handleEditWindow = (window) => {
+    setPruebaSEB(null);
     const isInfinite = window.sinTiempo || false;
     setFormData({
       examId: window.examId,
@@ -441,6 +457,11 @@ export default function ExamWindowsPage() {
       sebAllowDeveloperConsole: window.sebAllowDeveloperConsole ?? false,
       sebAllowDownloads: window.sebAllowDownloads ?? true,
       sebAllowUploads: window.sebAllowUploads ?? false,
+      sebUnsafeMode: window.sebUnsafeMode ?? false,
+      sebEnableTaskManager: window.sebEnableTaskManager ?? false,
+      sebAllowZoom: window.sebAllowZoom ?? false,
+      sebAllowTeams: window.sebAllowTeams ?? false,
+      sebBrowserWindowAllowMinimize: window.sebBrowserWindowAllowMinimize ?? false,
       sebQuitUrl: window.sebQuitUrl ?? 'https://ferocarcineto.com.ar/',
       sebQuitPassword: window.sebQuitPassword ?? '12345',
       sebSettingsPassword: window.sebSettingsPassword ?? '12345'
@@ -622,6 +643,20 @@ export default function ExamWindowsPage() {
   const patchWindow = (windowId, changes) => {
     setExamWindows(prev => prev.map(x => (x.id === windowId ? { ...x, ...changes } : x)));
     setEditingWindow(prev => (prev && prev.id === windowId ? { ...prev, ...changes } : prev));
+  };
+
+  const handleTestSEBConfig = async () => {
+    setGenerandoPruebaSEB(true);
+    try {
+      const result = await testSEBConfig({ ...formData, examId: Number(formData.examId) });
+      setPruebaSEB(result);
+      // Abre SEB directamente si está instalado; si no, queda el link para descargar el archivo
+      window.location.href = result.sebUrl;
+    } catch (error) {
+      showModal('error', 'Error', error.message || 'No se pudo generar la prueba de SEB');
+    } finally {
+      setGenerandoPruebaSEB(false);
+    }
   };
 
   const handleCloseWindow = (w) => {
@@ -1224,6 +1259,12 @@ export default function ExamWindowsPage() {
                             Cerrar examen para todos
                           </button>
                         </div>
+                        {!editingWindow.sinTiempo && (
+                          <TimeExtensionPanel
+                            windowId={editingWindow.id}
+                            onError={(message) => showModal('error', 'Error', message)}
+                          />
+                        )}
                         {editingWindow.modoAvanceParte === 'codigo' && (editingWindow.exam?._count?.partes ?? 0) > 1 && (
                           <div className="mt-3 pt-3" style={{ borderTop: '1px solid var(--border-color)', fontSize: '0.9rem' }}>
                             Código para pasar de parte:{' '}
@@ -1504,6 +1545,55 @@ export default function ExamWindowsPage() {
                               </div>
                             </div>
 
+                            {/* Probar la configuración: abre el examen en vista previa dentro de SEB */}
+                            <div className="mb-3 p-2" style={{ borderRadius: '8px', border: '1px solid #e9ecef', backgroundColor: 'white' }}>
+                              <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                <small className="text-muted" style={{ flex: '1 1 260px' }}>
+                                  Abrí el examen en SEB con esta configuración, aunque todavía no la hayas guardado, para revisarla antes del examen.
+                                </small>
+                                <button
+                                  type="button"
+                                  className="modern-btn modern-btn-secondary modern-btn-sm"
+                                  onClick={handleTestSEBConfig}
+                                  disabled={generandoPruebaSEB || !formData.examId}
+                                  title={formData.examId ? 'Generar archivo de prueba y abrir SEB' : 'Elegí un examen primero'}
+                                >
+                                  <i className="fas fa-vial me-1"></i>
+                                  {generandoPruebaSEB ? 'Generando...' : 'Probar en SEB'}
+                                </button>
+                              </div>
+                              {pruebaSEB && (
+                                <small className="d-block mt-2">
+                                  Si SEB no se abrió solo,{' '}
+                                  <a href={pruebaSEB.archivoUrl} download>descargá el archivo de prueba</a>
+                                  {' '}y abrilo. La vista previa vence en 10 minutos.
+                                </small>
+                              )}
+                            </div>
+
+                            {/* Modo de pruebas: desactiva las restricciones al generar el archivo SEB */}
+                            <div
+                              className="mb-3 p-2"
+                              style={{
+                                borderRadius: '8px',
+                                border: `1px solid ${formData.sebUnsafeMode ? '#ffc107' : '#e9ecef'}`,
+                                backgroundColor: formData.sebUnsafeMode ? '#fff3cd' : 'transparent'
+                              }}
+                            >
+                              <div className="form-check form-switch mb-0">
+                                <input className="form-check-input" type="checkbox" id="sebUnsafeMode" name="sebUnsafeMode" checked={formData.sebUnsafeMode} onChange={handleInputChange} />
+                                <label className="form-check-label" htmlFor="sebUnsafeMode" style={{ fontWeight: 600 }}>
+                                  <i className={`fas ${formData.sebUnsafeMode ? 'fa-exclamation-triangle text-warning' : 'fa-flask text-secondary'} me-2`}></i>
+                                  Modo de pruebas (sin restricciones)
+                                </label>
+                              </div>
+                              {formData.sebUnsafeMode && (
+                                <small className="d-block mt-1" style={{ color: '#856404' }}>
+                                  SEB se abre sin bloquear teclado, portapapeles ni otras aplicaciones. Usalo solo para probar la configuración, nunca en un examen real.
+                                </small>
+                              )}
+                            </div>
+
                             {/* Navegación */}
                             <div className="mb-3">
                               <h6 style={{ color: 'var(--text-color-2)', marginBottom: '0.75rem', fontWeight: '600', fontSize: '0.9rem' }}>
@@ -1660,6 +1750,44 @@ export default function ExamWindowsPage() {
                                   </div>
                                 </div>
                               </div>
+                            </div>
+
+                            {/* Aplicaciones permitidas */}
+                            <div className="mb-3">
+                              <h6 style={{ color: 'var(--text-color-2)', marginBottom: '0.75rem', fontWeight: '600', fontSize: '0.9rem' }}>
+                                <i className="fas fa-th-large me-2"></i>Aplicaciones permitidas
+                              </h6>
+                              <div className="row">
+                                <div className="col-md-6 mb-2">
+                                  <div className="form-check">
+                                    <input className="form-check-input" type="checkbox" id="sebAllowZoom" name="sebAllowZoom" checked={formData.sebAllowZoom} onChange={handleInputChange} />
+                                    <label className="form-check-label" htmlFor="sebAllowZoom">Permitir Zoom</label>
+                                  </div>
+                                </div>
+                                <div className="col-md-6 mb-2">
+                                  <div className="form-check">
+                                    <input className="form-check-input" type="checkbox" id="sebAllowTeams" name="sebAllowTeams" checked={formData.sebAllowTeams} onChange={handleInputChange} />
+                                    <label className="form-check-label" htmlFor="sebAllowTeams">Permitir Microsoft Teams</label>
+                                  </div>
+                                </div>
+                                <div className="col-md-6 mb-2">
+                                  <div className="form-check">
+                                    <input className="form-check-input" type="checkbox" id="sebEnableTaskManager" name="sebEnableTaskManager" checked={formData.sebEnableTaskManager} onChange={handleInputChange} />
+                                    <label className="form-check-label" htmlFor="sebEnableTaskManager">Permitir Administrador de tareas</label>
+                                  </div>
+                                </div>
+                                <div className="col-md-6 mb-2">
+                                  <div className="form-check">
+                                    <input className="form-check-input" type="checkbox" id="sebBrowserWindowAllowMinimize" name="sebBrowserWindowAllowMinimize" checked={formData.sebBrowserWindowAllowMinimize} onChange={handleInputChange} />
+                                    <label className="form-check-label" htmlFor="sebBrowserWindowAllowMinimize">Permitir minimizar la ventana</label>
+                                  </div>
+                                </div>
+                              </div>
+                              {(formData.sebAllowZoom || formData.sebAllowTeams || formData.sebEnableTaskManager) && (
+                                <small className="text-muted d-block">
+                                  Permitir otras aplicaciones habilita cambiar de aplicación dentro de SEB. El Administrador de tareas además desactiva el escritorio aparte.
+                                </small>
+                              )}
                             </div>
 
                             {/* URLs y contraseñas */}
