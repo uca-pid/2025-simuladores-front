@@ -967,3 +967,26 @@ export async function saveManualGrade(attemptId, calificacionManual) {
     throw err;
   }
 }
+
+// Genera un .seb de prueba con la configuración del formulario (aunque no esté guardada)
+// que abre el examen en vista previa dentro de SEB.
+export async function testSEBConfig(settings) {
+  const res = await fetch(`${API_BASE_URL}/exam-start/test-download`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(settings),
+  });
+
+  return await handleResponse(res);
+}
+
+// Examen para la vista previa dentro de SEB, con el token corto de vista previa
+// (SEB abre su propio navegador, sin la sesión del profesor).
+export async function getSEBPreviewExam(examId, previewToken) {
+  const res = await fetch(`${API_BASE_URL}/exam-start/preview/${examId}`, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${previewToken}` },
+  });
+
+  return await handleResponse(res);
+}

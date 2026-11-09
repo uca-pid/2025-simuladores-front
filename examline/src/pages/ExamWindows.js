@@ -6,7 +6,7 @@ import 'moment/locale/es';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { useAuth } from '../contexts/AuthContext';
 import { useModal } from '../hooks';
-import { getExams, getExamWindowsProfesor, createExamWindow, updateExamWindow, toggleExamWindowActive, closeExamWindow, enableNextExamPart, regeneratePartCode } from '../services/api';
+import { getExams, getExamWindowsProfesor, createExamWindow, updateExamWindow, toggleExamWindowActive, closeExamWindow, enableNextExamPart, regeneratePartCode, testSEBConfig } from '../services/api';
 import BackToMainButton from '../components/BackToMainButton';
 import Modal from '../components/Modal';
 import WaitingStudentsPanel from '../components/WaitingStudentsPanel';
@@ -104,6 +104,9 @@ export default function ExamWindowsPage() {
     sebSettingsPassword: '12345'
   });
   const [validationErrors, setValidationErrors] = useState({});
+  // Archivo .seb de prueba generado con la configuración del formulario
+  const [pruebaSEB, setPruebaSEB] = useState(null);
+  const [generandoPruebaSEB, setGenerandoPruebaSEB] = useState(false);
   const [isSavingWindow, setIsSavingWindow] = useState(false);
   const [, setIsAutoUpdating] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(null);
@@ -214,6 +217,7 @@ export default function ExamWindowsPage() {
   };
 
   const resetForm = (presetExamId = '') => {
+    setPruebaSEB(null);
     setFormData({
       examId: presetExamId,
       nombre: '',
@@ -413,6 +417,7 @@ export default function ExamWindowsPage() {
   };
 
   const handleEditWindow = (window) => {
+    setPruebaSEB(null);
     const isInfinite = window.sinTiempo || false;
     setFormData({
       examId: window.examId,
@@ -638,6 +643,20 @@ export default function ExamWindowsPage() {
   const patchWindow = (windowId, changes) => {
     setExamWindows(prev => prev.map(x => (x.id === windowId ? { ...x, ...changes } : x)));
     setEditingWindow(prev => (prev && prev.id === windowId ? { ...prev, ...changes } : prev));
+  };
+
+  const handleTestSEBConfig = async () => {
+    setGenerandoPruebaSEB(true);
+    try {
+      const result = await testSEBConfig({ ...formData, examId: Number(formData.examId) });
+      setPruebaSEB(result);
+      // Abre SEB directamente si está instalado; si no, queda el link para descargar el archivo
+      window.location.href = result.sebUrl;
+    } catch (error) {
+      showModal('error', 'Error', error.message || 'No se pudo generar la prueba de SEB');
+    } finally {
+      setGenerandoPruebaSEB(false);
+    }
   };
 
   const handleCloseWindow = (w) => {
@@ -1524,6 +1543,32 @@ export default function ExamWindowsPage() {
                               <div style={{ fontSize: '1.5rem', opacity: 0.3 }}>
                                 <i className="fas fa-sliders-h"></i>
                               </div>
+                            </div>
+
+                            {/* Probar la configuración: abre el examen en vista previa dentro de SEB */}
+                            <div className="mb-3 p-2" style={{ borderRadius: '8px', border: '1px solid #e9ecef', backgroundColor: 'white' }}>
+                              <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                <small className="text-muted" style={{ flex: '1 1 260px' }}>
+                                  Abrí el examen en SEB con esta configuración, aunque todavía no la hayas guardado, para revisarla antes del examen.
+                                </small>
+                                <button
+                                  type="button"
+                                  className="modern-btn modern-btn-secondary modern-btn-sm"
+                                  onClick={handleTestSEBConfig}
+                                  disabled={generandoPruebaSEB || !formData.examId}
+                                  title={formData.examId ? 'Generar archivo de prueba y abrir SEB' : 'Elegí un examen primero'}
+                                >
+                                  <i className="fas fa-vial me-1"></i>
+                                  {generandoPruebaSEB ? 'Generando...' : 'Probar en SEB'}
+                                </button>
+                              </div>
+                              {pruebaSEB && (
+                                <small className="d-block mt-2">
+                                  Si SEB no se abrió solo,{' '}
+                                  <a href={pruebaSEB.archivoUrl} download>descargá el archivo de prueba</a>
+                                  {' '}y abrilo. La vista previa vence en 10 minutos.
+                                </small>
+                              )}
                             </div>
 
                             {/* Modo de pruebas: desactiva las restricciones al generar el archivo SEB */}
