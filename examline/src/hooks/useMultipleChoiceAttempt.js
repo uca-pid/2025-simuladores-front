@@ -1,36 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getExamById, checkExamAttempt, startExamAttempt, advancePart, continuePart, saveDraftAnswers } from '../services/api';
 
-// PRNG determinístico (mulberry32): con la misma semilla siempre da el mismo
-// orden, así al recargar la página las opciones quedan en el mismo lugar y las
-// respuestas guardadas (por posición) siguen apuntando a la opción correcta.
-const seededRandom = (seed) => {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6D2B79F5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-};
-
-const shuffleWithSeed = (items, seed) => {
-  const random = seededRandom(seed);
-  const copia = [...items];
-  for (let i = copia.length - 1; i > 0; i--) {
-    const j = Math.floor(random() * (i + 1));
-    [copia[i], copia[j]] = [copia[j], copia[i]];
-  }
-  return copia;
-};
-
 /**
  * Hook personalizado para gestionar la toma de un examen NO de programación
  * (multiple_choice / otros tipos de pregunta: true_false, fill_in_blank, matching).
  *
  * Centraliza: validación de acceso (rol/windowId), carga del examen y del intento,
- * randomización de opciones/respuestas por pregunta, estado de respuestas del
+ * listas de opciones (ya mezcladas por el servidor), estado de respuestas del
  * estudiante (persistido en sessionStorage) y el envío de finalización del intento.
  *
  * @param {string} examId - Id del examen
@@ -73,7 +49,7 @@ export const useMultipleChoiceAttempt = (examId, windowId, navigate, { propExamI
     });
   }, [examId]);
 
-  // Carga del examen + intento + randomización
+  // Carga del examen + intento + listas de opciones
   useEffect(() => {
     if (!examId) return;
 
@@ -162,7 +138,9 @@ export const useMultipleChoiceAttempt = (examId, windowId, navigate, { propExamI
         setAttempt(attemptData);
         setExam(examData);
 
-        // Randomizar opciones para cada pregunta
+        // Las opciones ya vienen mezcladas por el servidor para este alumno (y en el
+        // mismo orden al recargar): acá solo se arman las listas que usa la vista.
+        // originalIndex es la posición mostrada, que el back traduce al corregir.
         if (preguntasAMostrar) {
           const randomized = {};
           const randomizedMatching = {};
@@ -174,13 +152,13 @@ export const useMultipleChoiceAttempt = (examId, windowId, navigate, { propExamI
                 texto,
                 originalIndex: numConceptos + i
               }));
-              randomizedMatching[index] = shuffleWithSeed(respuestasConIndice, attemptData.id * 100003 + pregunta.id);
+              randomizedMatching[index] = respuestasConIndice;
             } else if (pregunta.tipo === 'fill_in_blank' && pregunta.opciones && Array.isArray(pregunta.opciones)) {
               const opcionesConIndice = pregunta.opciones.map((texto, i) => ({
                 texto,
                 originalIndex: i
               }));
-              randomized[index] = shuffleWithSeed(opcionesConIndice, attemptData.id * 100003 + pregunta.id);
+              randomized[index] = opcionesConIndice;
             } else if (
               pregunta.opciones && Array.isArray(pregunta.opciones) &&
               !['short_answer', 'numeric', 'essay', 'file_upload'].includes(pregunta.tipo)
@@ -189,7 +167,7 @@ export const useMultipleChoiceAttempt = (examId, windowId, navigate, { propExamI
                 texto,
                 originalIndex: i
               }));
-              randomized[index] = shuffleWithSeed(opcionesConIndice, attemptData.id * 100003 + pregunta.id);
+              randomized[index] = opcionesConIndice;
             }
           });
           setRandomizedOptions(randomized);
