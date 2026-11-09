@@ -1,5 +1,29 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getExamById, checkExamAttempt, startExamAttempt, finishExamAttempt } from '../services/api';
+import { getExamById, checkExamAttempt, startExamAttempt, advancePart, continuePart, saveDraftAnswers } from '../services/api';
+
+// PRNG determinístico (mulberry32): con la misma semilla siempre da el mismo
+// orden, así al recargar la página las opciones quedan en el mismo lugar y las
+// respuestas guardadas (por posición) siguen apuntando a la opción correcta.
+const seededRandom = (seed) => {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+};
+
+const shuffleWithSeed = (items, seed) => {
+  const random = seededRandom(seed);
+  const copia = [...items];
+  for (let i = copia.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [copia[i], copia[j]] = [copia[j], copia[i]];
+  }
+  return copia;
+};
 
 /**
  * Hook personalizado para gestionar la toma de un examen NO de programación
@@ -26,6 +50,10 @@ export const useMultipleChoiceAttempt = (examId, windowId, navigate, { propExamI
   const [randomizedOptions, setRandomizedOptions] = useState({}); // { preguntaIndex: [{ texto, originalIndex }] }
   const [randomizedMatchingAnswers, setRandomizedMatchingAnswers] = useState({}); // { preguntaIndex: [{ texto, originalIndex }] }
   const [selectedMatchingConcepts, setSelectedMatchingConcepts] = useState({}); // { preguntaId: conceptoIndex | null }
+  const [reloadIndex, setReloadIndex] = useState(0); // se incrementa para forzar un refetch (p.ej. tras continuar de parte)
+
+  // Parte actual del examen (el backend nunca expone preguntas de partes que no sean la actual)
+  const part = exam?.partes?.[exam.currentPartIndex] || null;
 
   // 🔹 Cargar respuestas guardadas al montar el componente
   useEffect(() => {
@@ -105,17 +133,30 @@ export const useMultipleChoiceAttempt = (examId, windowId, navigate, { propExamI
         // SEGUNDO: Cargar examen con las preguntas
         const examData = await getExamById(examId, windowId);
 
+        const currentPart = examData.partes?.[examData.currentPartIndex];
+
+        // Si la parte actual no es de múltiple choice, esta página no debe
+        // renderizar nada: redirigir al lugar correcto según su tipo.
+        if (currentPart && currentPart.tipo === 'programming') {
+          const params = new URLSearchParams();
+          if (windowId) params.append('windowId', windowId);
+          navigate(`/programming-exam/${examId}?${params.toString()}`);
+          return;
+        }
+
         // TERCERO: Aplicar orden de preguntas ANTES de setear el estado (evita flash)
-        let preguntasAMostrar = examData.preguntas;
+        let preguntasAMostrar = currentPart?.preguntas || [];
 
         if (attemptData.ordenPreguntas && Array.isArray(attemptData.ordenPreguntas)) {
-          const ordenMap = new Map(examData.preguntas.map(p => [p.id, p]));
+          const ordenMap = new Map(preguntasAMostrar.map(p => [p.id, p]));
           preguntasAMostrar = attemptData.ordenPreguntas
             .map(id => ordenMap.get(id))
             .filter(p => p !== undefined);
         }
 
-        examData.preguntas = preguntasAMostrar;
+        if (currentPart) {
+          currentPart.preguntas = preguntasAMostrar;
+        }
 
         // CUARTO: Setear estados (ya con el orden correcto)
         setAttempt(attemptData);
@@ -133,43 +174,26 @@ export const useMultipleChoiceAttempt = (examId, windowId, navigate, { propExamI
                 texto,
                 originalIndex: numConceptos + i
               }));
-              for (let i = respuestasConIndice.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [respuestasConIndice[i], respuestasConIndice[j]] = [respuestasConIndice[j], respuestasConIndice[i]];
-              }
-              randomizedMatching[index] = respuestasConIndice;
+              randomizedMatching[index] = shuffleWithSeed(respuestasConIndice, attemptData.id * 100003 + pregunta.id);
             } else if (pregunta.tipo === 'fill_in_blank' && pregunta.opciones && Array.isArray(pregunta.opciones)) {
               const opcionesConIndice = pregunta.opciones.map((texto, i) => ({
                 texto,
                 originalIndex: i
               }));
-              for (let i = opcionesConIndice.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [opcionesConIndice[i], opcionesConIndice[j]] = [opcionesConIndice[j], opcionesConIndice[i]];
-              }
-              randomized[index] = opcionesConIndice;
-            } else if (pregunta.opciones && Array.isArray(pregunta.opciones)) {
+              randomized[index] = shuffleWithSeed(opcionesConIndice, attemptData.id * 100003 + pregunta.id);
+            } else if (
+              pregunta.opciones && Array.isArray(pregunta.opciones) &&
+              !['short_answer', 'numeric', 'essay', 'file_upload'].includes(pregunta.tipo)
+            ) {
               const opcionesConIndice = pregunta.opciones.map((texto, i) => ({
                 texto,
                 originalIndex: i
               }));
-              for (let i = opcionesConIndice.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [opcionesConIndice[i], opcionesConIndice[j]] = [opcionesConIndice[j], opcionesConIndice[i]];
-              }
-              randomized[index] = opcionesConIndice;
+              randomized[index] = shuffleWithSeed(opcionesConIndice, attemptData.id * 100003 + pregunta.id);
             }
           });
           setRandomizedOptions(randomized);
           setRandomizedMatchingAnswers(randomizedMatching);
-        }
-
-        // Redireccionar si es un examen de programación
-        if (examData.tipo === 'programming') {
-          const params = new URLSearchParams();
-          if (windowId) params.append('windowId', windowId);
-          navigate(`/programming-exam/${examId}?${params.toString()}`);
-          return;
         }
       } catch (err) {
         console.error('Error cargando examen:', err);
@@ -195,23 +219,44 @@ export const useMultipleChoiceAttempt = (examId, windowId, navigate, { propExamI
 
     loadExamAndAttempt();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [examId, windowId]);
+  }, [examId, windowId, reloadIndex]);
+
+  // Autoguardado en el servidor: si el profesor cierra el examen antes de que
+  // el alumno entregue, se corrige lo que haya respondido hasta ese momento.
+  useEffect(() => {
+    if (!attempt || propExamId || !part || part.tipo !== 'multiple_choice' || exam?.partStatus !== 'en_curso') return;
+    if (Object.keys(respuestas).length === 0) return;
+
+    const timeout = setTimeout(() => {
+      saveDraftAnswers(attempt.id, buildFinishBody()).catch(err => {
+        console.error('Error autoguardando respuestas:', err);
+      });
+    }, 1500);
+
+    return () => clearTimeout(timeout);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [respuestas, attempt, part]);
 
   // Construye el body de finalización a partir de las respuestas actuales
   const buildFinishBody = useCallback(() => {
-    if (!exam || exam.tipo !== 'multiple_choice') {
+    if (!part || part.tipo !== 'multiple_choice') {
       return {};
     }
 
     const respuestasFinales = {};
     Object.keys(respuestas).forEach(preguntaId => {
-      const preguntaIndex = exam.preguntas.findIndex(p => p.id === parseInt(preguntaId));
+      const preguntaIndex = part.preguntas.findIndex(p => p.id === parseInt(preguntaId));
       if (preguntaIndex === -1) return;
 
-      const pregunta = exam.preguntas[preguntaIndex];
+      const pregunta = part.preguntas[preguntaIndex];
       const respuesta = respuestas[preguntaId];
 
       if (pregunta.tipo === 'fill_in_blank' && Array.isArray(respuesta)) {
+        respuestasFinales[preguntaId] = respuesta.map(randomIndex =>
+          randomizedOptions[preguntaIndex][randomIndex].originalIndex
+        );
+      } else if (pregunta.tipo === 'multiple_response' && Array.isArray(respuesta)) {
+        // Array de índices (posiciones randomizadas) marcados por el alumno -> índices originales
         respuestasFinales[preguntaId] = respuesta.map(randomIndex =>
           randomizedOptions[preguntaIndex][randomIndex].originalIndex
         );
@@ -219,6 +264,10 @@ export const useMultipleChoiceAttempt = (examId, windowId, navigate, { propExamI
         respuestasFinales[preguntaId] = respuesta.map(randomizedAnswerIndex =>
           randomizedMatchingAnswers[preguntaIndex][randomizedAnswerIndex].originalIndex
         );
+      } else if (['short_answer', 'numeric', 'essay', 'file_upload'].includes(pregunta.tipo)) {
+        // Texto libre / valor numérico / URL de archivo: se envía tal cual, sin
+        // traducir índices de opciones randomizadas (no aplica a estos tipos).
+        respuestasFinales[preguntaId] = respuesta;
       } else {
         if (randomizedOptions[preguntaIndex]) {
           respuestasFinales[preguntaId] = randomizedOptions[preguntaIndex][respuesta].originalIndex;
@@ -228,24 +277,40 @@ export const useMultipleChoiceAttempt = (examId, windowId, navigate, { propExamI
       }
     });
 
-    return { respuestas: respuestasFinales };
-  }, [exam, respuestas, randomizedOptions, randomizedMatchingAnswers]);
+    return respuestasFinales;
+  }, [part, respuestas, randomizedOptions, randomizedMatchingAnswers]);
 
-  // Finaliza el intento en el backend. Lanza el error para que el componente lo maneje (modal).
+  // Cierra la parte actual (avanza a la siguiente, o finaliza el intento si era
+  // la última). La respuesta indica si hay que esperar a "continuar" o si el
+  // intento completo ya quedó finalizado.
   const finishAttempt = useCallback(async () => {
-    const body = buildFinishBody();
-    const response = await finishExamAttempt(attempt.id, body);
+    const respuestasFinales = buildFinishBody();
+    const response = await advancePart(attempt.id, respuestasFinales);
 
-    // Limpiar sessionStorage al completar el examen
-    const examKey = `exam_${examId}_windowId`;
-    sessionStorage.removeItem(examKey);
-    sessionStorage.removeItem(`exam_${examId}_respuestas`);
+    if (response.estado === 'finalizado') {
+      // Limpiar sessionStorage al completar el examen
+      const examKey = `exam_${examId}_windowId`;
+      sessionStorage.removeItem(examKey);
+      sessionStorage.removeItem(`exam_${examId}_respuestas`);
+    }
 
     return response;
   }, [attempt, buildFinishBody, examId]);
 
+  // Confirma el paso a la siguiente parte tras el estado "esperando_continuar"
+  // y fuerza un refetch del examen (que puede redirigir a la vista correcta
+  // según el tipo de la nueva parte actual).
+  const continueToNextPart = useCallback(async (codigo) => {
+    const response = await continuePart(attempt.id, codigo);
+    sessionStorage.removeItem(`exam_${examId}_respuestas`);
+    setRespuestas({});
+    setReloadIndex(prev => prev + 1);
+    return response;
+  }, [attempt, examId]);
+
   return {
     exam,
+    part,
     attempt,
     loading,
     setLoading,
@@ -260,7 +325,8 @@ export const useMultipleChoiceAttempt = (examId, windowId, navigate, { propExamI
     randomizedMatchingAnswers,
     selectedMatchingConcepts,
     setSelectedMatchingConcepts,
-    finishAttempt
+    finishAttempt,
+    continueToNextPart
   };
 };
 

@@ -13,6 +13,7 @@ export { useExamFiles } from './useExamFiles';
 export { useCodeCompiler } from './useCodeCompiler';
 export { useExamFinish } from './useExamFinish';
 export { useMultipleChoiceAttempt } from './useMultipleChoiceAttempt';
+export { useAttemptStatus } from './useAttemptStatus';
 
 // Exportar también como default para compatibilidad
 export { default as useModalDefault } from './useModal';

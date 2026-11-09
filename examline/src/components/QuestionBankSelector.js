@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
-
-const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:4000";
+import { getTipoBadge } from "../utils/questionBadges";
+import { getQuestionBank } from "../services/api";
+import OptionImage from "./OptionImage";
 
 const QuestionBankSelector = ({ show, onClose, onSelectQuestions }) => {
   const [questions, setQuestions] = useState([]);
@@ -22,20 +23,7 @@ const QuestionBankSelector = ({ show, onClose, onSelectQuestions }) => {
     try {
       setLoading(true);
       setError("");
-      const token = localStorage.getItem("token");
-      
-      const response = await fetch(`${API_BASE_URL}/question-bank`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Error al cargar preguntas");
-      }
-
-      const data = await response.json();
+      const data = await getQuestionBank();
       setQuestions(data);
     } catch (err) {
       setError(err.message || "Error al cargar las preguntas del banco");
@@ -78,9 +66,14 @@ const QuestionBankSelector = ({ show, onClose, onSelectQuestions }) => {
       .filter(q => selectedIds.includes(q.id))
       .map(q => ({
         tipo: q.tipo || "multiple_choice",
+        dificultad: q.dificultad || "media",
         texto: q.texto,
         opciones: q.opciones,
-        correcta: q.correcta
+        correcta: q.correcta,
+        correctas: q.correctas ?? null,
+        imagenUrl: q.imagenUrl || null,
+        imagenesOpciones: q.imagenesOpciones ?? null,
+        puntos: 1
       }));
     
     onSelectQuestions(selectedQuestions);
@@ -157,7 +150,8 @@ const QuestionBankSelector = ({ show, onClose, onSelectQuestions }) => {
                 </div>
                 {filteredQuestions.length > 0 && (
                   <button
-                    className="btn btn-sm btn-outline-primary"
+                    className="btn btn-sm"
+                    style={{ color: 'var(--primary-color)', border: '1px solid var(--primary-color)', backgroundColor: 'white' }}
                     onClick={handleSelectAll}
                   >
                     <i className={`fas fa-${selectedIds.length === filteredQuestions.length ? 'times' : 'check-double'} me-1`}></i>
@@ -170,7 +164,7 @@ const QuestionBankSelector = ({ show, onClose, onSelectQuestions }) => {
             {/* Lista de preguntas */}
             {loading ? (
               <div className="text-center py-5">
-                <div className="spinner-border text-primary" role="status">
+                <div className="spinner-border" role="status" style={{ color: 'var(--primary-color)' }}>
                   <span className="visually-hidden">Cargando...</span>
                 </div>
               </div>
@@ -184,7 +178,8 @@ const QuestionBankSelector = ({ show, onClose, onSelectQuestions }) => {
                 </h5>
                 {searchFilter && (
                   <button
-                    className="btn btn-outline-primary mt-3"
+                    className="btn mt-3"
+                    style={{ color: 'var(--primary-color)', border: '1px solid var(--primary-color)', backgroundColor: 'white' }}
                     onClick={() => setSearchFilter('')}
                   >
                     <i className="fas fa-times me-2"></i>
@@ -197,11 +192,12 @@ const QuestionBankSelector = ({ show, onClose, onSelectQuestions }) => {
                 {filteredQuestions.map((question) => (
                   <div key={question.id} className="col-12">
                     <div 
-                      className={`card h-100 ${selectedIds.includes(question.id) ? 'border-primary' : ''}`}
-                      style={{ 
+                      className="card h-100"
+                      style={{
                         cursor: 'pointer',
                         transition: 'all 0.2s',
-                        boxShadow: selectedIds.includes(question.id) ? '0 4px 12px rgba(124, 58, 237, 0.3)' : '0 2px 4px rgba(0,0,0,0.1)'
+                        borderColor: selectedIds.includes(question.id) ? 'var(--primary-color)' : undefined,
+                        boxShadow: selectedIds.includes(question.id) ? '0 4px 12px rgba(30, 41, 85, 0.3)' : '0 2px 4px rgba(0,0,0,0.1)'
                       }}
                       onClick={() => handleToggleQuestion(question.id)}
                     >
@@ -213,10 +209,13 @@ const QuestionBankSelector = ({ show, onClose, onSelectQuestions }) => {
                               type="checkbox"
                               checked={selectedIds.includes(question.id)}
                               onChange={() => handleToggleQuestion(question.id)}
-                              style={{ 
-                                width: '1.25rem', 
+                              style={{
+                                width: '1.25rem',
                                 height: '1.25rem',
-                                cursor: 'pointer'
+                                cursor: 'pointer',
+                                ...(selectedIds.includes(question.id)
+                                  ? { backgroundColor: 'var(--primary-color)', borderColor: 'var(--primary-color)', boxShadow: '0 0 0 0.2rem rgba(30, 41, 85, 0.25)' }
+                                  : {})
                               }}
                             />
                           </div>
@@ -224,21 +223,21 @@ const QuestionBankSelector = ({ show, onClose, onSelectQuestions }) => {
                           <div className="flex-grow-1">
                             <div className="d-flex align-items-center gap-2 mb-2">
                               <h6 className="mb-0">
-                                <i className="fas fa-question-circle me-2 text-primary"></i>
+                                <i className="fas fa-question-circle me-2" style={{ color: 'var(--primary-color)' }}></i>
                                 {question.titulo || "Sin título"}
                               </h6>
-                              <span 
+                              <span
                                 className="badge"
                                 style={{
-                                  backgroundColor: question.tipo === 'true_false' ? '#28a745' : question.tipo === 'fill_in_blank' ? '#ffc107' : question.tipo === 'matching' ? '#9c27b0' : '#007bff',
+                                  backgroundColor: 'var(--primary-color)',
                                   color: 'white',
                                   padding: '0.25rem 0.5rem',
                                   fontSize: '0.7rem',
                                   borderRadius: '4px'
                                 }}
                               >
-                                <i className={`fas ${question.tipo === 'true_false' ? 'fa-check-double' : question.tipo === 'fill_in_blank' ? 'fa-fill-drip' : question.tipo === 'matching' ? 'fa-arrows-alt-h' : 'fa-list-ul'} me-1`}></i>
-                                {question.tipo === 'true_false' ? 'V/F' : question.tipo === 'fill_in_blank' ? 'Completar' : question.tipo === 'matching' ? 'Unir' : 'Múltiple'}
+                                <i className={`fas ${getTipoBadge(question.tipo).icon} me-1`}></i>
+                                {getTipoBadge(question.tipo).label}
                               </span>
                             </div>
                             
@@ -279,11 +278,11 @@ const QuestionBankSelector = ({ show, onClose, onSelectQuestions }) => {
                                     const respuesta = question.opciones[question.correcta + i];
                                     return (
                                       <div key={i} className="d-flex align-items-center gap-2 mb-1">
-                                        <span className="badge bg-primary" style={{ fontSize: '0.7rem', minWidth: '25px' }}>
+                                        <span className="badge" style={{ fontSize: '0.7rem', minWidth: '25px', backgroundColor: 'var(--primary-color)' }}>
                                           {i + 1}
                                         </span>
                                         <span style={{ fontSize: '0.85rem' }}>{concepto}</span>
-                                        <i className="fas fa-arrow-right text-primary" style={{ fontSize: '0.7rem' }}></i>
+                                        <i className="fas fa-arrow-right" style={{ fontSize: '0.7rem', color: 'var(--primary-color)' }}></i>
                                         <span className="badge bg-success" style={{ fontSize: '0.7rem', minWidth: '25px' }}>
                                           {String.fromCharCode(65 + i)}
                                         </span>
@@ -311,6 +310,7 @@ const QuestionBankSelector = ({ show, onClose, onSelectQuestions }) => {
                                       <span className={i === question.correcta ? "text-success fw-bold" : ""}>
                                         {opcion}
                                       </span>
+                                      <OptionImage url={question.imagenesOpciones?.[i]} maxHeight={80} />
                                     </li>
                                   ))}
                                 </ul>
@@ -329,7 +329,7 @@ const QuestionBankSelector = ({ show, onClose, onSelectQuestions }) => {
           <div className="modal-footer" style={{ borderTop: '1px solid var(--border-color)', backgroundColor: '#f8f9fa' }}>
             <div className="d-flex justify-content-between align-items-center w-100">
               <div>
-                <strong className="text-primary">
+                <strong style={{ color: 'var(--primary-color)' }}>
                   <i className="fas fa-check-circle me-2"></i>
                   {selectedIds.length} pregunta{selectedIds.length !== 1 ? 's' : ''} seleccionada{selectedIds.length !== 1 ? 's' : ''}
                 </strong>

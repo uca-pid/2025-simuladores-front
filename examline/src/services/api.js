@@ -46,6 +46,9 @@ const handleResponse = async (response) => {
       error.code = data.code;
       throw error;
     } catch (parseError) {
+      // El error armado arriba (con el mensaje del backend) se relanza tal cual
+      if (parseError.status) throw parseError;
+
       // Si no se puede parsear el JSON, crear error con mensaje apropiado
       const errorMessage = response.status === 403 
         ? 'No está autorizado para ver este recurso'
@@ -95,6 +98,37 @@ export async function signupUser({ nombre, email, password, rol = "student" }) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ nombre, email, password: hashedPassword, rol }),
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
+export async function forgotPassword({ email }) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/users/forgot-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
+export async function resetPassword({ token, password, email }) {
+  try {
+    // Mismo esquema de doble hash que login/signup
+    const hashedPassword = hashPassword(password, email);
+
+    const res = await fetch(`${API_BASE_URL}/users/reset-password/${token}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: hashedPassword }),
     });
 
     return await handleResponse(res);
@@ -212,11 +246,119 @@ export async function createExam(examData) {
   }
 }
 
+export async function uploadEnunciado(file) {
+  try {
+    const token = localStorage.getItem('token');
+    const formData = new FormData();
+    formData.append('archivo', file);
+
+    const res = await fetch(`${API_BASE_URL}/exams/upload-enunciado`, {
+      method: "POST",
+      headers: {
+        ...(token && { 'Authorization': `Bearer ${token}` })
+        // No seteamos Content-Type: el browser lo define con el boundary correcto para FormData
+      },
+      body: formData,
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
+export async function uploadQuestionImage(file) {
+  try {
+    const token = localStorage.getItem('token');
+    const formData = new FormData();
+    formData.append('archivo', file);
+
+    const res = await fetch(`${API_BASE_URL}/exams/upload-question-image`, {
+      method: "POST",
+      headers: {
+        ...(token && { 'Authorization': `Bearer ${token}` })
+      },
+      body: formData,
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
+export async function uploadAnswerFile(file) {
+  try {
+    const token = localStorage.getItem('token');
+    const formData = new FormData();
+    formData.append('archivo', file);
+
+    const res = await fetch(`${API_BASE_URL}/exam-attempts/upload-answer-file`, {
+      method: "POST",
+      headers: {
+        ...(token && { 'Authorization': `Bearer ${token}` })
+      },
+      body: formData,
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
+export async function uploadDataset(file) {
+  try {
+    const token = localStorage.getItem('token');
+    const formData = new FormData();
+    formData.append('archivo', file);
+
+    const res = await fetch(`${API_BASE_URL}/exams/upload-dataset`, {
+      method: "POST",
+      headers: {
+        ...(token && { 'Authorization': `Bearer ${token}` })
+      },
+      body: formData,
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
 export async function getExams() {
   try {
     const res = await fetch(`${API_BASE_URL}/exams`, {
       method: "GET",
       headers: getAuthHeaders(),
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
+export async function getQuestionBank() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/question-bank`, {
+      method: "GET",
+      headers: getAuthHeaders(),
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
+export async function saveQuestionToBank(question) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/question-bank`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify(question),
     });
 
     return await handleResponse(res);
@@ -236,6 +378,39 @@ export async function getExamById(examId, windowId = null) {
     
     const res = await fetch(url, {
       method: "GET",
+      headers: getAuthHeaders(),
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
+export async function updateExam(examId, payload) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/exams/${examId}`, {
+      method: "PUT",
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    // El caso 409 (contenido rechazado por intentos existentes) es una
+    // respuesta parcial válida que el llamador debe inspeccionar, no un error.
+    if (res.status === 409) {
+      return await res.json();
+    }
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
+export async function deleteExam(examId) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/exams/${examId}`, {
+      method: "DELETE",
       headers: getAuthHeaders(),
     });
 
@@ -300,6 +475,56 @@ export async function toggleExamWindowActive(windowId) {
   }
 }
 
+// Cierra el examen para todos: finaliza los intentos en curso con lo que tengan guardado.
+export async function closeExamWindow(windowId) {
+  const res = await fetch(`${API_BASE_URL}/exam-windows/${windowId}/cerrar`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+  });
+
+  return await handleResponse(res);
+}
+
+// Habilita la siguiente parte del examen para todos los alumnos de la ventana.
+export async function enableNextExamPart(windowId) {
+  const res = await fetch(`${API_BASE_URL}/exam-windows/${windowId}/habilitar-parte`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+  });
+
+  return await handleResponse(res);
+}
+
+// Alumnos que terminaron una parte y esperan la siguiente (con la nota de esa parte).
+export async function getStudentsWaitingNextPart(windowId) {
+  const res = await fetch(`${API_BASE_URL}/exam-windows/${windowId}/esperando-parte`, {
+    method: "GET",
+    headers: getAuthHeaders(),
+  });
+
+  return await handleResponse(res);
+}
+
+// Habilita la siguiente parte a los alumnos elegidos (ids de intento), todos a la vez.
+export async function enableNextPartForStudents(windowId, attemptIds) {
+  const res = await fetch(`${API_BASE_URL}/exam-windows/${windowId}/habilitar-alumnos`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ attemptIds }),
+  });
+
+  return await handleResponse(res);
+}
+
+export async function regeneratePartCode(windowId) {
+  const res = await fetch(`${API_BASE_URL}/exam-windows/${windowId}/regenerar-codigo-parte`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+  });
+
+  return await handleResponse(res);
+}
+
 // Exam attempt endpoints
 export async function getExamAttemptResults(attemptId) {
   try {
@@ -340,6 +565,59 @@ export async function startExamAttempt({ examId, examWindowId }) {
   } catch (err) {
     throw err;
   }
+}
+
+// Avanza el intento a la siguiente parte (o lo finaliza si era la última).
+// `respuestas` solo es relevante para partes de multiple_choice.
+export async function advancePart(attemptId, respuestas = {}) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/exam-attempts/${attemptId}/advance-part`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ respuestas }),
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
+// Confirma el paso a la siguiente parte tras el estado "esperando_continuar".
+// `codigo` solo hace falta si el profesor bloqueó el avance y todavía no habilitó la parte.
+export async function continuePart(attemptId, codigo) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/exam-attempts/${attemptId}/continue-part`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify(codigo ? { codigo } : {}),
+    });
+
+    return await handleResponse(res);
+  } catch (err) {
+    throw err;
+  }
+}
+
+// Autoguarda las respuestas de la parte en curso (índices originales de opciones).
+export async function saveDraftAnswers(attemptId, respuestas) {
+  const res = await fetch(`${API_BASE_URL}/exam-attempts/${attemptId}/draft`, {
+    method: "PUT",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ respuestas }),
+  });
+
+  return await handleResponse(res);
+}
+
+// Estado del intento: si el profesor cerró el examen o habilitó la siguiente parte.
+export async function getAttemptStatus(attemptId) {
+  const res = await fetch(`${API_BASE_URL}/exam-attempts/${attemptId}/status`, {
+    method: "GET",
+    headers: getAuthHeaders(),
+  });
+
+  return await handleResponse(res);
 }
 
 export async function saveAttemptCode(attemptId, codigoProgramacion) {
@@ -426,12 +704,12 @@ export async function saveSubmissionFiles(examId, files) {
 }
 
 // Code execution endpoint
-export async function runCode({ code, language, examId, input }) {
+export async function runCode({ code, language, examId, partId, input }) {
   try {
     const res = await fetch(`${API_BASE_URL}/code-execution/run`, {
       method: "POST",
       headers: getAuthHeaders(),
-      body: JSON.stringify({ code, language, examId, input }),
+      body: JSON.stringify({ code, language, examId, partId, input }),
     });
 
     return await handleResponse(res);
@@ -549,12 +827,12 @@ export async function testExamSolution(examId, code, useReferenceSolution = fals
   }
 }
 
-export async function testSolutionPreview(code, language, testCases) {
+export async function testSolutionPreview(code, language, testCases, datasetFiles = []) {
   try {
     const res = await fetch(`${API_BASE_URL}/exams/test-solution-preview`, {
       method: "POST",
       headers: getAuthHeaders(),
-      body: JSON.stringify({ code, language, testCases }),
+      body: JSON.stringify({ code, language, testCases, datasetFiles }),
     });
 
     return await handleResponse(res);
@@ -632,12 +910,13 @@ export async function getAttemptProfessorView(attemptId) {
   }
 }
 
-export async function executeCodeForGrading({ code, language, filename, customInput, testCases }) {
+export async function executeCodeForGrading({ code, language, filename, examId, customInput, testCases }) {
   try {
     const payload = {
       code,
       language,
       filename,
+      ...(examId !== undefined && { examId }),
       ...(customInput !== undefined && { customInput }),
       ...(testCases !== undefined && { testCases }),
     };

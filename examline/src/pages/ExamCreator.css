@@ -1,3 +1,300 @@
+/* Layout de 2 columnas: sidebar fijo (pasos + partes) + contenido principal */
+.exam-creator-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+}
+
+.exam-creator-sidebar {
+  width: 290px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 1.5rem;
+  align-self: flex-start;
+}
+
+.exam-creator-main {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .exam-creator-layout {
+    flex-direction: column;
+  }
+
+  .exam-creator-sidebar {
+    width: 100%;
+    position: static;
+  }
+}
+
+/* "Agregar Parte" en la navegación inferior: outline navy para distinguirlo
+   de "Atrás" (gris, navegación) y de "Siguiente" (navy lleno, avanzar). */
+.modern-btn.exam-add-part-btn {
+  background: white;
+  color: var(--primary-color);
+  border: 1px solid var(--primary-color);
+}
+
+.modern-btn.exam-add-part-btn:hover:not(:disabled) {
+  background: rgba(30, 41, 85, 0.08);
+  color: var(--primary-color);
+}
+
+/* Bloque de "Partes del Examen" anidado debajo del paso 2 en el stepper */
+.exam-wizard-nested-parts {
+  padding: 0.25rem 0;
+  border-top: 1px solid rgba(226, 232, 240, 0.6);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+  background: #f8fafc;
+}
+
+/* Lista vertical de partes dentro del sidebar */
+.exam-parts-list-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.exam-parts-list-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.exam-parts-list-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 8px;
+  padding: 0.875rem 0.75rem;
+  min-height: 60px;
+  cursor: grab;
+  color: #64748b;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.exam-parts-list-group:not(.active) .exam-parts-list-item:hover {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.exam-parts-list-group.active .exam-parts-list-item {
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  color: white;
+  font-weight: 600;
+}
+
+.exam-parts-list-icon-btn {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: 0.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+}
+
+.exam-parts-list-icon-btn:disabled {
+  opacity: 0.4;
+}
+
+.exam-parts-list-icon-btn.text-danger {
+  border-color: transparent;
+  background: transparent;
+  color: #fca5a5;
+}
+
+.exam-parts-add-button {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 0.875rem 0.5rem;
+  min-height: 60px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.exam-parts-add-button:hover:not(:disabled) {
+  background: #f8fafc;
+  color: #334155;
+}
+
+.exam-parts-add-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* ExamCreator Wizard Stepper */
+.exam-wizard-steps {
+  display: flex;
+  width: 100%;
+}
+
+.exam-wizard-steps--vertical {
+  flex-direction: column;
+}
+
+.exam-wizard-steps--vertical .exam-wizard-step-button {
+  justify-content: flex-start;
+  min-height: auto;
+  padding: 0.75rem 1rem;
+}
+
+.exam-wizard-steps--vertical .exam-wizard-step-button {
+  border-radius: 0;
+  border-top: 1px solid rgba(226, 232, 240, 0.5);
+}
+
+.exam-wizard-steps--vertical:first-of-type .exam-wizard-step-button:first-child {
+  border-radius: 12px 12px 0 0;
+  border-top: none;
+}
+
+.exam-wizard-steps--vertical:last-of-type .exam-wizard-step-button:last-child {
+  border-radius: 0 0 12px 12px;
+}
+
+.exam-wizard-step-button {
+  flex: 1;
+  border: none;
+  padding: 0.875rem 0.5rem;
+  background: transparent;
+  border-radius: 0;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #64748b;
+  min-height: 60px;
+  cursor: pointer;
+  text-align: center;
+}
+
+.exam-wizard-step-button:first-child {
+  border-radius: 12px 0 0 12px;
+}
+
+.exam-wizard-step-button:nth-child(2) {
+  border-left: 1px solid rgba(226, 232, 240, 0.5);
+  border-right: 1px solid rgba(226, 232, 240, 0.5);
+}
+
+.exam-wizard-step-button:last-child {
+  border-radius: 0 12px 12px 0;
+}
+
+/* En el stepper vertical, el paso 2 es el último de su grupo pero no del
+   sidebar: sin esto hereda las esquinas redondeadas del modo horizontal y se
+   ve como una "píldora" que no ocupa todo el ancho. */
+.exam-wizard-steps--vertical .exam-wizard-step-button:nth-child(2),
+.exam-wizard-steps--vertical .exam-wizard-step-button:last-child {
+  border-left: none;
+  border-right: none;
+  border-radius: 0;
+}
+
+.exam-wizard-step-button.active {
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  color: white;
+  font-weight: 600;
+}
+
+.exam-wizard-step-button:hover:not(.active) {
+  background: #f8fafc;
+  color: #334155;
+}
+
+.exam-wizard-step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: rgba(100, 116, 139, 0.15);
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+.exam-wizard-step-button.active .exam-wizard-step-number {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.exam-wizard-step-label {
+  white-space: nowrap;
+}
+
+/* Tabs de la parte de programación (Configuración / Casos de Prueba / Solución) */
+.prog-tabs {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+  flex-wrap: wrap;
+}
+
+.prog-tab-button {
+  border: none;
+  background: transparent;
+  padding: 0.6rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: all 0.2s ease;
+}
+
+.prog-tab-button:hover:not(.active) {
+  color: var(--primary-color);
+}
+
+.prog-tab-button.active {
+  color: var(--primary-color);
+  font-weight: 600;
+  border-bottom-color: var(--primary-color);
+}
+
+.exam-summary-part-item {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.exam-summary-part-item:last-child {
+  border-bottom: none;
+}
+
+@media (max-width: 576px) {
+  .exam-wizard-step-button {
+    font-size: 0.75rem;
+    gap: 0.3rem;
+    padding: 0.75rem 0.25rem;
+  }
+
+  .exam-wizard-step-label {
+    white-space: normal;
+  }
+}
+
 /* ExamCreator Page Responsive Styles */
 .exam-creator-header {
   display: flex;

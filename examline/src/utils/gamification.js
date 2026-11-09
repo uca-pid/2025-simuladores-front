@@ -7,7 +7,7 @@ export const levels = [
   { level: 4, name: 'Avanzado', minExams: 11, maxExams: 15, color: '#fbbf24', icon: 'fas fa-medal', badge: '🏅' },
   { level: 5, name: 'Experto', minExams: 16, maxExams: 25, color: '#f97316', icon: 'fas fa-trophy', badge: '🏆' },
   { level: 6, name: 'Maestro', minExams: 26, maxExams: 40, color: '#ec4899', icon: 'fas fa-crown', badge: '👑' },
-  { level: 7, name: 'Leyenda', minExams: 41, maxExams: Infinity, color: '#8b5cf6', icon: 'fas fa-star', badge: '⭐' }
+  { level: 7, name: 'Leyenda', minExams: 41, maxExams: Infinity, color: '#172147', icon: 'fas fa-star', badge: '⭐' }
 ];
 
 // Calcular el nivel actual basado en la cantidad de exámenes completados
@@ -51,7 +51,7 @@ export const calculateProgress = (completedExams) => {
 
 // Obtener título descriptivo basado en cantidad de exámenes (sin notas)
 export const getPerformanceTitle = (completedExams) => {
-  if (completedExams >= 30) return { title: 'Dedicación Máxima', icon: '🌟', color: '#8b5cf6' };
+  if (completedExams >= 30) return { title: 'Dedicación Máxima', icon: '🌟', color: '#172147' };
   if (completedExams >= 20) return { title: 'Muy Activo', icon: '✨', color: '#ec4899' };
   if (completedExams >= 10) return { title: 'En Progreso', icon: '💪', color: '#10b981' };
   if (completedExams >= 5) return { title: 'Iniciando', icon: '📈', color: '#f59e0b' };

@@ -13,7 +13,8 @@ const Modal = ({
   confirmText = "Aceptar",
   cancelText = "Cancelar",
   showCancel = false,
-  isProcessing = false // Nuevo prop para deshabilitar botones durante el procesamiento
+  isProcessing = false, // Nuevo prop para deshabilitar botones durante el procesamiento
+  children // Contenido opcional extra (ej. un input) debajo del mensaje
 }) => {
   if (!show) return null;
 
@@ -29,7 +30,7 @@ const Modal = ({
       case 'warning':
         return <i className={`${iconClass} fa-exclamation-triangle`} style={{...iconStyle, color: 'var(--warning-color)'}}></i>;
       case 'confirm':
-        return <i className={`${iconClass} fa-question-circle`} style={{...iconStyle, color: '#667eea'}}></i>;
+        return <i className={`${iconClass} fa-question-circle`} style={{...iconStyle, color: 'var(--primary-color)'}}></i>;
       default:
         return <i className={`${iconClass} fa-info-circle`} style={{...iconStyle, color: 'var(--info-color)'}}></i>;
     }
@@ -76,7 +77,9 @@ const Modal = ({
               <p className="responsive-modal-message">
                 {message}
               </p>
-              
+
+              {children}
+
               <div className="responsive-modal-buttons">
                 {showCancel && (
                   <button

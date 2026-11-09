@@ -1,9 +1,24 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import './ExamAttempt.css';
-import { useModal, useSEB, useMultipleChoiceAttempt } from "../hooks";
+import { useModal, useSEB, useMultipleChoiceAttempt, useAttemptStatus } from "../hooks";
 import Modal from "../components/Modal";
+import PartBreakScreen from "../components/PartBreakScreen";
+import { uploadAnswerFile } from "../services/api";
+import OptionImage from "../components/OptionImage";
+
+const EXAM_ATTEMPT_TIPO_META = {
+  multiple_choice: { label: 'Múltiple', color: '#007bff', icon: 'fa-list-ul' },
+  multiple_response: { label: 'Selección Múltiple', color: '#6610f2', icon: 'fa-check-square' },
+  true_false: { label: 'V/F', color: '#28a745', icon: 'fa-check-double' },
+  fill_in_blank: { label: 'Completar', color: '#ffc107', icon: 'fa-fill-drip' },
+  matching: { label: 'Emparejar', color: '#9c27b0', icon: 'fa-arrows-alt-h' },
+  short_answer: { label: 'Resp. Corta', color: '#17a2b8', icon: 'fa-font' },
+  numeric: { label: 'Numérica', color: '#fd7e14', icon: 'fa-calculator' },
+  essay: { label: 'Desarrollo', color: '#6c757d', icon: 'fa-pen-fancy' },
+  file_upload: { label: 'Archivo', color: '#20c997', icon: 'fa-paperclip' },
+};
 
 const ExamAttempt = ({ examId: propExamId, onBack }) => {
   const { examId: routeExamId } = useParams();
@@ -28,6 +43,7 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
   const { isInSEB, tryCloseSEB } = useSEB();
   const {
     exam,
+    part,
     attempt,
     loading,
     setLoading,
@@ -42,8 +58,79 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
     randomizedMatchingAnswers,
     selectedMatchingConcepts,
     setSelectedMatchingConcepts,
-    finishAttempt
+    finishAttempt,
+    continueToNextPart
   } = useMultipleChoiceAttempt(examId, windowId, navigate, { propExamId });
+
+  // Estado de subida de archivos de respuesta (preguntas tipo file_upload)
+  const [uploadingFileFor, setUploadingFileFor] = useState(null); // preguntaId en curso, o null
+  const [fileUploadError, setFileUploadError] = useState({}); // { preguntaId: mensaje }
+
+  const handleAnswerFileChange = async (preguntaId, e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingFileFor(preguntaId);
+    setFileUploadError(prev => ({ ...prev, [preguntaId]: null }));
+    try {
+      const { url } = await uploadAnswerFile(file);
+      updateRespuesta(preguntaId, url);
+    } catch (err) {
+      setFileUploadError(prev => ({ ...prev, [preguntaId]: err.message || "No se pudo subir el archivo" }));
+    } finally {
+      setUploadingFileFor(null);
+      e.target.value = '';
+    }
+  };
+
+  // Se setea cuando advance-part responde "esperando_continuar": la parte
+  // actual ya se cerró y no vuelve a mostrarse, solo queda esperar a que el
+  // estudiante confirme el paso a la siguiente.
+  const [partBreak, setPartBreak] = useState(null);
+  // Se pone en true cuando el propio alumno entrega la última parte, para no
+  // confundir ese "finalizado" con un cierre del profesor.
+  const [finishedByStudent, setFinishedByStudent] = useState(false);
+
+  // Si se recarga la página estando en la pantalla de corte, el servidor ya
+  // tiene la parte cerrada: volver a mostrar la pantalla de corte.
+  useEffect(() => {
+    if (exam?.partStatus === 'esperando_continuar' && !propExamId) {
+      setPartBreak({
+        partNumber: (exam.currentPartIndex ?? 0) + 1,
+        totalParts: exam.partes?.length
+      });
+    }
+  }, [exam, propExamId]);
+
+  // Consulta periódica: cierre del examen por el profesor y habilitación de la siguiente parte
+  const attemptStatus = useAttemptStatus(
+    attempt && !propExamId && !finishedByStudent ? attempt.id : null,
+    {
+      intervalMs: partBreak ? 5000 : 15000,
+      onClosed: () => {
+        sessionStorage.removeItem(`exam_${examId}_respuestas`);
+        sessionStorage.removeItem(`exam_${examId}_windowId`);
+        showModal(
+          'warning',
+          'Examen cerrado',
+          'El profesor cerró el examen. Tus respuestas guardadas fueron entregadas automáticamente.',
+          async () => {
+            closeModal();
+            if (isInSEB) {
+              const closed = await tryCloseSEB();
+              if (!closed) navigate('/login');
+            } else if (onBack) {
+              onBack();
+            } else {
+              navigate('/student-exam');
+            }
+          },
+          false,
+          'Salir del examen'
+        );
+      }
+    }
+  );
 
   // 🔒 Validación inicial de seguridad para estudiantes
   useEffect(() => {
@@ -118,8 +205,8 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
     }
 
     // Para exámenes múltiple choice, advertir si no se respondieron todas las preguntas
-    if (exam.tipo === 'multiple_choice') {
-      const totalPreguntas = exam.preguntas?.length || 0;
+    if (part?.tipo === 'multiple_choice') {
+      const totalPreguntas = part.preguntas?.length || 0;
       const preguntasRespondidas = Object.keys(respuestas).filter(key => {
         const respuesta = respuestas[key];
         // Para fill_in_blank, verificar que el array tenga elementos
@@ -163,10 +250,22 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
           setSubmitting(true);
           setModalProcessing(true); // Deshabilitar botón del modal
 
-          await finishAttempt();
+          const response = await finishAttempt();
+          if (response.estado === 'finalizado') {
+            setFinishedByStudent(true);
+          }
 
-          // Redirigir directamente sin modal de éxito
           closeModal();
+
+          // Si quedan más partes, mostrar la pantalla intermedia en vez de
+          // navegar afuera: el estudiante decide cuándo continuar.
+          if (response.partStatus === 'esperando_continuar') {
+            setPartBreak({
+              partNumber: (exam?.currentPartIndex ?? 0) + 1,
+              totalParts: exam?.partes?.length
+            });
+            return;
+          }
 
           console.log('Intento finalizado exitosamente, isInSEB:', isInSEB);
 
@@ -316,6 +415,35 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
     );
   }
 
+  if (partBreak) {
+    return (
+      <>
+        <PartBreakScreen
+          partNumber={partBreak.partNumber}
+          totalParts={partBreak.totalParts}
+          locked={attemptStatus ? !attemptStatus.siguienteParteHabilitada : false}
+          conCodigo={attemptStatus?.modoAvanceParte === 'codigo'}
+          onContinue={async (codigo) => {
+            await continueToNextPart(codigo);
+            setPartBreak(null);
+          }}
+        />
+        <Modal
+          show={modal.show}
+          onClose={closeModal}
+          onConfirm={modal.onConfirm}
+          title={modal.title}
+          message={modal.message}
+          type={modal.type}
+          showCancel={modal.showCancel}
+          confirmText={modal.confirmText}
+        />
+      </>
+    );
+  }
+
+  const preguntas = part?.preguntas || [];
+
   return (
     <div className="container py-5">
       <div className="modern-card mb-4">
@@ -340,22 +468,22 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
                 )}
                 <span className="badge badge-primary">
                   <i className="fas fa-question-circle me-2"></i>
-                  <span className="count-text">{exam.preguntas?.length || 0} preguntas</span>
+                  <span className="count-text">{preguntas.length || 0} preguntas</span>
                 </span>
-                {exam.tipo === 'multiple_choice' && (
+                {part?.tipo === 'multiple_choice' && (
                   <span className={`badge ${Object.keys(respuestas).filter(key => {
                     const respuesta = respuestas[key];
                     return Array.isArray(respuesta) ? respuesta.length > 0 : respuesta !== undefined;
-                  }).length === exam.preguntas?.length ? 'bg-success' : 'bg-secondary'}`}>
+                  }).length === preguntas.length ? 'bg-success' : 'bg-secondary'}`}>
                     <i className={`fas ${Object.keys(respuestas).filter(key => {
                       const respuesta = respuestas[key];
                       return Array.isArray(respuesta) ? respuesta.length > 0 : respuesta !== undefined;
-                    }).length === exam.preguntas?.length ? 'fa-check-circle' : 'fa-list-check'} me-2`}></i>
+                    }).length === preguntas.length ? 'fa-check-circle' : 'fa-list-check'} me-2`}></i>
                     <span className="count-text">
                       {Object.keys(respuestas).filter(key => {
                         const respuesta = respuestas[key];
                         return Array.isArray(respuesta) ? respuesta.length > 0 : respuesta !== undefined;
-                      }).length} / {exam.preguntas?.length || 0} respondidas
+                      }).length} / {preguntas.length || 0} respondidas
                     </span>
                   </span>
                 )}
@@ -371,7 +499,7 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
         </div>
       </div>
 
-      {!exam.preguntas || exam.preguntas.length === 0 ? (
+      {preguntas.length === 0 ? (
         <div className="empty-state">
           <div className="empty-icon">
             <i className="fas fa-question-circle"></i>
@@ -388,10 +516,15 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
       ) : (
         <>
           <div className="exam-attempt-questions-grid">
-            {exam.preguntas.map((p, i) => {
+            {preguntas.map((p, i) => {
               const isMatching = p.tipo === 'matching';
               const opcionesParaMostrar = randomizedOptions[i] || p.opciones?.map((texto, idx) => ({ texto, originalIndex: idx })) || [];
               const isFillInBlank = p.tipo === 'fill_in_blank';
+              const isMultipleResponse = p.tipo === 'multiple_response';
+              const isShortAnswer = p.tipo === 'short_answer';
+              const isNumeric = p.tipo === 'numeric';
+              const isEssay = p.tipo === 'essay';
+              const isFileUpload = p.tipo === 'file_upload';
               const respuestaActual = respuestas[p.id]; // Usar ID de pregunta, no índice
               
               return (
@@ -402,15 +535,15 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
                       <span 
                         className="badge"
                         style={{
-                          backgroundColor: p.tipo === 'true_false' ? '#28a745' : p.tipo === 'fill_in_blank' ? '#ffc107' : p.tipo === 'matching' ? '#9c27b0' : '#007bff',
+                          backgroundColor: EXAM_ATTEMPT_TIPO_META[p.tipo]?.color || '#007bff',
                           color: 'white',
                           padding: '0.35rem 0.65rem',
                           fontSize: '0.75rem',
                           borderRadius: '6px'
                         }}
                       >
-                        <i className={`fas ${p.tipo === 'true_false' ? 'fa-check-double' : p.tipo === 'fill_in_blank' ? 'fa-fill-drip' : p.tipo === 'matching' ? 'fa-arrows-alt-h' : 'fa-list-ul'} me-1`}></i>
-                        {p.tipo === 'true_false' ? 'V/F' : p.tipo === 'fill_in_blank' ? 'Completar' : p.tipo === 'matching' ? 'Unir' : 'Múltiple'}
+                        <i className={`fas ${EXAM_ATTEMPT_TIPO_META[p.tipo]?.icon || 'fa-list-ul'} me-1`}></i>
+                        {EXAM_ATTEMPT_TIPO_META[p.tipo]?.label || 'Múltiple'}
                       </span>
                       <span className="badge badge-primary">{i + 1}</span>
                     </div>
@@ -434,10 +567,103 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
                         lineHeight: '1.5'
                       }}>{p.texto || "Sin texto"}</span>
                     </h5>
+                    {p.imagenUrl && (
+                      <img
+                        src={p.imagenUrl}
+                        alt=""
+                        style={{ maxWidth: '100%', maxHeight: '320px', borderRadius: '8px', marginTop: '0.75rem', display: 'block' }}
+                      />
+                    )}
                   </div>
                   <div className="exam-card-body">
                     <div className="exam-info">
-                      {isMatching ? (
+                      {isShortAnswer ? (
+                        <>
+                          <h6 className="mb-3">
+                            <i className="fas fa-font me-2"></i>
+                            <span className="options-label">Escribí tu respuesta:</span>
+                          </h6>
+                          <input
+                            type="text"
+                            className="form-control"
+                            placeholder="Tu respuesta"
+                            value={respuestaActual || ''}
+                            disabled={submitting}
+                            onChange={(e) => updateRespuesta(p.id, e.target.value)}
+                          />
+                        </>
+                      ) : isNumeric ? (
+                        <>
+                          <h6 className="mb-3">
+                            <i className="fas fa-calculator me-2"></i>
+                            <span className="options-label">Ingresá el valor numérico:</span>
+                          </h6>
+                          <input
+                            type="number"
+                            className="form-control"
+                            placeholder="Ej: 4.5"
+                            value={respuestaActual ?? ''}
+                            disabled={submitting}
+                            onChange={(e) => updateRespuesta(p.id, e.target.value)}
+                          />
+                        </>
+                      ) : isEssay ? (
+                        <>
+                          <h6 className="mb-3">
+                            <i className="fas fa-pen-fancy me-2"></i>
+                            <span className="options-label">Desarrollá tu respuesta:</span>
+                          </h6>
+                          <div className="alert alert-secondary mb-2" style={{ fontSize: '0.8rem', padding: '0.5rem 0.75rem' }}>
+                            <i className="fas fa-user-check me-2"></i>
+                            Esta pregunta la corrige manualmente tu profesor/a.
+                          </div>
+                          <textarea
+                            className="form-control"
+                            rows={6}
+                            placeholder="Escribí tu respuesta aquí..."
+                            value={respuestaActual || ''}
+                            disabled={submitting}
+                            onChange={(e) => updateRespuesta(p.id, e.target.value)}
+                          />
+                        </>
+                      ) : isFileUpload ? (
+                        <>
+                          <h6 className="mb-3">
+                            <i className="fas fa-paperclip me-2"></i>
+                            <span className="options-label">Adjuntá tu respuesta:</span>
+                          </h6>
+                          <div className="alert alert-secondary mb-2" style={{ fontSize: '0.8rem', padding: '0.5rem 0.75rem' }}>
+                            <i className="fas fa-user-check me-2"></i>
+                            Esta pregunta la corrige manualmente tu profesor/a.
+                          </div>
+                          <input
+                            type="file"
+                            className="form-control"
+                            accept="application/pdf,image/jpeg,image/png,image/webp"
+                            disabled={submitting || uploadingFileFor === p.id}
+                            onChange={(e) => handleAnswerFileChange(p.id, e)}
+                          />
+                          {uploadingFileFor === p.id && (
+                            <small className="text-muted d-block mt-2">
+                              <i className="fas fa-spinner fa-spin me-1"></i>
+                              Subiendo archivo...
+                            </small>
+                          )}
+                          {fileUploadError[p.id] && (
+                            <small className="text-danger d-block mt-2">
+                              <i className="fas fa-exclamation-triangle me-1"></i>
+                              {fileUploadError[p.id]}
+                            </small>
+                          )}
+                          {respuestaActual && uploadingFileFor !== p.id && (
+                            <small className="text-success d-block mt-2">
+                              <i className="fas fa-check-circle me-1"></i>
+                              Archivo adjuntado correctamente.{" "}
+                              <a href={respuestaActual} target="_blank" rel="noreferrer">Ver archivo</a>
+                            </small>
+                          )}
+                        </>
+                      ) : isMatching ? (
                         <>
                           <h6 className="mb-3">
                             <i className="fas fa-arrows-alt-h me-2"></i>
@@ -612,8 +838,10 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
                       ) : (
                         <>
                           <h6 className="mb-3">
-                            <i className={`fas ${isFillInBlank ? 'fa-check-double' : 'fa-list-ul'} me-2`}></i>
-                            <span className="options-label">{isFillInBlank ? 'Selecciona las respuestas (en orden):' : 'Selecciona tu respuesta:'}</span>
+                            <i className={`fas ${isFillInBlank ? 'fa-check-double' : isMultipleResponse ? 'fa-check-square' : 'fa-list-ul'} me-2`}></i>
+                            <span className="options-label">
+                              {isFillInBlank ? 'Selecciona las respuestas (en orden):' : isMultipleResponse ? 'Marcá todas las opciones correctas:' : 'Selecciona tu respuesta:'}
+                            </span>
                           </h6>
                           {isFillInBlank && (
                             <div className="alert alert-info mb-3" style={{ fontSize: '0.85rem', padding: '0.5rem 0.75rem' }}>
@@ -621,22 +849,29 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
                               Selecciona las opciones en el orden en que deben aparecer en los espacios en blanco
                             </div>
                           )}
+                          {isMultipleResponse && (
+                            <div className="alert alert-info mb-3" style={{ fontSize: '0.85rem', padding: '0.5rem 0.75rem' }}>
+                              <i className="fas fa-info-circle me-2"></i>
+                              Esta pregunta puede tener más de una respuesta correcta
+                            </div>
+                          )}
                           <div className="exam-options-list">
                         {opcionesParaMostrar.map((opcion, j) => {
-                          const isSelected = isFillInBlank 
+                          const isMultiSelect = isFillInBlank || isMultipleResponse;
+                          const isSelected = isMultiSelect
                             ? Array.isArray(respuestaActual) && respuestaActual.includes(j)
                             : respuestaActual === j;
-                          const selectionOrder = isFillInBlank && Array.isArray(respuestaActual) 
-                            ? respuestaActual.indexOf(j) + 1 
+                          const selectionOrder = isFillInBlank && Array.isArray(respuestaActual)
+                            ? respuestaActual.indexOf(j) + 1
                             : null;
-                          
+
                           return (
-                          <div 
-                            key={j} 
+                          <div
+                            key={j}
                             className={`exam-option-item ${isSelected ? 'selected' : ''}`}
                             onClick={() => {
                               if (submitting) return;
-                              if (isFillInBlank) {
+                              if (isMultiSelect) {
                                 updateRespuesta(p.id, (current) => {
                                   const currentArr = Array.isArray(current) ? current : [];
                                   return currentArr.includes(j)
@@ -694,6 +929,23 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
                               }}>
                                 {isSelected && selectionOrder}
                               </div>
+                            ) : isMultipleResponse ? (
+                              <div style={{
+                                width: '22px',
+                                height: '22px',
+                                borderRadius: '4px',
+                                border: isSelected ? '2px solid #6610f2' : '2px solid #adb5bd',
+                                backgroundColor: isSelected ? '#6610f2' : 'white',
+                                flexShrink: 0,
+                                transition: 'all 0.2s ease',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'white',
+                                fontSize: '0.8rem'
+                              }}>
+                                {isSelected && <i className="fas fa-check"></i>}
+                              </div>
                             ) : (
                               <div style={{
                                 width: '20px',
@@ -704,13 +956,18 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
                                 transition: 'all 0.2s ease'
                               }}></div>
                             )}
-                            <span style={{
-                              fontSize: '0.95rem',
-                              color: isSelected ? '#0d6efd' : '#212529',
-                              fontWeight: isSelected ? '500' : '400'
-                            }}>
-                              {opcion.texto || "Opción vacía"}
-                            </span>
+                            <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                              {(opcion.texto || !p.imagenesOpciones?.[opcion.originalIndex]) && (
+                                <span style={{
+                                  fontSize: '0.95rem',
+                                  color: isSelected ? '#0d6efd' : '#212529',
+                                  fontWeight: isSelected ? '500' : '400'
+                                }}>
+                                  {opcion.texto || "Opción vacía"}
+                                </span>
+                              )}
+                              <OptionImage url={p.imagenesOpciones?.[opcion.originalIndex]} maxHeight={220} />
+                            </div>
                           </div>
                         );})}
                       </div>
