@@ -516,6 +516,27 @@ export async function enableNextPartForStudents(windowId, attemptIds) {
   return await handleResponse(res);
 }
 
+// Fin del examen, alumnos rindiendo con su propio fin e historial de extensiones de tiempo.
+export async function getExamWindowTime(windowId) {
+  const res = await fetch(`${API_BASE_URL}/exam-windows/${windowId}/tiempo`, {
+    method: "GET",
+    headers: getAuthHeaders(),
+  });
+
+  return await handleResponse(res);
+}
+
+// Da minutos extra a todos los alumnos de la ventana, o a uno solo si se pasa attemptId.
+export async function extendExamWindowTime(windowId, { minutos, motivo, attemptId } = {}) {
+  const res = await fetch(`${API_BASE_URL}/exam-windows/${windowId}/extender-tiempo`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ minutos, motivo, attemptId }),
+  });
+
+  return await handleResponse(res);
+}
+
 export async function regeneratePartCode(windowId) {
   const res = await fetch(`${API_BASE_URL}/exam-windows/${windowId}/regenerar-codigo-parte`, {
     method: "POST",

@@ -10,6 +10,7 @@ import { getExams, getExamWindowsProfesor, createExamWindow, updateExamWindow, t
 import BackToMainButton from '../components/BackToMainButton';
 import Modal from '../components/Modal';
 import WaitingStudentsPanel from '../components/WaitingStudentsPanel';
+import TimeExtensionPanel from '../components/TimeExtensionPanel';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../button-styles.css';
 import './ExamWindows.css';
@@ -1239,6 +1240,12 @@ export default function ExamWindowsPage() {
                             Cerrar examen para todos
                           </button>
                         </div>
+                        {!editingWindow.sinTiempo && (
+                          <TimeExtensionPanel
+                            windowId={editingWindow.id}
+                            onError={(message) => showModal('error', 'Error', message)}
+                          />
+                        )}
                         {editingWindow.modoAvanceParte === 'codigo' && (editingWindow.exam?._count?.partes ?? 0) > 1 && (
                           <div className="mt-3 pt-3" style={{ borderTop: '1px solid var(--border-color)', fontSize: '0.9rem' }}>
                             Código para pasar de parte:{' '}
