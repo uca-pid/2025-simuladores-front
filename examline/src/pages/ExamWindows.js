@@ -93,6 +93,11 @@ export default function ExamWindowsPage() {
     sebAllowDeveloperConsole: false,
     sebAllowDownloads: true,
     sebAllowUploads: false,
+    sebUnsafeMode: false,
+    sebEnableTaskManager: false,
+    sebAllowZoom: false,
+    sebAllowTeams: false,
+    sebBrowserWindowAllowMinimize: false,
     sebQuitUrl: 'https://ferocarcineto.com.ar/',
     sebQuitPassword: '12345',
     sebSettingsPassword: '12345'
@@ -246,6 +251,11 @@ export default function ExamWindowsPage() {
       sebAllowDeveloperConsole: false,
       sebAllowDownloads: true,
       sebAllowUploads: false,
+      sebUnsafeMode: false,
+      sebEnableTaskManager: false,
+      sebAllowZoom: false,
+      sebAllowTeams: false,
+      sebBrowserWindowAllowMinimize: false,
       sebQuitUrl: 'https://ferocarcineto.com.ar/',
       sebQuitPassword: '12345',
       sebSettingsPassword: '12345'
@@ -441,6 +451,11 @@ export default function ExamWindowsPage() {
       sebAllowDeveloperConsole: window.sebAllowDeveloperConsole ?? false,
       sebAllowDownloads: window.sebAllowDownloads ?? true,
       sebAllowUploads: window.sebAllowUploads ?? false,
+      sebUnsafeMode: window.sebUnsafeMode ?? false,
+      sebEnableTaskManager: window.sebEnableTaskManager ?? false,
+      sebAllowZoom: window.sebAllowZoom ?? false,
+      sebAllowTeams: window.sebAllowTeams ?? false,
+      sebBrowserWindowAllowMinimize: window.sebBrowserWindowAllowMinimize ?? false,
       sebQuitUrl: window.sebQuitUrl ?? 'https://ferocarcineto.com.ar/',
       sebQuitPassword: window.sebQuitPassword ?? '12345',
       sebSettingsPassword: window.sebSettingsPassword ?? '12345'
@@ -1504,6 +1519,29 @@ export default function ExamWindowsPage() {
                               </div>
                             </div>
 
+                            {/* Modo de pruebas: desactiva las restricciones al generar el archivo SEB */}
+                            <div
+                              className="mb-3 p-2"
+                              style={{
+                                borderRadius: '8px',
+                                border: `1px solid ${formData.sebUnsafeMode ? '#ffc107' : '#e9ecef'}`,
+                                backgroundColor: formData.sebUnsafeMode ? '#fff3cd' : 'transparent'
+                              }}
+                            >
+                              <div className="form-check form-switch mb-0">
+                                <input className="form-check-input" type="checkbox" id="sebUnsafeMode" name="sebUnsafeMode" checked={formData.sebUnsafeMode} onChange={handleInputChange} />
+                                <label className="form-check-label" htmlFor="sebUnsafeMode" style={{ fontWeight: 600 }}>
+                                  <i className={`fas ${formData.sebUnsafeMode ? 'fa-exclamation-triangle text-warning' : 'fa-flask text-secondary'} me-2`}></i>
+                                  Modo de pruebas (sin restricciones)
+                                </label>
+                              </div>
+                              {formData.sebUnsafeMode && (
+                                <small className="d-block mt-1" style={{ color: '#856404' }}>
+                                  SEB se abre sin bloquear teclado, portapapeles ni otras aplicaciones. Usalo solo para probar la configuración, nunca en un examen real.
+                                </small>
+                              )}
+                            </div>
+
                             {/* Navegación */}
                             <div className="mb-3">
                               <h6 style={{ color: 'var(--text-color-2)', marginBottom: '0.75rem', fontWeight: '600', fontSize: '0.9rem' }}>
@@ -1660,6 +1698,44 @@ export default function ExamWindowsPage() {
                                   </div>
                                 </div>
                               </div>
+                            </div>
+
+                            {/* Aplicaciones permitidas */}
+                            <div className="mb-3">
+                              <h6 style={{ color: 'var(--text-color-2)', marginBottom: '0.75rem', fontWeight: '600', fontSize: '0.9rem' }}>
+                                <i className="fas fa-th-large me-2"></i>Aplicaciones permitidas
+                              </h6>
+                              <div className="row">
+                                <div className="col-md-6 mb-2">
+                                  <div className="form-check">
+                                    <input className="form-check-input" type="checkbox" id="sebAllowZoom" name="sebAllowZoom" checked={formData.sebAllowZoom} onChange={handleInputChange} />
+                                    <label className="form-check-label" htmlFor="sebAllowZoom">Permitir Zoom</label>
+                                  </div>
+                                </div>
+                                <div className="col-md-6 mb-2">
+                                  <div className="form-check">
+                                    <input className="form-check-input" type="checkbox" id="sebAllowTeams" name="sebAllowTeams" checked={formData.sebAllowTeams} onChange={handleInputChange} />
+                                    <label className="form-check-label" htmlFor="sebAllowTeams">Permitir Microsoft Teams</label>
+                                  </div>
+                                </div>
+                                <div className="col-md-6 mb-2">
+                                  <div className="form-check">
+                                    <input className="form-check-input" type="checkbox" id="sebEnableTaskManager" name="sebEnableTaskManager" checked={formData.sebEnableTaskManager} onChange={handleInputChange} />
+                                    <label className="form-check-label" htmlFor="sebEnableTaskManager">Permitir Administrador de tareas</label>
+                                  </div>
+                                </div>
+                                <div className="col-md-6 mb-2">
+                                  <div className="form-check">
+                                    <input className="form-check-input" type="checkbox" id="sebBrowserWindowAllowMinimize" name="sebBrowserWindowAllowMinimize" checked={formData.sebBrowserWindowAllowMinimize} onChange={handleInputChange} />
+                                    <label className="form-check-label" htmlFor="sebBrowserWindowAllowMinimize">Permitir minimizar la ventana</label>
+                                  </div>
+                                </div>
+                              </div>
+                              {(formData.sebAllowZoom || formData.sebAllowTeams || formData.sebEnableTaskManager) && (
+                                <small className="text-muted d-block">
+                                  Permitir otras aplicaciones habilita cambiar de aplicación dentro de SEB. El Administrador de tareas además desactiva el escritorio aparte.
+                                </small>
+                              )}
                             </div>
 
                             {/* URLs y contraseñas */}
