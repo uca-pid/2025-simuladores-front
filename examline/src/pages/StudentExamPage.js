@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import UserHeader from "../components/UserHeader";
 import StudentInscriptionsPage from "./StudentInscriptions";
 import "./StudentExamPage.css";
+import { GAMIFICATION_ENABLED } from "../config/features";
 
 const StudentExamPage = () => {
   const navigate = useNavigate();
@@ -13,9 +14,10 @@ const StudentExamPage = () => {
       {/* Header con información del usuario */}
       <UserHeader />
 
-      {/* Banner de Progreso */}
+      {/* Banner de Progreso (gamificación) */}
+      {GAMIFICATION_ENABLED && (
       <div className="modern-card mb-4" style={{ 
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: 'linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%)',
         border: 'none'
       }}>
         <div className="modern-card-body">
@@ -33,7 +35,7 @@ const StudentExamPage = () => {
               className="modern-btn modern-btn-lg"
               style={{ 
                 background: 'white',
-                color: '#667eea',
+                color: 'var(--primary-color)',
                 fontWeight: '600'
               }}
               onClick={() => navigate('/student-progress')}
@@ -44,6 +46,7 @@ const StudentExamPage = () => {
           </div>
         </div>
       </div>
+      )}
 
       {/* Instructivo colapsable */}
       <div className="modern-card mb-4">

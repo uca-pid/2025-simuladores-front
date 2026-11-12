@@ -2,16 +2,21 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { useAuth } from "../contexts/AuthContext";
-import { getExams } from "../services/api";
+import { getExams, deleteExam } from "../services/api";
+import { useModal } from "../hooks";
+import Modal from "../components/Modal";
+
+const TIPO_PARTE_LABEL = { multiple_choice: "Preguntas", programming: "Programación" };
 
 const MisExamenes = () => {
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [filterType, setFilterType] = useState("all"); // all, multiple_choice, programming
   const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { modal, showModal, closeModal } = useModal();
+  const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
     const fetchExams = async () => {
@@ -36,13 +41,36 @@ const MisExamenes = () => {
 
   const handleCrearExamen = () => navigate("/exam-creator");
   const handleVerExamen = (examId) => navigate(`/examen/${examId}`);
+  const handleEditarExamen = (examId) => navigate(`/exam-creator?editId=${examId}`);
+  const handleCrearVentana = (examId) => navigate(`/exam-windows?examId=${examId}&openCreate=1`);
+
+  const handleEliminarExamen = (exam) => {
+    showModal(
+      'confirm',
+      'Eliminar Examen',
+      `¿Estás seguro de que deseas eliminar el examen "${exam.titulo}"? Esta acción no se puede deshacer.`,
+      async () => {
+        try {
+          setDeletingId(exam.id);
+          await deleteExam(exam.id);
+          setExams((prev) => prev.filter((e) => e.id !== exam.id));
+          closeModal();
+        } catch (err) {
+          console.error("Error deleting exam:", err);
+          showModal('error', 'Error', err.message || 'Error al eliminar el examen', null, false);
+        } finally {
+          setDeletingId(null);
+        }
+      },
+      true,
+      'Eliminar'
+    );
+  };
 
   // Filtrar exámenes
-  const filteredExams = exams.filter((exam) => {
-    const matchesType = filterType === "all" || exam.tipo === filterType;
-    const matchesSearch = exam.titulo.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesType && matchesSearch;
-  });
+  const filteredExams = exams.filter((exam) =>
+    (exam.titulo || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="container-fluid container-lg py-5 px-3 px-md-4">
@@ -81,35 +109,20 @@ const MisExamenes = () => {
         </div>
       </div>
 
-      {/* Filtros y búsqueda */}
+      {/* Búsqueda */}
       <div className="modern-card mb-4">
         <div className="modern-card-body">
-          <div className="row g-3">
-            <div className="col-md-8">
-              <div className="input-group">
-                <span className="input-group-text">
-                  <i className="fas fa-search"></i>
-                </span>
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="Buscar examen por nombre..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="col-md-4">
-              <select
-                className="form-select"
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
-              >
-                <option value="all">Todos los tipos</option>
-                <option value="multiple_choice">Múltiple Choice</option>
-                <option value="programming">Programación</option>
-              </select>
-            </div>
+          <div className="input-group">
+            <span className="input-group-text">
+              <i className="fas fa-search"></i>
+            </span>
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Buscar examen por nombre..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
         </div>
       </div>
@@ -140,16 +153,16 @@ const MisExamenes = () => {
                 <i className="fas fa-file-alt"></i>
               </div>
               <h4 className="empty-title">
-                {searchTerm || filterType !== "all" 
-                  ? "No se encontraron exámenes" 
+                {searchTerm
+                  ? "No se encontraron exámenes"
                   : "No hay exámenes creados"}
               </h4>
               <p className="empty-subtitle">
-                {searchTerm || filterType !== "all"
-                  ? "Intenta ajustar los filtros de búsqueda"
+                {searchTerm
+                  ? "Intenta ajustar la búsqueda"
                   : "Comienza creando tu primer examen"}
               </p>
-              {!searchTerm && filterType === "all" && (
+              {!searchTerm && (
                 <button 
                   className="modern-btn modern-btn-primary"
                   onClick={handleCrearExamen}
@@ -163,55 +176,49 @@ const MisExamenes = () => {
             <div className="exams-grid">
               {filteredExams.map((exam, index) => (
                 <div key={exam.id} className="exam-grid-item">
-                  <div className={`exam-card fade-in-up`} style={{animationDelay: `${index * 0.1}s`}}>
-                    <div className="exam-card-header">
-                      <h5 className="exam-title">{exam.titulo}</h5>
-                      <span
-  className={`exam-badge ${
-    exam.tipo === "programming"
-      ? "badge-programming"
-      : "badge-multiple"
-  }`}
->
-  <i
-    className={`fas ${
-      exam.tipo === "programming" ? "fa-code" : "fa-list-ul"
-    } me-1`}
-  ></i>
-  <span className="badge-text">
-    {exam.tipo === "programming"
-      ? "Programación"
-      : "Múltiple Choice"}
-  </span>
-</span>
-
+                  <div className={`exam-card fade-in-up`} style={{animationDelay: `${Math.min(index, 8) * 0.1}s`}}>
+                    <div className="exam-card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                      <h5 className="exam-title mb-0">{exam.titulo}</h5>
+                      <div className="d-flex gap-1">
+                        <button
+                          className="modern-btn modern-btn-primary modern-btn-sm exam-icon-btn"
+                          onClick={() => handleVerExamen(exam.id)}
+                          title="Ver"
+                        >
+                          <i className="fas fa-eye"></i>
+                        </button>
+                        <button
+                          className="modern-btn modern-btn-primary modern-btn-sm exam-icon-btn"
+                          onClick={() => handleEditarExamen(exam.id)}
+                          title="Editar"
+                        >
+                          <i className="fas fa-edit"></i>
+                        </button>
+                        <button
+                          className="modern-btn modern-btn-danger modern-btn-sm exam-icon-btn"
+                          onClick={() => handleEliminarExamen(exam)}
+                          disabled={deletingId === exam.id}
+                          title="Eliminar"
+                        >
+                          <i className="fas fa-trash"></i>
+                        </button>
+                      </div>
                     </div>
                     <div className="exam-card-body">
                       <div className="exam-info">
-                        <div className="exam-info-item">
-                          <i className="fas fa-hashtag"></i>
-                          <span>Código: {exam.id}</span>
-                        </div>
-                        {exam.tipo === 'programming' ? (
-                          <div className="exam-info-item">
-                            <i className="fas fa-code"></i>
-                            <span>Lenguaje: {exam.lenguajeProgramacion === 'python' ? 'Python' : 'JavaScript'}</span>
+                        {exam.partes?.map((parte, i) => (
+                          <div className="exam-info-item" key={parte.id ?? i}>
+                            <i className={`fas ${parte.tipo === "programming" ? "fa-code" : "fa-list-ul"}`}></i>
+                            <span>Parte {i + 1}: {TIPO_PARTE_LABEL[parte.tipo] || parte.tipo}</span>
                           </div>
-                        ) : (
-                          <div className="exam-info-item">
-                            <i className="fas fa-question-circle"></i>
-                            <span>Preguntas: {exam.preguntas?.length || 0}</span>
-                          </div>
-                        )}
+                        ))}
                       </div>
                       <button
-                        className="modern-btn modern-btn-primary w-100 view-exam-btn"
-                        onClick={() => handleVerExamen(exam.id)}
+                        className="modern-btn modern-btn-secondary modern-btn-sm w-100"
+                        onClick={() => handleCrearVentana(exam.id)}
                       >
-                        <i className="fas fa-eye me-2"></i>
-                        <span className="btn-text">
-                          {exam.tipo === 'programming' ? 'Ver examen' : 'Ver preguntas'}
-                        </span>
+                        <i className="fas fa-calendar-plus me-2"></i>
+                        <span className="btn-text">Crear ventana de este examen</span>
                       </button>
                     </div>
                   </div>
@@ -221,6 +228,18 @@ const MisExamenes = () => {
           )}
         </div>
       </div>
+
+      <Modal
+        show={modal.show}
+        onClose={closeModal}
+        onConfirm={modal.onConfirm}
+        title={modal.title}
+        message={modal.message}
+        type={modal.type}
+        showCancel={modal.showCancel}
+        confirmText={modal.confirmText || ((modal.type === 'warning') ? 'Confirmar' : 'Entendido')}
+        cancelText="Cancelar"
+      />
     </div>
   );
 };

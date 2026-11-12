@@ -58,7 +58,7 @@ export default function SEBExamLauncher() {
   return (
     <div className="container-fluid min-vh-100 d-flex align-items-center justify-content-center" 
          style={{ 
-           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+           background: 'linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%)',
            padding: '2rem'
          }}>
       <div className="modern-card" style={{ maxWidth: '600px', width: '100%' }}>
@@ -70,11 +70,11 @@ export default function SEBExamLauncher() {
               height: '100px',
               margin: '0 auto',
               borderRadius: '50%',
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              background: 'linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 10px 30px rgba(102, 126, 234, 0.3)'
+              boxShadow: '0 10px 30px rgba(30, 41, 85, 0.3)'
             }}>
               <i className="fas fa-shield-alt" style={{ fontSize: '3rem', color: 'white' }}></i>
             </div>

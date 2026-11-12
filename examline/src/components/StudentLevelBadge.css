@@ -202,7 +202,7 @@
 }
 
 .max-level-message {
-  background: linear-gradient(135deg, #8b5cf6, #ec4899);
+  background: linear-gradient(135deg, #172147, #ec4899);
   color: white;
   padding: 1rem;
   border-radius: 12px;
@@ -239,7 +239,7 @@
 
 .stat-icon {
   font-size: 1.5rem;
-  color: #6366f1;
+  color: #1E2955;
   margin-bottom: 0.5rem;
 }
 

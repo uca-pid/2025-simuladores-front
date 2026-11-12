@@ -1,13 +1,30 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "../components/action-cards.css";
 import "./Principal.css";
 import UserHeader from "../components/UserHeader";
+import { getExamWindowsProfesor } from "../services/api";
+import { useAuth } from "../contexts/AuthContext";
 
 const Principal = () => {
   const [showInstructivo, setShowInstructivo] = useState(false);
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [pendientesCorreccion, setPendientesCorreccion] = useState(0);
+
+  useEffect(() => {
+    if (user?.rol !== 'professor') return;
+    let cancelled = false;
+    getExamWindowsProfesor()
+      .then((windows) => {
+        if (cancelled || !Array.isArray(windows)) return;
+        const total = windows.reduce((acc, w) => acc + (w.pendientesCorreccionCount || 0), 0);
+        setPendientesCorreccion(total);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [user]);
 
   return (
     <div className="container-fluid container-lg py-5 px-3 px-md-4">
@@ -42,8 +59,10 @@ const Principal = () => {
                     <div className="step-content">
                       <h5 className="step-title">1. Crear Exámenes</h5>
                       <p className="step-description">
-                        Hacé clic en <strong>"Ir a Mis Exámenes"</strong> para ver todos tus exámenes o crear uno nuevo. Puedes crear dos tipos de examenes: 
-                        <strong> Múltiple Choice</strong> o <strong> Programación</strong>.
+                        Hacé clic en <strong>"Ir a Mis Exámenes"</strong> para ver todos tus exámenes, crear uno nuevo, editarlo o eliminarlo.
+                        Un examen puede tener una sola parte (<strong>Múltiple Choice</strong> o <strong>Programación</strong>) o combinar varias
+                        partes de distinto tipo en un mismo examen, con una pausa entre partes para que el alumno pueda descansar antes de continuar.
+                        Podés reutilizar preguntas ya cargadas desde el <strong>Banco de Preguntas</strong>.
                       </p>
                     </div>
                   </div>
@@ -56,11 +75,11 @@ const Principal = () => {
                     <div className="step-content">
                       <h5 className="step-title">2. Gestionar Ventanas y Corregir</h5>
                       <p className="step-description mb-2">
-                        Hacé clic en <strong>"Gestionar Ventanas"</strong> para:
+                        Entrá a <strong>"Ventanas de Examen"</strong> para:
                       </p>
                       <ul className="step-list">
-                        <li><strong>Crear ventanas:</strong> Seleccioná un examen, definí fecha/hora (o sin límites), cupo máximo y si requiere Safe Exam Browser para mayor seguridad.</li>
-                        <li><strong>Corregir:</strong> Una vez rendidos, los múltiple choice se corrigen automáticamente. Los de programación podés corregirlos con test cases automáticos o manualmente agregando calificación</li>
+                        <li><strong>Crear ventanas:</strong> Definí fecha/hora (o sin límites), cupo máximo y si requiere Safe Exam Browser para mayor seguridad.</li>
+                        <li><strong>Corregir:</strong> Una vez rendidos, los múltiple choice se corrigen automáticamente. Los de programación podés corregirlos con test cases automáticos o manualmente agregando calificación. Las ventanas con entregas pendientes aparecen destacadas arriba de todo, con acceso directo a corregirlas.</li>
                       </ul>
                     </div>
                   </div>
@@ -75,26 +94,23 @@ const Principal = () => {
         <div className="modern-card-header">
           <h2 className="page-title mb-0">
             <i className="fas fa-rocket me-2"></i>
-            <span className="title-text">Acciones Rápidas</span>
+            <span className="title-text">Acciones</span>
           </h2>
         </div>
         <div className="modern-card-body">
           <div className="row g-3">
             <div className="col-md-4">
               <div className="action-card">
-                <div className="action-step-badge">
-                  <span className="step-number">1</span>
-                </div>
                 <div className="action-content">
                   <h5 className="action-title">
-                    <i className="fas fa-folder-open text-primary me-2"></i>
-                    Crear Exámenes
+                    <i className="fas fa-folder-open me-2" style={{ color: 'var(--accent-color)' }}></i>
+                    Mis Exámenes
                   </h5>
                   <p className="action-description text-muted mb-3">
-                    Mirá todos tus exámenes o creá nuevos
+                    Creá, mirá, editá y eliminá exámenes
                   </p>
-                  <button 
-                    className="modern-btn modern-btn-primary w-100" 
+                  <button
+                    className="modern-btn modern-btn-primary w-100"
                     onClick={() => navigate("/mis-examenes")}
                   >
                     <i className="fas fa-folder-open me-2"></i>
@@ -105,19 +121,16 @@ const Principal = () => {
             </div>
             <div className="col-md-4">
               <div className="action-card">
-                <div className="action-step-badge secondary">
-                  <span className="step-number">2</span>
-                </div>
                 <div className="action-content">
                   <h5 className="action-title">
-                    <i className="fas fa-database text-primary me-2"></i>
+                    <i className="fas fa-database me-2" style={{ color: 'var(--accent-color)' }}></i>
                     Banco de Preguntas
                   </h5>
                   <p className="action-description text-muted mb-3">
-                    Gestioná preguntas reutilizables para tus exámenes
+                    Creá preguntas reutilizables para tus exámenes
                   </p>
                   <button
-                    className="modern-btn modern-btn-secondary w-100"
+                    className="modern-btn modern-btn-primary w-100"
                     onClick={() => navigate("/question-bank")}
                   >
                     <i className="fas fa-database me-2"></i>
@@ -128,23 +141,37 @@ const Principal = () => {
             </div>
             <div className="col-md-4">
               <div className="action-card">
-                <div className="action-step-badge secondary">
-                  <span className="step-number">3</span>
-                </div>
                 <div className="action-content">
                   <h5 className="action-title">
-                    <i className="fas fa-tasks text-success me-2"></i>
-                    Gestionar y Corregir Ventanas de Exámenes
+                    <i className="fas fa-calendar-alt me-2" style={{ color: 'var(--accent-color)' }}></i>
+                    Ventanas de Examen
                   </h5>
                   <p className="action-description text-muted mb-3">
-                    Creá ventanas de examen para inscribirse y corregí los exámenes
+                    Programá horarios en un calendario y corregí las entregas de tus exámenes
                   </p>
+                  {pendientesCorreccion > 0 && (
+                    <div
+                      className="d-flex align-items-center gap-2 mb-3"
+                      style={{
+                        backgroundColor: '#dc3545',
+                        color: 'white',
+                        padding: '0.5rem 0.75rem',
+                        borderRadius: '8px',
+                        fontWeight: 'bold',
+                        fontSize: '0.9rem',
+                        animation: 'pulse-warning 1.6s infinite',
+                      }}
+                    >
+                      <i className="fas fa-exclamation-triangle"></i>
+                      <span>{pendientesCorreccion} examen{pendientesCorreccion === 1 ? '' : 'es'} pendiente{pendientesCorreccion === 1 ? '' : 's'} de corrección</span>
+                    </div>
+                  )}
                   <button
-                    className="modern-btn modern-btn-secondary w-100"
+                    className="modern-btn modern-btn-primary w-100"
                     onClick={() => navigate("/exam-windows")}
                   >
-                    <i className="fas fa-calendar-check me-2"></i>
-                    <span className="btn-text">Gestionar Ventanas</span>
+                    <i className="fas fa-calendar-alt me-2"></i>
+                    <span className="btn-text">Ir a Ventanas de Examen</span>
                   </button>
                 </div>
               </div>

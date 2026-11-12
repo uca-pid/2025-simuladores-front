@@ -1,23 +1,61 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Calendar, momentLocalizer } from 'react-big-calendar';
+import moment from 'moment';
+import 'moment/locale/es';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { useAuth } from '../contexts/AuthContext';
 import { useModal } from '../hooks';
-import { getExams, getExamWindowsProfesor, createExamWindow, updateExamWindow, toggleExamWindowActive } from '../services/api';
+import { getExams, getExamWindowsProfesor, createExamWindow, updateExamWindow, toggleExamWindowActive, closeExamWindow, enableNextExamPart, regeneratePartCode, testSEBConfig } from '../services/api';
 import BackToMainButton from '../components/BackToMainButton';
 import Modal from '../components/Modal';
+import WaitingStudentsPanel from '../components/WaitingStudentsPanel';
+import TimeExtensionPanel from '../components/TimeExtensionPanel';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../button-styles.css';
 import './ExamWindows.css';
 
+moment.locale('es');
+const localizer = momentLocalizer(moment);
+
+const WINDOW_STATUS_STYLES = {
+  programada: { solid: 'var(--primary-color)', a: 'rgba(99, 102, 241, 0.12)', b: 'rgba(139, 92, 246, 0.18)' },
+  cerrada_inscripciones: { solid: 'var(--warning-color)', a: 'rgba(245, 158, 11, 0.12)', b: 'rgba(245, 158, 11, 0.20)' },
+  en_curso: { solid: 'var(--success-color)', a: 'rgba(16, 185, 129, 0.12)', b: 'rgba(16, 185, 129, 0.20)' },
+  finalizada: { solid: '#cbd5e1', a: 'rgba(148, 163, 184, 0.10)', b: 'rgba(148, 163, 184, 0.18)' }
+};
+
+function getEffectiveState(window) {
+  return (window.sinTiempo && window.estado === 'programada') ? 'en_curso' : window.estado;
+}
+
+// Ventana en la que los alumnos pueden estar rindiendo ahora (el profesor puede cerrarla o habilitar partes)
+function isWindowLive(window) {
+  if (!window || !window.activa || window.estado === 'finalizada') return false;
+  return window.sinTiempo || window.estado === 'en_curso';
+}
+
 export default function ExamWindowsPage() {
   const { user, token } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const scopedExamId = searchParams.get('examId');
+  const openCreateOnLoad = searchParams.get('openCreate') === '1';
   const { modal, showModal, closeModal } = useModal();
   const [examWindows, setExamWindows] = useState([]);
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingWindow, setEditingWindow] = useState(null);
+  const [copiedCodeId, setCopiedCodeId] = useState(null);
+  const [examFilterIds, setExamFilterIds] = useState(() => scopedExamId ? [scopedExamId] : []);
+  const [examSearchInput, setExamSearchInput] = useState('');
+  const [examDropdownOpen, setExamDropdownOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState([]);
+  const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
+  const [calendarDate, setCalendarDate] = useState(new Date());
+  const [calendarView, setCalendarView] = useState('week');
+  const [viewMode, setViewMode] = useState('list');
   const [formData, setFormData] = useState({
     examId: '',
     nombre: '',
@@ -30,6 +68,7 @@ export default function ExamWindowsPage() {
     kioskMode: 0,
     sinTiempo: false,
     requierePresente: false,
+    modoAvanceParte: 'libre',
     // SEB Configuración
     sebKioskMode: 0,
     sebShowTaskBar: false,
@@ -55,17 +94,22 @@ export default function ExamWindowsPage() {
     sebAllowDeveloperConsole: false,
     sebAllowDownloads: true,
     sebAllowUploads: false,
+    sebUnsafeMode: false,
+    sebEnableTaskManager: false,
+    sebAllowZoom: false,
+    sebAllowTeams: false,
+    sebBrowserWindowAllowMinimize: false,
     sebQuitUrl: 'https://ferocarcineto.com.ar/',
     sebQuitPassword: '12345',
     sebSettingsPassword: '12345'
   });
   const [validationErrors, setValidationErrors] = useState({});
+  // Archivo .seb de prueba generado con la configuración del formulario
+  const [pruebaSEB, setPruebaSEB] = useState(null);
+  const [generandoPruebaSEB, setGenerandoPruebaSEB] = useState(false);
   const [isSavingWindow, setIsSavingWindow] = useState(false);
   const [, setIsAutoUpdating] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(null);
-  const [activeTab, setActiveTab] = useState(() => {
-    return localStorage.getItem('examWindows_activeTab') || 'current';
-  });
 
   const adjustTextareaHeight = (textarea) => {
     if (!textarea) return;
@@ -111,16 +155,23 @@ export default function ExamWindowsPage() {
   }, [token, navigate, showModal]);
 
   useEffect(() => {
-    localStorage.setItem('examWindows_activeTab', activeTab);
-  }, [activeTab]);
-
-  useEffect(() => {
     if (!user || user.rol !== 'professor') {
       navigate('/');
       return;
     }
     loadData(false);
   }, [user, navigate, loadData]);
+
+  // Atajo "Crear ventana de este examen" desde Mis Exámenes
+  useEffect(() => {
+    if (openCreateOnLoad && !loading && scopedExamId) {
+      resetForm(scopedExamId);
+      setShowCreateModal(true);
+      searchParams.delete('openCreate');
+      setSearchParams(searchParams, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openCreateOnLoad, loading, scopedExamId]);
 
   // Auto-refresh periódico (reemplaza WebSocket eliminado)
   useEffect(() => {
@@ -144,6 +195,17 @@ export default function ExamWindowsPage() {
     }
   }, [showCreateModal, editingWindow]);
 
+  // Bloquea el scroll de la página de fondo mientras el modal está abierto,
+  // para que la rueda del mouse solo scrollee el contenido del modal
+  useEffect(() => {
+    if (showCreateModal) {
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = '';
+      };
+    }
+  }, [showCreateModal]);
+
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     const inputValue = type === 'checkbox' ? checked : value;
@@ -154,9 +216,10 @@ export default function ExamWindowsPage() {
     }
   };
 
-  const resetForm = () => {
+  const resetForm = (presetExamId = '') => {
+    setPruebaSEB(null);
     setFormData({
-      examId: '',
+      examId: presetExamId,
       nombre: '',
       fechaInicio: '',
       duracion: 120,
@@ -167,6 +230,7 @@ export default function ExamWindowsPage() {
       kioskMode: 0,
       sinTiempo: false,
       requierePresente: false,
+      modoAvanceParte: 'libre',
       // SEB Configuración
       sebKioskMode: 0,
       sebShowTaskBar: false,
@@ -192,6 +256,11 @@ export default function ExamWindowsPage() {
       sebAllowDeveloperConsole: false,
       sebAllowDownloads: true,
       sebAllowUploads: false,
+      sebUnsafeMode: false,
+      sebEnableTaskManager: false,
+      sebAllowZoom: false,
+      sebAllowTeams: false,
+      sebBrowserWindowAllowMinimize: false,
       sebQuitUrl: 'https://ferocarcineto.com.ar/',
       sebQuitPassword: '12345',
       sebSettingsPassword: '12345'
@@ -202,9 +271,127 @@ export default function ExamWindowsPage() {
   };
 
   const handleCreateWindow = () => {
-    resetForm();
+    const presetExamId = examFilterIds.length === 1 ? examFilterIds[0] : (scopedExamId || '');
+    resetForm(presetExamId);
     setShowCreateModal(true);
   };
+
+  const handleSelectSlot = (slotInfo) => {
+    if (exams.length === 0) return;
+    resetForm(examFilterIds.length === 1 ? examFilterIds[0] : '');
+    setFormData(prev => ({ ...prev, fechaInicio: formatDateTimeLocal(slotInfo.start) }));
+    setShowCreateModal(true);
+  };
+
+  const handleSelectEvent = (event) => {
+    handleEditWindow(event.resource);
+  };
+
+  const addExamFilter = (examId) => {
+    setExamFilterIds(prev => prev.includes(String(examId)) ? prev : [...prev, String(examId)]);
+  };
+
+  const removeExamFilter = (examId) => {
+    setExamFilterIds(prev => prev.filter(id => id !== String(examId)));
+  };
+
+  const filteredWindows = useMemo(() => {
+    return examWindows
+      .filter(w => examFilterIds.length === 0 || examFilterIds.includes(String(w.examId)))
+      .filter(w => statusFilter.length === 0 || statusFilter.includes(getEffectiveState(w)));
+  }, [examWindows, examFilterIds, statusFilter]);
+
+  const toggleStatusFilter = (estado) => {
+    setStatusFilter(prev => prev.includes(estado) ? prev.filter(s => s !== estado) : [...prev, estado]);
+  };
+
+  const STATUS_OPTIONS = [
+    { key: 'programada', label: '📅 Programada', badgeClass: 'bg-primary' },
+    { key: 'cerrada_inscripciones', label: '🔒 Cerrada', badgeClass: 'bg-warning text-dark' },
+    { key: 'en_curso', label: '▶️ En Curso', badgeClass: 'bg-success' },
+    { key: 'finalizada', label: '✅ Finalizada', badgeClass: 'bg-secondary' }
+  ];
+
+  const calendarEvents = useMemo(() => {
+    return filteredWindows
+      .filter(w => !w.sinTiempo && w.fechaInicio)
+      .map(w => {
+        const start = new Date(w.fechaInicio);
+        const end = new Date(start.getTime() + ((w.duracion || 0) * 60 * 1000));
+        return { id: w.id, title: `${w.nombre} · ${w.exam?.titulo || ''}`, start, end, resource: w };
+      });
+  }, [filteredWindows]);
+
+  const sinTiempoWindows = useMemo(
+    () => filteredWindows.filter(w => w.sinTiempo),
+    [filteredWindows]
+  );
+
+  const listViewWindows = useMemo(() => {
+    return [...filteredWindows].sort((a, b) => {
+      if (!a.fechaInicio && !b.fechaInicio) return 0;
+      if (!a.fechaInicio) return 1;
+      if (!b.fechaInicio) return -1;
+      return new Date(a.fechaInicio) - new Date(b.fechaInicio);
+    });
+  }, [filteredWindows]);
+
+  const pendingCorrectionWindows = useMemo(
+    () => examWindows.filter(w => (w.pendientesCorreccionCount || 0) > 0),
+    [examWindows]
+  );
+
+  const eventPropGetter = (event) => {
+    const st = WINDOW_STATUS_STYLES[getEffectiveState(event.resource)] || WINDOW_STATUS_STYLES.programada;
+    return {
+      style: {
+        backgroundColor: st.solid,
+        borderColor: st.solid,
+        borderRadius: '6px',
+        color: '#fff'
+      }
+    };
+  };
+
+  const dayPreviewEvents = useMemo(() => {
+    if (!formData.fechaInicio) return [];
+    const selectedDay = new Date(formData.fechaInicio);
+    const sameDay = (d) =>
+      d.getFullYear() === selectedDay.getFullYear() &&
+      d.getMonth() === selectedDay.getMonth() &&
+      d.getDate() === selectedDay.getDate();
+
+    const others = examWindows
+      .filter(w => !w.sinTiempo && w.fechaInicio && (!editingWindow || w.id !== editingWindow.id))
+      .filter(w => sameDay(new Date(w.fechaInicio)))
+      .map(w => {
+        const start = new Date(w.fechaInicio);
+        const end = new Date(start.getTime() + ((w.duracion || 0) * 60 * 1000));
+        return { id: w.id, title: `${w.nombre} · ${w.exam?.titulo || ''}`, start, end, isDraft: false };
+      });
+
+    const draftStart = selectedDay;
+    const draftEnd = new Date(draftStart.getTime() + ((parseInt(formData.duracion, 10) || 0) * 60 * 1000));
+    const draft = {
+      id: 'draft',
+      title: formData.nombre ? `${formData.nombre} (nueva)` : 'Nueva ventana',
+      start: draftStart,
+      end: draftEnd,
+      isDraft: true
+    };
+
+    return [...others, draft];
+  }, [formData.fechaInicio, formData.duracion, formData.nombre, examWindows, editingWindow]);
+
+  const dayPreviewEventPropGetter = (event) => ({
+    style: {
+      backgroundColor: event.isDraft ? 'var(--primary-color)' : '#94a3b8',
+      borderColor: event.isDraft ? 'var(--primary-color)' : '#94a3b8',
+      borderRadius: '6px',
+      color: '#fff',
+      opacity: event.isDraft ? 1 : 0.75
+    }
+  });
 
   const formatDateTimeLocal = (dateString) => {
     const date = new Date(dateString);
@@ -230,6 +417,7 @@ export default function ExamWindowsPage() {
   };
 
   const handleEditWindow = (window) => {
+    setPruebaSEB(null);
     const isInfinite = window.sinTiempo || false;
     setFormData({
       examId: window.examId,
@@ -243,6 +431,7 @@ export default function ExamWindowsPage() {
       kioskMode: window.kioskMode || 0,
       sinTiempo: isInfinite,
       requierePresente: isInfinite ? false : (window.requierePresente || false),
+      modoAvanceParte: window.modoAvanceParte ?? 'libre',
       // SEB Configuración
       sebKioskMode: window.sebKioskMode ?? 0,
       sebShowTaskBar: window.sebShowTaskBar ?? false,
@@ -268,6 +457,11 @@ export default function ExamWindowsPage() {
       sebAllowDeveloperConsole: window.sebAllowDeveloperConsole ?? false,
       sebAllowDownloads: window.sebAllowDownloads ?? true,
       sebAllowUploads: window.sebAllowUploads ?? false,
+      sebUnsafeMode: window.sebUnsafeMode ?? false,
+      sebEnableTaskManager: window.sebEnableTaskManager ?? false,
+      sebAllowZoom: window.sebAllowZoom ?? false,
+      sebAllowTeams: window.sebAllowTeams ?? false,
+      sebBrowserWindowAllowMinimize: window.sebBrowserWindowAllowMinimize ?? false,
       sebQuitUrl: window.sebQuitUrl ?? 'https://ferocarcineto.com.ar/',
       sebQuitPassword: window.sebQuitPassword ?? '12345',
       sebSettingsPassword: window.sebSettingsPassword ?? '12345'
@@ -445,6 +639,65 @@ export default function ExamWindowsPage() {
     }
   };
 
+  // Aplica a la lista y a la ventana abierta en el modal los cambios devueltos por el servidor
+  const patchWindow = (windowId, changes) => {
+    setExamWindows(prev => prev.map(x => (x.id === windowId ? { ...x, ...changes } : x)));
+    setEditingWindow(prev => (prev && prev.id === windowId ? { ...prev, ...changes } : prev));
+  };
+
+  const handleTestSEBConfig = async () => {
+    setGenerandoPruebaSEB(true);
+    try {
+      const result = await testSEBConfig({ ...formData, examId: Number(formData.examId) });
+      setPruebaSEB(result);
+      // Abre SEB directamente si está instalado; si no, queda el link para descargar el archivo
+      window.location.href = result.sebUrl;
+    } catch (error) {
+      showModal('error', 'Error', error.message || 'No se pudo generar la prueba de SEB');
+    } finally {
+      setGenerandoPruebaSEB(false);
+    }
+  };
+
+  const handleCloseWindow = (w) => {
+    showModal(
+      'warning',
+      'Cerrar examen',
+      `¿Cerrar "${w.nombre}" para todos? Los alumnos que estén rindiendo no van a poder seguir y se les corregirá lo que tengan guardado. Esta acción no se puede deshacer.`,
+      async () => {
+        closeModal();
+        try {
+          const result = await closeExamWindow(w.id);
+          patchWindow(w.id, { estado: 'finalizada' });
+          showModal('success', 'Examen cerrado', result.message);
+          loadData(true);
+        } catch (error) {
+          showModal('error', 'Error', error.message || 'No se pudo cerrar el examen');
+        }
+      },
+      true,
+      'Cerrar examen'
+    );
+  };
+
+  const handleEnableNextPart = async (w) => {
+    try {
+      const result = await enableNextExamPart(w.id);
+      patchWindow(w.id, { partesHabilitadas: result.partesHabilitadas });
+    } catch (error) {
+      showModal('error', 'Error', error.message || 'No se pudo habilitar la parte');
+    }
+  };
+
+  const handleRegeneratePartCode = async (w) => {
+    try {
+      const result = await regeneratePartCode(w.id);
+      patchWindow(w.id, { codigoParte: result.codigoParte });
+    } catch (error) {
+      showModal('error', 'Error', error.message || 'No se pudo generar un nuevo código');
+    }
+  };
+
   const getStatusBadge = (estado) => {
     const badges = {
       programada: 'bg-primary',
@@ -475,218 +728,15 @@ export default function ExamWindowsPage() {
     return 0;
   };
 
-  const renderWindowCard = (window, index) => (
-    <div key={window.id} className="exam-window-card-wrapper">
-      {(() => {
-        const statusStyles = {
-          programada: {
-            solid: 'var(--primary-color)',
-            a: 'rgba(99, 102, 241, 0.12)',
-            b: 'rgba(139, 92, 246, 0.18)'
-          },
-          cerrada_inscripciones: {
-            solid: 'var(--warning-color)',
-            a: 'rgba(245, 158, 11, 0.12)',
-            b: 'rgba(245, 158, 11, 0.20)'
-          },
-          en_curso: {
-            solid: 'var(--success-color)',
-            a: 'rgba(16, 185, 129, 0.12)',
-            b: 'rgba(16, 185, 129, 0.20)'
-          },
-          finalizada: {
-            solid: '#cbd5e1',
-            a: 'rgba(148, 163, 184, 0.10)',
-            b: 'rgba(148, 163, 184, 0.18)'
-          }
-        };
-        // Las ventanas eternas en estado 'programada' se muestran como 'en_curso'
-        const effectiveState = (window.sinTiempo && window.estado === 'programada') ? 'en_curso' : window.estado;
-        const st = statusStyles[effectiveState] || statusStyles.programada;
-        return (
-          <div 
-            className={`exam-card fade-in-up w-100`} 
-            style={{
-              animationDelay: `${index * 0.1}s`,
-              minHeight: '520px',
-              height: 'auto',
-              display: 'flex',
-              flexDirection: 'column',
-              borderLeft: `4px solid ${st.solid}`
-            }}
-          >
-            <div 
-              className="exam-card-header"
-              style={{
-                background: `linear-gradient(135deg, ${st.a}, ${st.b})`
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
-                <div style={{ flex: 1 }}>
-                  <h5 className="exam-title" style={{ margin: 0 }}>
-                    {window.nombre}
-                    {(window.estado === 'en_curso' || (window.sinTiempo && window.estado === 'programada')) && <span className="status-pulse" />}
-                  </h5>
-                  <div style={{ 
-                    fontSize: '0.85rem', 
-                    color: '#6c757d', 
-                    marginTop: '0.35rem',
-                    fontWeight: '500'
-                  }}>
-                    <i className="fas fa-file-alt me-1" style={{ fontSize: '0.75rem' }}></i>
-                    {window.exam.titulo}
-                  </div>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
-                  {getStatusBadge(window.sinTiempo && window.estado === 'programada' ? 'en_curso' : window.estado)}
-                  <div 
-                    className="form-check form-switch"
-                    style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '0.5rem',
-                      margin: 0,
-                      opacity: (window.estado === 'en_curso' || window.estado === 'finalizada') ? 0.6 : 1
-                    }}
-                    title={window.activa 
-                      ? 'Desactivar ventana (estudiantes no la verán)' 
-                      : 'Activar ventana (estudiantes podrán inscribirse)'
-                    }
-                  >
-                    <input 
-                      className="form-check-input" 
-                      type="checkbox" 
-                      id={`toggle-${window.id}`}
-                      checked={window.activa}
-                      onChange={(e) => {
-                        e.stopPropagation();
-                        handleToggleActive(window.id, window.activa);
-                      }}
-                      disabled={window.estado === 'en_curso' || window.estado === 'finalizada'}
-                      style={{
-                        width: '2.5rem',
-                        height: '1.2rem',
-                        backgroundColor: window.activa ? '#28a745' : '#6c757d',
-                        borderColor: window.activa ? '#28a745' : '#6c757d'
-                      }}
-                    />
-                    <label 
-                      className="form-check-label" 
-                      htmlFor={`toggle-${window.id}`}
-                      style={{ 
-                        fontSize: '0.75rem', 
-                        fontWeight: '500',
-                        color: window.activa ? '#28a745' : '#6c757d',
-                        cursor: (window.estado === 'en_curso' || window.estado === 'finalizada') ? 'not-allowed' : 'pointer'
-                      }}
-                    >
-                      <i className={`fas ${window.activa ? 'fa-eye' : 'fa-eye-slash'} me-1`}></i>
-                      {window.activa ? 'Visible' : 'Oculta'}
-                    </label>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="exam-card-body" style={{ flex: '1', display: 'flex', flexDirection: 'column' }}>
-              <div className="exam-info" style={{ flex: '1' }}>
-                {window.sinTiempo ? (
-                  <div className="exam-info-item">
-                    <i className="fas fa-infinity"></i>
-                    <span><strong>Tipo:</strong> <span style={{ color: '#7c3aed', fontWeight: 'bold' }}>Sin límite de tiempo</span></span>
-                  </div>
-                ) : (
-                  <>
-                    <div className="exam-info-item">
-                      <i className="fas fa-calendar"></i>
-                      <span><strong>Fecha:</strong> {window.fechaInicio ? new Date(window.fechaInicio).toLocaleDateString() : 'Sin fecha'}</span>
-                    </div>
-                    <div className="exam-info-item">
-                      <i className="fas fa-clock"></i>
-                      <span><strong>Hora de inicio:</strong> {window.fechaInicio ? new Date(window.fechaInicio).toLocaleTimeString() : 'Sin hora'}</span>
-                    </div>
-                    <div className="exam-info-item">
-                      <i className="fas fa-hourglass-half"></i>
-                      <span><strong>Duración:</strong> {window.duracion ? `${window.duracion} min` : 'Sin duración'}</span>
-                    </div>
-                    {window.estado === 'en_curso' && window.fechaInicio && window.duracion && (
-                      <div className="exam-info-item">
-                        <i className="fas fa-flag-checkered"></i>
-                        <span><strong>Termina a las:</strong> {calculateEndTime(window.fechaInicio, window.duracion)}</span>
-                      </div>
-                    )}
-                  </>
-                )}
-                <div className="exam-info-item">
-                  <i className="fas fa-laptop"></i>
-                  <span><strong>Modalidad:</strong> {window.modalidad ? window.modalidad.charAt(0).toUpperCase() + window.modalidad.slice(1) : ''}</span>
-                </div>
-                <div className="exam-info-item">
-                  <i className={`fas ${window.usaSEB ? 'fa-shield-alt text-success' : 'fa-shield text-muted'}`}></i>
-                  <span><strong>Seguridad:</strong> 
-                    <span className={`ms-1 badge ${window.usaSEB ? 'bg-success' : 'bg-secondary'}`}>
-                      {window.usaSEB ? '🔒 SEB Requerido' : '🌐 Navegador Normal'}
-                    </span>
-                  </span>
-                </div>
-                <div className="exam-info-item">
-                  <i className={`fas ${window.kioskMode ? 'fa-desktop text-primary' : 'fa-laptop text-muted'}`}></i>
-                  <span>
-                    <strong>Modo:</strong>
-                    <span className={`ms-1 badge ${window.kioskMode ? 'bg-primary' : 'bg-secondary'}`}>
-                      {window.kioskMode ? '🖥️ Pantalla Completa' : '💻 Normal'}
-                    </span>
-                  </span>
-                </div>
-                <div className="exam-info-item">
-                  <i className="fas fa-users"></i>
-                  <span><strong>Inscritos:</strong> {getInscritosCount(window)}/{window.cupoMaximo}</span>
-                </div>
-                <div className="exam-info-item">
-                  <i className="fas fa-sticky-note"></i>
-                  <span className="me-2"><strong>Notas:</strong></span>
-                  <span 
-                    style={{
-                      display: '-webkit-box',
-                      WebkitLineClamp: 4,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      maxHeight: '5em',
-                      lineHeight: '1.25em',
-                      fontStyle: !window.notas ? 'italic' : 'normal',
-                      color: !window.notas ? '#888' : 'inherit'
-                    }}
-                  >
-                    {window.notas || 'No hay notas'}
-                  </span>
-                </div>
-              </div>
-              <div className="exam-actions" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {window.estado !== 'finalizada' && (
-                  <button 
-                    className="modern-btn modern-btn-secondary modern-btn-sm w-100"
-                    onClick={() => handleEditWindow(window)}
-                  >
-                    <i className="fas fa-edit"></i>
-                    Editar
-                  </button>
-                )}
-                <button 
-                  className="modern-btn modern-btn-primary modern-btn-sm w-100"
-                  onClick={() => {
-                    navigate(`/exam-windows/${window.id}/results`);
-                  }}
-                >
-                  <i className="fas fa-trophy"></i>
-                  Resultados
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
-    </div>
-  );
+  const handleCopyCode = async (windowId, codigo) => {
+    try {
+      await navigator.clipboard.writeText(codigo);
+      setCopiedCodeId(windowId);
+      setTimeout(() => setCopiedCodeId((current) => (current === windowId ? null : current)), 1500);
+    } catch (error) {
+      console.error('No se pudo copiar el código:', error);
+    }
+  };
 
   if (loading) {
     return (
@@ -720,8 +770,8 @@ export default function ExamWindowsPage() {
             </div>
             <div className="header-actions-section">
               <div className="d-flex gap-2 flex-wrap justify-content-end">
-                <button 
-                  className="modern-btn modern-btn-primary modern-btn-sm" 
+                <button
+                  className="modern-btn modern-btn-primary modern-btn-sm"
                   onClick={handleCreateWindow}
                   disabled={exams.length === 0}
                   style={
@@ -753,241 +803,424 @@ export default function ExamWindowsPage() {
         </div>
       )}
 
-      <div className="modern-card mb-4">
-        <div className="modern-card-body exam-states-panel">
-          <h6 className="panel-title">
-            <i className="fas fa-info-circle me-2" style={{ color: 'var(--primary-color)' }}></i>
-            Estados de las Ventanas de Examen
-          </h6>
-          <div className="states-grid">
-            <div className="state-item">
-              <span className="state-badge bg-primary">📅 Programada</span>
-              <small className="state-description">Abierta a inscripciones</small>
+      {pendingCorrectionWindows.length > 0 && (
+        <div className="modern-card mb-4" style={{ borderLeft: '4px solid var(--warning-color)' }}>
+          <div className="modern-card-body d-flex flex-wrap align-items-center gap-3">
+            <div style={{ fontSize: '1.5rem', color: 'var(--warning-color)' }}>
+              <i className="fas fa-exclamation-circle"></i>
             </div>
-            <div className="state-item">
-              <span className="state-badge bg-warning text-dark">🔒 Cerrada</span>
-              <small className="state-description">Cerrada a inscripciones</small>
+            <div className="flex-grow-1">
+              <strong>Pendientes de corrección ({pendingCorrectionWindows.length})</strong>
+              <div className="d-flex flex-wrap gap-2 mt-2">
+                {pendingCorrectionWindows.map(w => (
+                  <button
+                    key={w.id}
+                    type="button"
+                    className="modern-btn modern-btn-secondary modern-btn-sm"
+                    onClick={() => navigate(
+                      w.primerIntentoPendienteId
+                        ? `/exam-windows/${w.id}/results/${w.primerIntentoPendienteId}`
+                        : `/exam-windows/${w.id}/results`
+                    )}
+                  >
+                    {w.nombre}
+                    <span className="badge bg-warning text-dark ms-2">{w.pendientesCorreccionCount}</span>
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="state-item">
-              <span className="state-badge bg-success">▶️ En Curso</span>
-              <small className="state-description">Examen en progreso</small>
+          </div>
+        </div>
+      )}
+
+      <div className="modern-card mb-4 filter-bar-card">
+        <div className="modern-card-body">
+          <div className="row g-3 align-items-start">
+            <div className="col-md-5">
+              <h6 className="panel-title mb-2">
+                <i className="fas fa-filter me-2" style={{ color: 'var(--primary-color)' }}></i>
+                Exámenes
+              </h6>
+              <div style={{ position: 'relative' }}>
+                <button
+                  type="button"
+                  className="form-control modern-input filter-dropdown-toggle d-flex justify-content-between align-items-center"
+                  style={{ borderRadius: '8px', padding: '0.5rem 0.75rem', fontSize: '0.85rem', cursor: 'pointer', background: 'white' }}
+                  onClick={() => setExamDropdownOpen(prev => !prev)}
+                >
+                  <span className="text-truncate">
+                    {examFilterIds.length === 0
+                      ? 'Todos los exámenes'
+                      : examFilterIds.length === 1
+                        ? (exams.find(e => String(e.id) === String(examFilterIds[0]))?.titulo || '1 examen')
+                        : `${examFilterIds.length} exámenes seleccionados`}
+                  </span>
+                  <i className={`fas fa-chevron-${examDropdownOpen ? 'up' : 'down'} ms-2`}></i>
+                </button>
+                {examDropdownOpen && (
+                  <>
+                  <div
+                    onClick={() => setExamDropdownOpen(false)}
+                    style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9 }}
+                  />
+                  <div
+                    className="modern-card"
+                    style={{
+                      position: 'absolute', top: 'calc(100% + 0.25rem)', left: 0, right: 0, zIndex: 10,
+                      border: '1px solid var(--border-color)',
+                      transition: 'none',
+                      transform: 'none'
+                    }}
+                  >
+                    <div className="p-2" style={{ borderBottom: '1px solid var(--border-color)' }}>
+                      <input
+                        type="text"
+                        autoFocus
+                        className="form-control form-control-sm"
+                        placeholder="Buscar examen..."
+                        value={examSearchInput}
+                        onChange={(e) => setExamSearchInput(e.target.value)}
+                      />
+                    </div>
+                    <div style={{ maxHeight: '220px', overflowY: 'auto' }}>
+                      {examFilterIds.length > 0 && (
+                        <button
+                          type="button"
+                          className="w-100 text-start"
+                          style={{ background: 'none', border: 'none', padding: '0.5rem 0.75rem', fontSize: '0.85rem', cursor: 'pointer', color: 'var(--primary-color)', fontWeight: '600' }}
+                          onClick={() => setExamFilterIds([])}
+                        >
+                          <i className="fas fa-times me-2"></i>
+                          Ver todos
+                        </button>
+                      )}
+                      {exams
+                        .filter(e => e.titulo.toLowerCase().includes(examSearchInput.trim().toLowerCase()))
+                        .map(exam => {
+                          const checked = examFilterIds.includes(String(exam.id));
+                          return (
+                            <button
+                              key={exam.id}
+                              type="button"
+                              className="w-100 text-start d-flex align-items-center gap-2 filter-dropdown-option"
+                              style={{ background: 'none', border: 'none', padding: '0.5rem 0.75rem', fontSize: '0.85rem', cursor: 'pointer' }}
+                              onClick={() => checked ? removeExamFilter(exam.id) : addExamFilter(exam.id)}
+                            >
+                              <input type="checkbox" readOnly checked={checked} />
+                              <span>{exam.titulo}</span>
+                            </button>
+                          );
+                        })}
+                    </div>
+                  </div>
+                  </>
+                )}
+              </div>
             </div>
-            <div className="state-item">
-              <span className="state-badge bg-secondary">✅ Finalizada</span>
-              <small className="state-description">Examen completado</small>
+
+            <div className="col-md-4">
+              <h6 className="panel-title mb-2">
+                <i className="fas fa-info-circle me-2" style={{ color: 'var(--primary-color)' }}></i>
+                Estados
+              </h6>
+              <div style={{ position: 'relative' }}>
+                <button
+                  type="button"
+                  className="form-control modern-input filter-dropdown-toggle d-flex justify-content-between align-items-center"
+                  style={{ borderRadius: '8px', padding: '0.5rem 0.75rem', fontSize: '0.85rem', cursor: 'pointer', background: 'white' }}
+                  onClick={() => setStatusDropdownOpen(prev => !prev)}
+                >
+                  <span className="text-truncate">
+                    {statusFilter.length === 0
+                      ? 'Todos los estados'
+                      : `${statusFilter.length} estado(s) seleccionados`}
+                  </span>
+                  <i className={`fas fa-chevron-${statusDropdownOpen ? 'up' : 'down'} ms-2`}></i>
+                </button>
+                {statusDropdownOpen && (
+                  <>
+                  <div
+                    onClick={() => setStatusDropdownOpen(false)}
+                    style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9 }}
+                  />
+                  <div
+                    className="modern-card"
+                    style={{
+                      position: 'absolute', top: 'calc(100% + 0.25rem)', left: 0, right: 0, zIndex: 10,
+                      border: '1px solid var(--border-color)',
+                      transition: 'none',
+                      transform: 'none'
+                    }}
+                  >
+                    {statusFilter.length > 0 && (
+                      <button
+                        type="button"
+                        className="w-100 text-start"
+                        style={{ background: 'none', border: 'none', padding: '0.5rem 0.75rem', fontSize: '0.85rem', cursor: 'pointer', color: 'var(--primary-color)', fontWeight: '600' }}
+                        onClick={() => setStatusFilter([])}
+                      >
+                        <i className="fas fa-times me-2"></i>
+                        Ver todos
+                      </button>
+                    )}
+                    {STATUS_OPTIONS.map(opt => {
+                      const checked = statusFilter.includes(opt.key);
+                      return (
+                        <button
+                          key={opt.key}
+                          type="button"
+                          className="w-100 text-start d-flex align-items-center gap-2 filter-dropdown-option"
+                          style={{ background: 'none', border: 'none', padding: '0.5rem 0.75rem', cursor: 'pointer' }}
+                          onClick={() => toggleStatusFilter(opt.key)}
+                        >
+                          <input type="checkbox" readOnly checked={checked} />
+                          <span className={`badge ${opt.badgeClass}`}>{opt.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="col-md-3 d-flex align-items-end justify-content-md-end">
+              <div className="btn-group" role="group">
+                <button
+                  type="button"
+                  className={`modern-btn modern-btn-sm ${viewMode === 'list' ? 'modern-btn-primary' : 'modern-btn-secondary'}`}
+                  onClick={() => setViewMode('list')}
+                >
+                  <i className="fas fa-list me-2"></i>
+                  Lista
+                </button>
+                <button
+                  type="button"
+                  className={`modern-btn modern-btn-sm ${viewMode === 'calendar' ? 'modern-btn-primary' : 'modern-btn-secondary'}`}
+                  onClick={() => setViewMode('calendar')}
+                >
+                  <i className="fas fa-calendar-alt me-2"></i>
+                  Calendario
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="modern-card mb-4">
-        <div className="modern-card-body p-0">
-          <div className="exam-windows-tabs">
-            {(() => {
-              // Las ventanas eternas (sinTiempo: true) con estado 'programada' aparecen en "En curso"
-              const enCurso = examWindows.filter(w => 
-                w.estado === 'en_curso' || 
-                (w.sinTiempo && w.estado === 'programada')
-              );
-              // Las ventanas programadas NO incluyen las eternas
-              const programadasYCerradas = examWindows.filter(w => 
-                (w.estado === 'programada' && !w.sinTiempo) || 
-                w.estado === 'cerrada_inscripciones'
-              );
-              const finalizadas = examWindows.filter(w => w.estado === 'finalizada');
-
-              return (
-                <>
-                  <button 
-                    className={`exam-windows-tab-button ${activeTab === 'current' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('current')}
-                  >
-                    <i className="fas fa-play-circle me-2"></i>
-                    <span className="tab-text">En Curso</span>
-                    <span className="tab-count">({enCurso.length})</span>
-                  </button>
-                  <button 
-                    className={`exam-windows-tab-button ${activeTab === 'scheduled' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('scheduled')}
-                  >
-                    <i className="fas fa-calendar-check me-2"></i>
-                    <span className="tab-text">Programadas</span>
-                    <span className="tab-count">({programadasYCerradas.length})</span>
-                  </button>
-                  <button 
-                    className={`exam-windows-tab-button ${activeTab === 'finished' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('finished')}
-                  >
-                    <i className="fas fa-flag-checkered me-2"></i>
-                    <span className="tab-text">Finalizadas</span>
-                    <span className="tab-count">({finalizadas.length})</span>
-                  </button>
-                </>
-              );
-            })()}
+      <div className="row g-4">
+        {viewMode === 'calendar' && (
+          <div className="col-lg-3">
+            <div className="modern-card h-100">
+              <div className="modern-card-header">
+                <h3 className="modern-card-title">
+                  <i className="fas fa-infinity me-2" style={{ color: 'var(--primary-color)' }}></i>
+                  Sin horario fijo ({sinTiempoWindows.length})
+                </h3>
+              </div>
+              <div className="modern-card-body">
+                {sinTiempoWindows.length === 0 ? (
+                  <small className="text-muted">No hay ventanas sin horario fijo.</small>
+                ) : (
+                  <div className="d-flex flex-column gap-2" style={{ maxHeight: '580px', overflowY: 'auto' }}>
+                    {sinTiempoWindows.map(w => (
+                      <button
+                        key={w.id}
+                        type="button"
+                        className="w-100 text-start"
+                        style={{
+                          background: 'none',
+                          border: `1px solid ${WINDOW_STATUS_STYLES[getEffectiveState(w)].solid}`,
+                          borderRadius: '8px',
+                          padding: '0.5rem 0.65rem',
+                          cursor: 'pointer'
+                        }}
+                        onClick={() => handleEditWindow(w)}
+                      >
+                        <div style={{ fontWeight: '600', fontSize: '0.85rem' }}>{w.nombre}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#6c757d' }}>{w.exam?.titulo}</div>
+                        <div style={{ fontSize: '0.75rem', fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '1px', color: 'var(--primary-color)' }}>{w.codigo}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
+        )}
+
+        <div className={viewMode === 'calendar' ? 'col-lg-9' : 'col-12'}>
+          {viewMode === 'calendar' ? (
+            <div className="modern-card">
+              <div className="modern-card-body" style={{ height: '650px' }}>
+                <Calendar
+                  localizer={localizer}
+                  culture="es"
+                  events={calendarEvents}
+                  startAccessor="start"
+                  endAccessor="end"
+                  date={calendarDate}
+                  onNavigate={setCalendarDate}
+                  view={calendarView}
+                  onView={setCalendarView}
+                  views={['month', 'week', 'day']}
+                  selectable
+                  onSelectSlot={handleSelectSlot}
+                  onSelectEvent={handleSelectEvent}
+                  eventPropGetter={eventPropGetter}
+                  style={{ height: '100%' }}
+                  messages={{
+                    next: 'Sig.',
+                    previous: 'Ant.',
+                    today: 'Hoy',
+                    month: 'Mes',
+                    week: 'Semana',
+                    day: 'Día',
+                    noEventsInRange: 'No hay ventanas en este rango de fechas.'
+                  }}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="modern-card">
+              <div className="modern-card-body p-0" style={{ maxHeight: '650px', overflowY: 'auto' }}>
+                {listViewWindows.length === 0 ? (
+                  <div className="p-4 text-center text-muted">No hay ventanas para mostrar con estos filtros.</div>
+                ) : (
+                  <table className="table table-hover mb-0">
+                    <thead>
+                      <tr>
+                        <th>Nombre</th>
+                        <th>Examen</th>
+                        <th>Código</th>
+                        <th>Fecha y hora</th>
+                        <th>Estado</th>
+                        <th>Inscriptos</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {listViewWindows.map(w => {
+                        const statusOpt = STATUS_OPTIONS.find(opt => opt.key === getEffectiveState(w));
+                        return (
+                          <tr key={w.id} style={{ cursor: 'pointer' }} onClick={() => handleEditWindow(w)}>
+                            <td>{w.nombre}</td>
+                            <td>{w.exam?.titulo}</td>
+                            <td onClick={(e) => e.stopPropagation()}>
+                              <span style={{ fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '1px', color: 'var(--primary-color)' }}>
+                                {w.codigo}
+                              </span>
+                              <button
+                                type="button"
+                                className="copy-code-btn ms-2"
+                                onClick={() => handleCopyCode(w.id, w.codigo)}
+                                title="Copiar código"
+                              >
+                                <i className={`fas ${copiedCodeId === w.id ? 'fa-check text-success' : 'fa-copy'}`}></i>
+                              </button>
+                            </td>
+                            <td>
+                              {w.sinTiempo
+                                ? <span className="text-muted fst-italic">Sin horario fijo</span>
+                                : w.fechaInicio
+                                  ? `${new Date(w.fechaInicio).toLocaleDateString()} ${new Date(w.fechaInicio).toLocaleTimeString()}`
+                                  : '—'}
+                            </td>
+                            <td>
+                              {statusOpt && <span className={`badge ${statusOpt.badgeClass}`}>{statusOpt.label}</span>}
+                            </td>
+                            <td>{getInscritosCount(w)}/{w.cupoMaximo}</td>
+                            <td className="text-end" style={{ whiteSpace: 'nowrap' }}>
+                              {isWindowLive(w) && (
+                                <button
+                                  type="button"
+                                  className="modern-btn modern-btn-sm me-2"
+                                  style={{ backgroundColor: 'var(--danger-color, #dc3545)', borderColor: 'var(--danger-color, #dc3545)', color: '#fff' }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCloseWindow(w);
+                                  }}
+                                  title="Cerrar el examen para todos los alumnos"
+                                >
+                                  <i className="fas fa-stop-circle me-1"></i>
+                                  Cerrar
+                                </button>
+                              )}
+                              {w.pendientesCorreccionCount > 0 && (
+                                <button
+                                  type="button"
+                                  className="modern-btn modern-btn-sm"
+                                  style={{ backgroundColor: 'var(--primary-color)', borderColor: 'var(--primary-color)', color: '#fff' }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(
+                                      w.primerIntentoPendienteId
+                                        ? `/exam-windows/${w.id}/results/${w.primerIntentoPendienteId}`
+                                        : `/exam-windows/${w.id}/results`
+                                    );
+                                  }}
+                                >
+                                  Corregir ({w.pendientesCorreccionCount})
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
-
-      {(() => {
-        // Las ventanas eternas (sinTiempo: true) con estado 'programada' aparecen en "En curso"
-        const enCurso = examWindows.filter(w => 
-          w.estado === 'en_curso' || 
-          (w.sinTiempo && w.estado === 'programada')
-        );
-        // Las ventanas programadas NO incluyen las eternas
-        const programadasYCerradas = examWindows.filter(w => 
-          (w.estado === 'programada' && !w.sinTiempo) || 
-          w.estado === 'cerrada_inscripciones'
-        );
-        const finalizadas = examWindows.filter(w => w.estado === 'finalizada');
-        const total = examWindows.length;
-
-        if (total === 0) {
-          return (
-            <div className="modern-card">
-              <div className="modern-card-body">
-                <div className="empty-state">
-                  <div className="empty-icon">
-                    <i className="fas fa-calendar-plus"></i>
-                  </div>
-                  <h4 className="empty-title">No hay ventanas</h4>
-                  <p className="empty-subtitle">
-                    Crea tu primera ventana de examen para comenzar
-                  </p>
-                  {exams.length > 0 && (
-                    <button 
-                      className="modern-btn modern-btn-primary"
-                      onClick={handleCreateWindow}
-                    >
-                      <i className="fas fa-plus me-2"></i>
-                      Crear primera ventana
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        }
-
-        if (activeTab === 'current') {
-          return (
-            <div className="modern-card">
-              <div className="modern-card-header">
-                <h3 className="modern-card-title">
-                  <i className="fas fa-play-circle me-2" style={{ color: 'var(--success-color)' }}></i>
-                  Ventanas en Curso ({enCurso.length})
-                </h3>
-              </div>
-              <div className="modern-card-body">
-                {enCurso.length === 0 ? (
-                  <div className="empty-state">
-                    <div className="empty-icon">
-                      <i className="fas fa-play-circle"></i>
-                    </div>
-                    <h4 className="empty-title">No hay ventanas en curso</h4>
-                    <p className="empty-subtitle">
-                      No tienes exámenes ejecutándose en este momento.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="exam-windows-grid">
-                    {enCurso.map((w, idx) => renderWindowCard(w, idx))}
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        }
-
-        if (activeTab === 'scheduled') {
-          return (
-            <div className="modern-card">
-              <div className="modern-card-header">
-                <h3 className="modern-card-title">
-                  <i className="fas fa-calendar-check me-2" style={{ color: 'var(--primary-color)' }}></i>
-                  Ventanas Programadas y Cerradas ({programadasYCerradas.length})
-                </h3>
-              </div>
-              <div className="modern-card-body">
-                {programadasYCerradas.length === 0 ? (
-                  <div className="empty-state">
-                    <div className="empty-icon">
-                      <i className="fas fa-calendar-check"></i>
-                    </div>
-                    <h4 className="empty-title">No hay ventanas programadas</h4>
-                    <p className="empty-subtitle">
-                      No tienes ventanas programadas o cerradas a inscripciones.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="exam-windows-grid">
-                    {programadasYCerradas.map((w, idx) => renderWindowCard(w, idx))}
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        }
-
-        if (activeTab === 'finished') {
-          return (
-            <div className="modern-card">
-              <div className="modern-card-header">
-                <h3 className="modern-card-title">
-                  <i className="fas fa-flag-checkered me-2" style={{ color: 'var(--text-color-3)' }}></i>
-                  Ventanas Finalizadas ({finalizadas.length})
-                </h3>
-              </div>
-              <div className="modern-card-body">
-                {finalizadas.length === 0 ? (
-                  <div className="empty-state">
-                    <div className="empty-icon">
-                      <i className="fas fa-flag-checkered"></i>
-                    </div>
-                    <h4 className="empty-title">No hay ventanas finalizadas</h4>
-                    <p className="empty-subtitle">
-                      Las ventanas completadas aparecerán aquí.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="exam-windows-grid">
-                    {finalizadas.map((w, idx) => renderWindowCard(w, idx))}
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        }
-      })()}
 
       {showCreateModal && (
         <div 
           className="modal-backdrop-fade"
         >
           <div className="modal show" style={{ display: 'block' }}>
-            <div 
-              className="modal-dialog" 
+            <div
+              className="modal-dialog"
               onClick={(e) => e.stopPropagation()}
-              style={{ margin: '1rem auto', maxWidth: '900px', width: '90vw' }}
+              style={{ margin: '1rem auto', maxWidth: '900px', width: '90vw', maxHeight: 'calc(100vh - 2rem)' }}
             >
-              <div 
-                className="modern-card" 
-                style={{ border: 'none', borderRadius: '16px' }}
+              <div
+                className="modern-card"
+                style={{ border: 'none', borderRadius: '16px', maxHeight: 'calc(100vh - 2rem)', display: 'flex', flexDirection: 'column' }}
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="modern-card-header" style={{ 
+                <div className="modern-card-header" style={{
                   background: 'linear-gradient(135deg, var(--primary-color), var(--secondary-color))',
                   borderRadius: '16px 16px 0 0',
                   color: 'white',
                   display: 'flex',
                   justifyContent: 'space-between',
-                  alignItems: 'center'
+                  alignItems: 'center',
+                  flexShrink: 0
                 }}>
-                  <h5 className="modern-card-title" style={{ color: 'white', margin: 0 }}>
-                    <i className="fas fa-calendar-plus me-2"></i>
-                    {editingWindow ? 'Editar Ventana' : 'Nueva Ventana de Examen'}
-                  </h5>
+                  <div>
+                    <h5 className="modern-card-title" style={{ color: 'white', margin: 0 }}>
+                      <i className="fas fa-calendar-plus me-2"></i>
+                      {editingWindow ? 'Editar Ventana' : 'Nueva Ventana de Examen'}
+                    </h5>
+                    {editingWindow && (
+                      <div className="d-flex align-items-center gap-2 mt-1" style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.85)' }}>
+                        <span>
+                          Código: <span style={{ fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '1px' }}>{editingWindow.codigo}</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyCode(editingWindow.id, editingWindow.codigo)}
+                          title="Copiar código"
+                          style={{ background: 'none', border: 'none', color: 'inherit', padding: 0, cursor: 'pointer' }}
+                        >
+                          <i className={`fas ${copiedCodeId === editingWindow.id ? 'fa-check' : 'fa-copy'}`}></i>
+                        </button>
+                      </div>
+                    )}
+                  </div>
                   <button 
                     type="button" 
                     className="modern-btn"
@@ -1005,9 +1238,75 @@ export default function ExamWindowsPage() {
                     <i className="fas fa-times"></i>
                   </button>
                 </div>
-                <form onSubmit={handleSaveWindow} onClick={(e) => e.stopPropagation()}>
-                  <div className="modern-card-body" style={{ padding: '1.5rem' }}>
+                <form onSubmit={handleSaveWindow} onClick={(e) => e.stopPropagation()} style={{ display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1 }}>
+                  <div className="modern-card-body" style={{ padding: '1.5rem', overflowY: 'auto', flex: 1, minHeight: 0 }}>
                     
+                    {/* Control en vivo: cerrar el examen y habilitar partes mientras se rinde */}
+                    {editingWindow && isWindowLive(editingWindow) && (
+                      <div className="mb-4 p-3" style={{ border: '1.5px solid var(--border-color)', borderRadius: '10px', background: 'rgba(30, 41, 85, 0.04)' }}>
+                        <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                          <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>
+                            <i className="fas fa-broadcast-tower text-success me-2"></i>
+                            Examen en curso
+                          </div>
+                          <button
+                            type="button"
+                            className="modern-btn modern-btn-sm"
+                            style={{ backgroundColor: 'var(--danger-color, #dc3545)', borderColor: 'var(--danger-color, #dc3545)', color: '#fff' }}
+                            onClick={() => handleCloseWindow(editingWindow)}
+                          >
+                            <i className="fas fa-stop-circle me-1"></i>
+                            Cerrar examen para todos
+                          </button>
+                        </div>
+                        {!editingWindow.sinTiempo && (
+                          <TimeExtensionPanel
+                            windowId={editingWindow.id}
+                            onError={(message) => showModal('error', 'Error', message)}
+                          />
+                        )}
+                        {editingWindow.modoAvanceParte === 'codigo' && (editingWindow.exam?._count?.partes ?? 0) > 1 && (
+                          <div className="mt-3 pt-3" style={{ borderTop: '1px solid var(--border-color)', fontSize: '0.9rem' }}>
+                            Código para pasar de parte:{' '}
+                            <span style={{ fontFamily: 'monospace', fontWeight: 'bold', fontSize: '1.1rem', letterSpacing: '2px', color: 'var(--primary-color)' }}>
+                              {editingWindow.codigoParte || '—'}
+                            </span>
+                            <button
+                              type="button"
+                              className="btn btn-link btn-sm"
+                              onClick={() => handleRegeneratePartCode(editingWindow)}
+                              title="Generar un código nuevo (el anterior deja de funcionar)"
+                            >
+                              <i className="fas fa-sync-alt"></i>
+                            </button>
+                          </div>
+                        )}
+                        {editingWindow.modoAvanceParte === 'manual' && (editingWindow.exam?._count?.partes ?? 0) > 1 && (
+                          <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 mt-3 pt-3" style={{ borderTop: '1px solid var(--border-color)' }}>
+                            <div className="text-muted" style={{ fontSize: '0.85rem' }}>
+                              Partes habilitadas para todos: {editingWindow.partesHabilitadas ?? 1} de {editingWindow.exam._count.partes}
+                            </div>
+                            {(editingWindow.partesHabilitadas ?? 1) < editingWindow.exam._count.partes && (
+                              <button
+                                type="button"
+                                className="modern-btn modern-btn-primary modern-btn-sm"
+                                onClick={() => handleEnableNextPart(editingWindow)}
+                              >
+                                <i className="fas fa-unlock me-1"></i>
+                                Habilitar parte {(editingWindow.partesHabilitadas ?? 1) + 1} para todos
+                              </button>
+                            )}
+                          </div>
+                        )}
+                        {editingWindow.modoAvanceParte === 'manual' && (editingWindow.exam?._count?.partes ?? 0) > 1 && (
+                          <WaitingStudentsPanel
+                            windowId={editingWindow.id}
+                            onError={(message) => showModal('error', 'Error', message)}
+                          />
+                        )}
+                      </div>
+                    )}
+
                     {/* Nombre de la Ventana */}
                     <div className="row mb-4">
                       <div className="col-12">
@@ -1068,7 +1367,7 @@ export default function ExamWindowsPage() {
                           value={formData.examId}
                           onChange={handleInputChange}
                           required
-                          disabled={editingWindow || isSavingWindow}
+                          disabled={editingWindow || isSavingWindow || !!scopedExamId}
                           style={{
                             borderRadius: '8px',
                             border: `1px solid ${validationErrors.examId ? '#dc3545' : 'var(--border-color)'}`,
@@ -1085,109 +1384,139 @@ export default function ExamWindowsPage() {
                       </div>
                     </div>
 
-                    {/* Toggle para seguridad SEB */}
-                    <div className="mb-4">
-                      <div className="card" style={{ 
-                        backgroundColor: formData.usaSEB ? '#f0fff4' : '#f8f9fa', 
-                        borderColor: formData.usaSEB ? '#28a745' : '#e9ecef',
-                        borderWidth: '2px',
-                        transition: 'all 0.3s ease'
-                      }}>
-                        <div className="card-body p-3">
-                          <div className="d-flex align-items-center justify-content-between">
-                            <div className="d-flex align-items-center">
-                              <div className="form-check form-switch me-3">
-                                <input 
-                                  className="form-check-input" 
-                                  type="checkbox" 
-                                  id="usaSEB"
-                                  name="usaSEB"
-                                  checked={formData.usaSEB}
-                                  onChange={(e) => {
-                                    const useSEB = e.target.checked;
-                                    setFormData(prev => ({
-                                      ...prev,
-                                      usaSEB: useSEB,
-                                      kioskMode: useSEB ? 1 : 0 // Activar pantalla completa automáticamente con SEB
-                                    }));
-                                  }}
-                                  disabled={isSavingWindow || (!!editingWindow && editingWindow.estado === 'en_curso')}
-                                  style={{ 
-                                    width: '3rem', 
-                                    height: '1.5rem',
-                                    backgroundColor: formData.usaSEB ? '#28a745' : '#6c757d',
-                                    borderColor: formData.usaSEB ? '#28a745' : '#6c757d'
-                                  }}
-                                />
-                              </div>
-                              <div>
-                                <label className="form-check-label mb-0" htmlFor="usaSEB" style={{ fontWeight: '600', fontSize: '1rem', cursor: 'pointer' }}>
-                                  <i className={`fas ${formData.usaSEB ? 'fa-shield-alt text-success' : 'fa-shield text-secondary'} me-2`}></i>
-                                  {formData.usaSEB ? 'Ventana segura activada (SEB)' : 'Ventana estándar'}
-                                </label>
-                                <div style={{ fontSize: '0.85rem', color: '#6c757d', marginTop: '0.25rem' }}>
-                                  {formData.usaSEB 
-                                    ? 'Los estudiantes deberán usar Safe Exam Browser en modo pantalla completa'
-                                    : 'Los estudiantes podrán acceder usando cualquier navegador web'
-                                  }
-                                </div>
-                              </div>
-                            </div>
-                            <div style={{ fontSize: '2rem', opacity: 0.3 }}>
-                              <i className={`fas ${formData.usaSEB ? 'fa-shield-alt' : 'fa-globe'}`}></i>
-                            </div>
+                    {/* Avance entre partes (solo exámenes de varias partes) */}
+                    {(exams.find(e => String(e.id) === String(formData.examId))?.partes?.length ?? 0) > 1 && (
+                      <div className="mb-4">
+                        <label className="form-label" style={{ fontWeight: '600', color: 'var(--text-color-2)', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
+                          Paso entre partes
+                        </label>
+                        {[
+                          { value: 'libre', label: 'Normal', help: 'El alumno continúa con la parte siguiente cuando quiere.' },
+                          { value: 'manual', label: 'Habilitación del profesor', help: 'El alumno espera hasta que lo habilites, a todos juntos o a los que elijas.' },
+                          { value: 'codigo', label: 'Por código', help: 'El alumno continúa cuando ingresa el código que le dictes.' },
+                        ].map(opcion => (
+                          <div className="form-check" key={opcion.value}>
+                            <input
+                              className="form-check-input"
+                              type="radio"
+                              id={`modoAvanceParte-${opcion.value}`}
+                              name="modoAvanceParte"
+                              value={opcion.value}
+                              checked={formData.modoAvanceParte === opcion.value}
+                              onChange={handleInputChange}
+                              disabled={isSavingWindow}
+                            />
+                            <label className="form-check-label" htmlFor={`modoAvanceParte-${opcion.value}`} style={{ fontSize: '0.9rem' }}>
+                              <span style={{ fontWeight: 600 }}>{opcion.label}</span>
+                              <span className="text-muted"> — {opcion.help}</span>
+                            </label>
                           </div>
-                        </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Selector de seguridad SEB */}
+                    <div className="mb-4">
+                      <label className="form-label" style={{ fontWeight: '600', color: 'var(--text-color-2)', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
+                        Seguridad de la ventana
+                      </label>
+                      <div className="d-flex gap-2" role="radiogroup" aria-label="Seguridad de la ventana">
+                        <button
+                          type="button"
+                          role="radio"
+                          aria-checked={!formData.usaSEB}
+                          onClick={() => setFormData(prev => ({ ...prev, usaSEB: false, kioskMode: 0 }))}
+                          disabled={isSavingWindow || (!!editingWindow && editingWindow.estado === 'en_curso')}
+                          className="flex-fill text-start p-2"
+                          style={{
+                            background: !formData.usaSEB ? 'rgba(30, 41, 85, 0.08)' : 'transparent',
+                            border: '1.5px solid ' + (!formData.usaSEB ? 'var(--primary-color)' : 'var(--border-color)'),
+                            borderRadius: '8px',
+                            cursor: isSavingWindow ? 'not-allowed' : 'pointer',
+                            color: !formData.usaSEB ? 'var(--primary-color)' : 'var(--text-color-3)',
+                          }}
+                        >
+                          <div className="d-flex align-items-center gap-2" style={{ fontSize: '0.9rem', fontWeight: '600' }}>
+                            <i className="fas fa-globe"></i>
+                            Estándar
+                          </div>
+                          <small style={{ fontSize: '0.75rem', opacity: 0.85 }}>Cualquier navegador web</small>
+                        </button>
+
+                        <button
+                          type="button"
+                          role="radio"
+                          aria-checked={formData.usaSEB}
+                          onClick={() => setFormData(prev => ({ ...prev, usaSEB: true, kioskMode: 1 }))}
+                          disabled={isSavingWindow || (!!editingWindow && editingWindow.estado === 'en_curso')}
+                          className="flex-fill text-start p-2"
+                          style={{
+                            background: formData.usaSEB ? 'rgba(30, 41, 85, 0.08)' : 'transparent',
+                            border: '1.5px solid ' + (formData.usaSEB ? 'var(--primary-color)' : 'var(--border-color)'),
+                            borderRadius: '8px',
+                            cursor: isSavingWindow ? 'not-allowed' : 'pointer',
+                            color: formData.usaSEB ? 'var(--primary-color)' : 'var(--text-color-3)',
+                          }}
+                        >
+                          <div className="d-flex align-items-center gap-2" style={{ fontSize: '0.9rem', fontWeight: '600' }}>
+                            <i className="fas fa-shield-alt"></i>
+                            Con SEB
+                          </div>
+                          <small style={{ fontSize: '0.75rem', opacity: 0.85 }}>Requiere Safe Exam Browser instalado</small>
+                        </button>
                       </div>
                     </div>
 
-                    {/* Toggle para modo kiosco - Solo visible cuando SEB está activado */}
+                    {/* Selector de modo kiosco - Solo visible cuando SEB está activado */}
                     {formData.usaSEB && (
                       <div className="mb-4">
-                        <div className="card" style={{ 
-                          backgroundColor: formData.kioskMode ? '#f0f4ff' : '#f8f9fa', 
-                          borderColor: formData.kioskMode ? '#28a745' : '#e9ecef',
-                          borderWidth: '2px',
-                          transition: 'all 0.3s ease'
-                        }}>
-                          <div className="card-body p-3">
-                            <div className="d-flex align-items-center justify-content-between">
-                              <div className="d-flex align-items-center">
-                                <div className="form-check form-switch me-3">
-                                  <input 
-                                    className="form-check-input" 
-                                    type="checkbox" 
-                                    id="kioskMode"
-                                    name="kioskMode"
-                                    checked={formData.kioskMode ? true : false}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, kioskMode: e.target.checked ? 1 : 0 }))}
-                                    disabled={!!editingWindow && editingWindow.estado === 'en_curso'}
-                                    style={{ 
-                                      width: '3rem', 
-                                      height: '1.5rem',
-                                      backgroundColor: formData.kioskMode ? '#28a745' : '#6c757d',
-                                      borderColor: formData.kioskMode ? '#28a745' : '#6c757d'
-                                    }}
-                                  />
-                                </div>
-                                <div>
-                                  <label className="form-check-label mb-0" htmlFor="kioskMode" style={{ fontWeight: '600', fontSize: '1rem', cursor: 'pointer' }}>
-                                    <i className={`fas ${formData.kioskMode ? 'fa-desktop text-primary' : 'fa-laptop text-secondary'} me-2`}></i>
-                                    {formData.kioskMode ? 'Modo Pantalla Completa activado' : 'Modo Normal'}
-                                  </label>
-                                  <div style={{ fontSize: '0.85rem', color: '#6c757d', marginTop: '0.25rem' }}>
-                                    {formData.kioskMode 
-                                      ? 'SEB se ejecutará en modo pantalla completa, sin barra de tareas'
-                                      : 'SEB se ejecutará en modo pantalla normal, permitiendo al alumno ver la barra de tareas'
-                                    }
-                                  </div>
-                                </div>
-                              </div>
-                              <div style={{ fontSize: '2rem', opacity: 0.3 }}>
-                                <i className={`fas ${formData.kioskMode ? 'fa-desktop' : 'fa-laptop'}`}></i>
-                              </div>
+                        <label className="form-label" style={{ fontWeight: '600', color: 'var(--text-color-2)', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
+                          Modo de pantalla
+                        </label>
+                        <div className="d-flex gap-2" role="radiogroup" aria-label="Modo de pantalla">
+                          <button
+                            type="button"
+                            role="radio"
+                            aria-checked={!formData.kioskMode}
+                            onClick={() => setFormData(prev => ({ ...prev, kioskMode: 0 }))}
+                            disabled={!!editingWindow && editingWindow.estado === 'en_curso'}
+                            className="flex-fill text-start p-2"
+                            style={{
+                              background: !formData.kioskMode ? 'rgba(30, 41, 85, 0.08)' : 'transparent',
+                              border: '1.5px solid ' + (!formData.kioskMode ? 'var(--primary-color)' : 'var(--border-color)'),
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                              color: !formData.kioskMode ? 'var(--primary-color)' : 'var(--text-color-3)',
+                            }}
+                          >
+                            <div className="d-flex align-items-center gap-2" style={{ fontSize: '0.9rem', fontWeight: '600' }}>
+                              <i className="fas fa-laptop"></i>
+                              Normal
                             </div>
-                          </div>
+                            <small style={{ fontSize: '0.75rem', opacity: 0.85 }}>El alumno ve la barra de tareas</small>
+                          </button>
+
+                          <button
+                            type="button"
+                            role="radio"
+                            aria-checked={!!formData.kioskMode}
+                            onClick={() => setFormData(prev => ({ ...prev, kioskMode: 1 }))}
+                            disabled={!!editingWindow && editingWindow.estado === 'en_curso'}
+                            className="flex-fill text-start p-2"
+                            style={{
+                              background: formData.kioskMode ? 'rgba(30, 41, 85, 0.08)' : 'transparent',
+                              border: '1.5px solid ' + (formData.kioskMode ? 'var(--primary-color)' : 'var(--border-color)'),
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                              color: formData.kioskMode ? 'var(--primary-color)' : 'var(--text-color-3)',
+                            }}
+                          >
+                            <div className="d-flex align-items-center gap-2" style={{ fontSize: '0.9rem', fontWeight: '600' }}>
+                              <i className="fas fa-desktop"></i>
+                              Pantalla Completa
+                            </div>
+                            <small style={{ fontSize: '0.75rem', opacity: 0.85 }}>Sin barra de tareas</small>
+                          </button>
                         </div>
                       </div>
                     )}
@@ -1214,6 +1543,55 @@ export default function ExamWindowsPage() {
                               <div style={{ fontSize: '1.5rem', opacity: 0.3 }}>
                                 <i className="fas fa-sliders-h"></i>
                               </div>
+                            </div>
+
+                            {/* Probar la configuración: abre el examen en vista previa dentro de SEB */}
+                            <div className="mb-3 p-2" style={{ borderRadius: '8px', border: '1px solid #e9ecef', backgroundColor: 'white' }}>
+                              <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                <small className="text-muted" style={{ flex: '1 1 260px' }}>
+                                  Abrí el examen en SEB con esta configuración, aunque todavía no la hayas guardado, para revisarla antes del examen.
+                                </small>
+                                <button
+                                  type="button"
+                                  className="modern-btn modern-btn-secondary modern-btn-sm"
+                                  onClick={handleTestSEBConfig}
+                                  disabled={generandoPruebaSEB || !formData.examId}
+                                  title={formData.examId ? 'Generar archivo de prueba y abrir SEB' : 'Elegí un examen primero'}
+                                >
+                                  <i className="fas fa-vial me-1"></i>
+                                  {generandoPruebaSEB ? 'Generando...' : 'Probar en SEB'}
+                                </button>
+                              </div>
+                              {pruebaSEB && (
+                                <small className="d-block mt-2">
+                                  Si SEB no se abrió solo,{' '}
+                                  <a href={pruebaSEB.archivoUrl} download>descargá el archivo de prueba</a>
+                                  {' '}y abrilo. La vista previa vence en 10 minutos.
+                                </small>
+                              )}
+                            </div>
+
+                            {/* Modo de pruebas: desactiva las restricciones al generar el archivo SEB */}
+                            <div
+                              className="mb-3 p-2"
+                              style={{
+                                borderRadius: '8px',
+                                border: `1px solid ${formData.sebUnsafeMode ? '#ffc107' : '#e9ecef'}`,
+                                backgroundColor: formData.sebUnsafeMode ? '#fff3cd' : 'transparent'
+                              }}
+                            >
+                              <div className="form-check form-switch mb-0">
+                                <input className="form-check-input" type="checkbox" id="sebUnsafeMode" name="sebUnsafeMode" checked={formData.sebUnsafeMode} onChange={handleInputChange} />
+                                <label className="form-check-label" htmlFor="sebUnsafeMode" style={{ fontWeight: 600 }}>
+                                  <i className={`fas ${formData.sebUnsafeMode ? 'fa-exclamation-triangle text-warning' : 'fa-flask text-secondary'} me-2`}></i>
+                                  Modo de pruebas (sin restricciones)
+                                </label>
+                              </div>
+                              {formData.sebUnsafeMode && (
+                                <small className="d-block mt-1" style={{ color: '#856404' }}>
+                                  SEB se abre sin bloquear teclado, portapapeles ni otras aplicaciones. Usalo solo para probar la configuración, nunca en un examen real.
+                                </small>
+                              )}
                             </div>
 
                             {/* Navegación */}
@@ -1374,6 +1752,44 @@ export default function ExamWindowsPage() {
                               </div>
                             </div>
 
+                            {/* Aplicaciones permitidas */}
+                            <div className="mb-3">
+                              <h6 style={{ color: 'var(--text-color-2)', marginBottom: '0.75rem', fontWeight: '600', fontSize: '0.9rem' }}>
+                                <i className="fas fa-th-large me-2"></i>Aplicaciones permitidas
+                              </h6>
+                              <div className="row">
+                                <div className="col-md-6 mb-2">
+                                  <div className="form-check">
+                                    <input className="form-check-input" type="checkbox" id="sebAllowZoom" name="sebAllowZoom" checked={formData.sebAllowZoom} onChange={handleInputChange} />
+                                    <label className="form-check-label" htmlFor="sebAllowZoom">Permitir Zoom</label>
+                                  </div>
+                                </div>
+                                <div className="col-md-6 mb-2">
+                                  <div className="form-check">
+                                    <input className="form-check-input" type="checkbox" id="sebAllowTeams" name="sebAllowTeams" checked={formData.sebAllowTeams} onChange={handleInputChange} />
+                                    <label className="form-check-label" htmlFor="sebAllowTeams">Permitir Microsoft Teams</label>
+                                  </div>
+                                </div>
+                                <div className="col-md-6 mb-2">
+                                  <div className="form-check">
+                                    <input className="form-check-input" type="checkbox" id="sebEnableTaskManager" name="sebEnableTaskManager" checked={formData.sebEnableTaskManager} onChange={handleInputChange} />
+                                    <label className="form-check-label" htmlFor="sebEnableTaskManager">Permitir Administrador de tareas</label>
+                                  </div>
+                                </div>
+                                <div className="col-md-6 mb-2">
+                                  <div className="form-check">
+                                    <input className="form-check-input" type="checkbox" id="sebBrowserWindowAllowMinimize" name="sebBrowserWindowAllowMinimize" checked={formData.sebBrowserWindowAllowMinimize} onChange={handleInputChange} />
+                                    <label className="form-check-label" htmlFor="sebBrowserWindowAllowMinimize">Permitir minimizar la ventana</label>
+                                  </div>
+                                </div>
+                              </div>
+                              {(formData.sebAllowZoom || formData.sebAllowTeams || formData.sebEnableTaskManager) && (
+                                <small className="text-muted d-block">
+                                  Permitir otras aplicaciones habilita cambiar de aplicación dentro de SEB. El Administrador de tareas además desactiva el escritorio aparte.
+                                </small>
+                              )}
+                            </div>
+
                             {/* URLs y contraseñas */}
                             <div className="mb-2">
                               <h6 style={{ color: 'var(--text-color-2)', marginBottom: '0.75rem', fontWeight: '600', fontSize: '0.9rem' }}>
@@ -1399,65 +1815,61 @@ export default function ExamWindowsPage() {
                       </div>
                     )}
 
-                    {/* Toggle para tipo de ventana */}
+                    {/* Selector de tipo de ventana */}
                     <div className="mb-4">
-                      <div className="card" style={{ 
-                        backgroundColor: formData.sinTiempo ? '#f0f4ff' : '#f8f9fa', 
-                        borderColor: formData.sinTiempo ? '#4f46e5' : '#e9ecef',
-                        borderWidth: '2px',
-                        transition: 'all 0.3s ease'
-                      }}>
-                        <div className="card-body p-3">
-                          <div className="d-flex align-items-center justify-content-between">
-                            <div className="d-flex align-items-center">
-                              <div className="form-check form-switch me-3">
-                                <input 
-                                  className="form-check-input" 
-                                  type="checkbox" 
-                                  id="sinTiempo"
-                                  name="sinTiempo"
-                                  checked={formData.sinTiempo}
-                                  onChange={(e) => {
-                                    const isInfinite = e.target.checked;
-                                    setFormData(prev => ({
-                                      ...prev,
-                                      sinTiempo: isInfinite
-                                    }));
-                                    
-                                    setValidationErrors(prev => ({
-                                      ...prev,
-                                      sinTiempo: false,
-                                      fechaInicio: false,
-                                      duracion: false
-                                    }));
-                                  }}
-                                  disabled={isSavingWindow || (!!editingWindow && (editingWindow.estado === 'en_curso' || editingWindow.estado === 'finalizada'))}
-                                  style={{ 
-                                    width: '3rem', 
-                                    height: '1.5rem',
-                                    backgroundColor: formData.sinTiempo ? '#4f46e5' : '#6c757d',
-                                    borderColor: formData.sinTiempo ? '#4f46e5' : '#6c757d'
-                                  }}
-                                />
-                              </div>
-                              <div>
-                                <label className="form-check-label mb-0" htmlFor="sinTiempo" style={{ fontWeight: '600', fontSize: '1rem', cursor: 'pointer' }}>
-                                  <i className={`fas ${formData.sinTiempo ? 'fa-infinity text-primary' : 'fa-clock text-secondary'} me-2`}></i>
-                                  {formData.sinTiempo ? 'Ventana sin límite de tiempo' : 'Ventana con horario específico'}
-                                </label>
-                                <div style={{ fontSize: '0.85rem', color: '#6c757d', marginTop: '0.25rem' }}>
-                                  {formData.sinTiempo 
-                                    ? 'Los estudiantes accederán solo cuando esté activa, sin horarios específicos'
-                                    : 'Configurar fecha, hora de inicio y duración específica para la ventana'
-                                  }
-                                </div>
-                              </div>
-                            </div>
-                            <div style={{ fontSize: '2rem', opacity: 0.3 }}>
-                              <i className={`fas ${formData.sinTiempo ? 'fa-infinity' : 'fa-calendar-alt'}`}></i>
-                            </div>
+                      <label className="form-label" style={{ fontWeight: '600', color: 'var(--text-color-2)', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
+                        Tipo de ventana
+                      </label>
+                      <div className="d-flex gap-2" role="radiogroup" aria-label="Tipo de ventana">
+                        <button
+                          type="button"
+                          role="radio"
+                          aria-checked={!formData.sinTiempo}
+                          onClick={() => {
+                            setFormData(prev => ({ ...prev, sinTiempo: false }));
+                            setValidationErrors(prev => ({ ...prev, sinTiempo: false, fechaInicio: false, duracion: false }));
+                          }}
+                          disabled={isSavingWindow || (!!editingWindow && (editingWindow.estado === 'en_curso' || editingWindow.estado === 'finalizada'))}
+                          className="flex-fill text-start p-2"
+                          style={{
+                            background: !formData.sinTiempo ? 'rgba(30, 41, 85, 0.08)' : 'transparent',
+                            border: '1.5px solid ' + (!formData.sinTiempo ? 'var(--primary-color)' : 'var(--border-color)'),
+                            borderRadius: '8px',
+                            cursor: isSavingWindow ? 'not-allowed' : 'pointer',
+                            color: !formData.sinTiempo ? 'var(--primary-color)' : 'var(--text-color-3)',
+                          }}
+                        >
+                          <div className="d-flex align-items-center gap-2" style={{ fontSize: '0.9rem', fontWeight: '600' }}>
+                            <i className="fas fa-clock"></i>
+                            Horario específico
                           </div>
-                        </div>
+                          <small style={{ fontSize: '0.75rem', opacity: 0.85 }}>Fecha, hora y duración definidas</small>
+                        </button>
+
+                        <button
+                          type="button"
+                          role="radio"
+                          aria-checked={formData.sinTiempo}
+                          onClick={() => {
+                            setFormData(prev => ({ ...prev, sinTiempo: true }));
+                            setValidationErrors(prev => ({ ...prev, sinTiempo: false, fechaInicio: false, duracion: false }));
+                          }}
+                          disabled={isSavingWindow || (!!editingWindow && (editingWindow.estado === 'en_curso' || editingWindow.estado === 'finalizada'))}
+                          className="flex-fill text-start p-2"
+                          style={{
+                            background: formData.sinTiempo ? 'rgba(30, 41, 85, 0.08)' : 'transparent',
+                            border: '1.5px solid ' + (formData.sinTiempo ? 'var(--primary-color)' : 'var(--border-color)'),
+                            borderRadius: '8px',
+                            cursor: isSavingWindow ? 'not-allowed' : 'pointer',
+                            color: formData.sinTiempo ? 'var(--primary-color)' : 'var(--text-color-3)',
+                          }}
+                        >
+                          <div className="d-flex align-items-center gap-2" style={{ fontSize: '0.9rem', fontWeight: '600' }}>
+                            <i className="fas fa-infinity"></i>
+                            Sin límite de tiempo
+                          </div>
+                          <small style={{ fontSize: '0.75rem', opacity: 0.85 }}>Activa sin horarios específicos</small>
+                        </button>
                       </div>
                     </div>
 
@@ -1548,6 +1960,29 @@ export default function ExamWindowsPage() {
                             )}
                           </div>
                         </div>
+
+                        {formData.fechaInicio && (
+                          <div className="mt-3">
+                            <label className="form-label" style={{ fontWeight: '600', color: 'var(--text-color-2)', marginBottom: '0.4rem', fontSize: '0.9rem' }}>
+                              <i className="fas fa-calendar-day text-primary me-2"></i>
+                              Vista del día
+                            </label>
+                            <div className="modern-card" style={{ height: '220px', padding: '0.5rem' }}>
+                              <Calendar
+                                localizer={localizer}
+                                culture="es"
+                                events={dayPreviewEvents}
+                                startAccessor="start"
+                                endAccessor="end"
+                                date={new Date(formData.fechaInicio)}
+                                view="day"
+                                toolbar={false}
+                                eventPropGetter={dayPreviewEventPropGetter}
+                                style={{ height: '100%' }}
+                              />
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -1672,17 +2107,28 @@ export default function ExamWindowsPage() {
                       />
                     </div>
                   </div>
-                  <div className="modern-card-footer" style={{ 
+                  <div className="modern-card-footer" style={{
                     padding: '1rem 1.5rem',
                     borderTop: '1px solid var(--border-color)',
                     background: '#fafbfc',
                     borderRadius: '0 0 16px 16px',
                     display: 'flex',
                     gap: '0.75rem',
-                    justifyContent: 'flex-end'
+                    justifyContent: 'flex-end',
+                    flexShrink: 0
                   }}>
-                    <button 
-                      type="submit" 
+                    {editingWindow && (
+                      <button
+                        type="button"
+                        className="modern-btn modern-btn-secondary"
+                        onClick={() => navigate(`/exam-windows/${editingWindow.id}/results`)}
+                      >
+                        <i className="fas fa-trophy me-2"></i>
+                        Ver Resultados / Corregir
+                      </button>
+                    )}
+                    <button
+                      type="submit"
                       className="modern-btn modern-btn-primary"
                       style={{ minWidth: '120px' }}
                       disabled={isSavingWindow}
@@ -1715,7 +2161,7 @@ export default function ExamWindowsPage() {
         message={modal.message}
         type={modal.type}
         showCancel={modal.showCancel}
-        confirmText={'Aceptar'}
+        confirmText={modal.confirmText || 'Aceptar'}
         cancelText="Cancelar"
       />
     </div>

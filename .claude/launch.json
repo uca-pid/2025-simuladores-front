@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "front-start",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "examline", "run", "start"],
+      "port": 3000
+    },
+    {
+      "name": "back-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "../2025-simuladores-back/examline", "run", "dev"],
+      "port": 4000
+    }
+  ]
+}

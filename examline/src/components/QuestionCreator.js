@@ -1,23 +1,112 @@
 // src/components/QuestionCreator.jsx
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
+import { uploadQuestionImage } from "../services/api";
 
-const QuestionCreator = ({ onAddQuestion }) => {
-  const [tipoPregunta, setTipoPregunta] = useState("multiple_choice");
-  const [textoPregunta, setTextoPregunta] = useState("");
-  const [opciones, setOpciones] = useState(["", ""]);
-  const [correcta, setCorrecta] = useState(0);
+// `editingQuestion`: si se pasa, el formulario arranca precargado con sus
+// datos y al guardar llama a `onSave` (modo edición) en vez de `onAddQuestion`
+// (modo alta, usado por QuestionBank.js y, antes de esta función, por
+// ExamPartBuilder). `onCancel` solo se usa en modo modal (edición o alta
+// dentro de ExamPartBuilder); QuestionBank.js no lo pasa y no muestra el botón.
+// `variant="card"`: se muestra con el mismo aspecto que la tarjeta de pregunta
+// ya guardada (encabezado con número, tipo y botones), para editar "en el lugar".
+const QuestionCreator = ({ onAddQuestion, onSave, onCancel, editingQuestion, variant, numero }) => {
+  const isCard = variant === 'card';
+  const [tipoPregunta, setTipoPregunta] = useState(editingQuestion?.tipo || "multiple_choice");
+  // Guarda el último tipo "visto" por el efecto de reseteo de abajo, en vez de
+  // un simple flag de "primer render": con ese flag, el doble-invocado de
+  // efectos de React.StrictMode en desarrollo disparaba el reseteo en la
+  // segunda invocación (el flag ya estaba en false) y borraba los datos
+  // precargados en modo edición. Comparando tipos, el efecto es un no-op
+  // mientras el tipo no cambie de verdad, sin importar cuántas veces corra.
+  const prevTipoPregunta = useRef(editingQuestion?.tipo || "multiple_choice");
+  const [dificultad, setDificultad] = useState(editingQuestion?.dificultad || "media");
+  const [puntos, setPuntos] = useState(String(editingQuestion?.puntos ?? 1));
+  const [textoPregunta, setTextoPregunta] = useState(editingQuestion?.texto || "");
+  const [opciones, setOpciones] = useState(() => {
+    if (!editingQuestion) return ["", ""];
+    if (["multiple_choice", "multiple_response", "true_false"].includes(editingQuestion.tipo)) {
+      return editingQuestion.opciones?.length ? editingQuestion.opciones : ["", ""];
+    }
+    return ["", ""];
+  });
+  const [correcta, setCorrecta] = useState(editingQuestion?.correcta ?? 0);
   const [error, setError] = useState("");
-  
-  // Estados adicionales para fill_in_blank
-  const [respuestasCorrectas, setRespuestasCorrectas] = useState([""]);
-  const [distractores, setDistractores] = useState([]);
-  
-  // Estados adicionales para matching
-  const [conceptos, setConceptos] = useState(["", ""]);
-  const [respuestasMatching, setRespuestasMatching] = useState(["", ""]);
 
-  // Efecto para ajustar opciones cuando cambia el tipo de pregunta
+  // Imagen opcional, solo aplica a multiple_choice
+  const [imagenUrl, setImagenUrl] = useState(editingQuestion?.imagenUrl || null);
+  const [isUploadingImagen, setIsUploadingImagen] = useState(false);
+
+  // Imagen opcional por opción (multiple_choice/multiple_response): array
+  // paralelo a `opciones` con la URL de cada una, o null si no tiene.
+  const [imagenesOpciones, setImagenesOpciones] = useState(() => {
+    if (["multiple_choice", "multiple_response"].includes(editingQuestion?.tipo) && Array.isArray(editingQuestion.imagenesOpciones)) {
+      return editingQuestion.imagenesOpciones;
+    }
+    return [];
+  });
+  const [uploadingOpcion, setUploadingOpcion] = useState(null); // índice de la opción cuya imagen se está subiendo
+
+  // Estados adicionales para fill_in_blank
+  const [respuestasCorrectas, setRespuestasCorrectas] = useState(() => {
+    if (editingQuestion?.tipo === "fill_in_blank") {
+      return editingQuestion.opciones.slice(0, editingQuestion.correcta || 0);
+    }
+    return [""];
+  });
+  const [distractores, setDistractores] = useState(() => {
+    if (editingQuestion?.tipo === "fill_in_blank") {
+      return editingQuestion.opciones.slice(editingQuestion.correcta || 0);
+    }
+    return [];
+  });
+
+  // Estados adicionales para matching
+  const [conceptos, setConceptos] = useState(() => {
+    if (editingQuestion?.tipo === "matching") {
+      return editingQuestion.opciones.slice(0, editingQuestion.correcta || 0);
+    }
+    return ["", ""];
+  });
+  const [respuestasMatching, setRespuestasMatching] = useState(() => {
+    if (editingQuestion?.tipo === "matching") {
+      return editingQuestion.opciones.slice(editingQuestion.correcta || 0);
+    }
+    return ["", ""];
+  });
+
+  // Estados adicionales para short_answer (respuesta corta auto-corregible)
+  const [respuestasAceptadas, setRespuestasAceptadas] = useState(() => {
+    if (editingQuestion?.tipo === "short_answer" && editingQuestion.opciones?.length) {
+      return editingQuestion.opciones;
+    }
+    return [""];
+  });
+
+  // Estados adicionales para numeric (numérica con tolerancia)
+  const [valorNumericoCorrecto, setValorNumericoCorrecto] = useState(
+    editingQuestion?.tipo === "numeric" ? (editingQuestion.opciones?.[0] || "") : ""
+  );
+  const [toleranciaNumerica, setToleranciaNumerica] = useState(
+    editingQuestion?.tipo === "numeric" ? (editingQuestion.opciones?.[1] || "0") : "0"
+  );
+
+  // Estado adicional para multiple_response (selección múltiple / checkbox):
+  // reutiliza `opciones` (mismo editor de lista que multiple_choice), pero la
+  // respuesta correcta es un conjunto de índices en vez de uno solo.
+  const [correctasSeleccionadas, setCorrectasSeleccionadas] = useState(
+    editingQuestion?.tipo === "multiple_response" ? (editingQuestion.correctas || []) : []
+  );
+
+  // Efecto para ajustar opciones cuando cambia el tipo de pregunta. Es un
+  // no-op si el tipo no cambió de verdad (cubre tanto el mount inicial como
+  // el doble-invocado de StrictMode en desarrollo), para no pisar los valores
+  // precargados en modo edición.
   React.useEffect(() => {
+    if (prevTipoPregunta.current === tipoPregunta) {
+      return;
+    }
+    prevTipoPregunta.current = tipoPregunta;
+    setImagenesOpciones([]);
     if (tipoPregunta === "true_false") {
       setOpciones(["Verdadero", "Falso"]);
       setCorrecta(0);
@@ -29,6 +118,14 @@ const QuestionCreator = ({ onAddQuestion }) => {
       setConceptos(["", ""]);
       setRespuestasMatching(["", ""]);
       setCorrecta(0);
+    } else if (tipoPregunta === "short_answer") {
+      setRespuestasAceptadas([""]);
+    } else if (tipoPregunta === "numeric") {
+      setValorNumericoCorrecto("");
+      setToleranciaNumerica("0");
+    } else if (tipoPregunta === "multiple_response") {
+      setOpciones(["", ""]);
+      setCorrectasSeleccionadas([]);
     } else if (tipoPregunta === "multiple_choice" && opciones.length === 2 && opciones[0] === "Verdadero" && opciones[1] === "Falso") {
       // Si volvemos de true_false a multiple_choice, resetear opciones
       setOpciones(["", ""]);
@@ -36,6 +133,19 @@ const QuestionCreator = ({ onAddQuestion }) => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tipoPregunta]);
+
+  // Funciones para respuestas aceptadas de short_answer
+  const handleAgregarRespuestaAceptada = () => {
+    if (respuestasAceptadas.length < 10) {
+      setRespuestasAceptadas([...respuestasAceptadas, ""]);
+    }
+  };
+
+  const handleEliminarRespuestaAceptada = (index) => {
+    if (respuestasAceptadas.length > 1) {
+      setRespuestasAceptadas(respuestasAceptadas.filter((_, i) => i !== index));
+    }
+  };
 
   // Agregar opción nueva
   const handleAgregarOpcion = () => {
@@ -49,10 +159,17 @@ const QuestionCreator = ({ onAddQuestion }) => {
     if (opciones.length > 2) { // Mínimo 2 opciones
       const nuevasOpciones = opciones.filter((_, i) => i !== index);
       setOpciones(nuevasOpciones);
+      setImagenesOpciones(prev => prev.filter((_, i) => i !== index));
       // Ajustar la respuesta correcta si es necesario
       if (correcta >= nuevasOpciones.length) {
         setCorrecta(nuevasOpciones.length - 1);
       }
+      // Re-mapear índices de selección múltiple (quitar el eliminado y correr los siguientes)
+      setCorrectasSeleccionadas(prev =>
+        prev
+          .filter(i => i !== index)
+          .map(i => (i > index ? i - 1 : i))
+      );
     }
   };
   
@@ -85,23 +202,91 @@ const QuestionCreator = ({ onAddQuestion }) => {
     setTextoPregunta(textoPregunta + "—");
   };
 
+  const handleImagenChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingImagen(true);
+    try {
+      const { url } = await uploadQuestionImage(file);
+      setImagenUrl(url);
+    } catch (err) {
+      console.error(err);
+      setError(err.message || "No se pudo subir la imagen");
+    } finally {
+      setIsUploadingImagen(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleQuitarImagen = () => {
+    setImagenUrl(null);
+  };
+
+  const handleImagenOpcionChange = async (index, e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingOpcion(index);
+    try {
+      const { url } = await uploadQuestionImage(file);
+      setImagenesOpciones(prev => {
+        const nuevas = [...prev];
+        nuevas[index] = url;
+        return nuevas;
+      });
+    } catch (err) {
+      console.error(err);
+      setError(err.message || "No se pudo subir la imagen");
+    } finally {
+      setUploadingOpcion(null);
+      e.target.value = '';
+    }
+  };
+
+  const handleQuitarImagenOpcion = (index) => {
+    setImagenesOpciones(prev => {
+      const nuevas = [...prev];
+      nuevas[index] = null;
+      return nuevas;
+    });
+  };
+
   // Agregar pregunta al listado
   const handleAgregarPregunta = () => {
     if (!textoPregunta.trim()) {
       setError("Ingrese el texto de la pregunta");
       return;
     }
-    
-    if (tipoPregunta === "multiple_choice") {
+
+    if (puntos.trim() === "" || isNaN(Number(puntos)) || Number(puntos) <= 0) {
+      setError("El puntaje debe ser un número mayor a 0");
+      return;
+    }
+
+    if (tipoPregunta === "multiple_choice" || tipoPregunta === "multiple_response") {
       if (opciones.length < 2) {
         setError("La pregunta debe tener al menos 2 opciones");
         return;
       }
-      
-      if (opciones.some(o => !o.trim())) {
-        setError("Complete todas las opciones antes de agregar la pregunta");
+
+      if (opciones.some((o, i) => !o.trim() && !imagenesOpciones[i])) {
+        setError("Cada opción necesita un texto o una imagen");
         return;
       }
+
+      // Las opciones que son solo imagen no cuentan para detectar duplicados
+      const opcionesNormalizadas = opciones.map(o => o.trim().toLowerCase()).filter(o => o);
+      const hayDuplicados = opcionesNormalizadas.some((o, i) => opcionesNormalizadas.indexOf(o) !== i);
+      if (hayDuplicados) {
+        setError("No se permiten opciones duplicadas (ignorando mayúsculas/minúsculas y espacios).");
+        return;
+      }
+    }
+
+    if (tipoPregunta === "multiple_response" && correctasSeleccionadas.length === 0) {
+      setError("Marque al menos una opción como correcta");
+      return;
     }
     
     if (tipoPregunta === "fill_in_blank") {
@@ -137,14 +322,43 @@ const QuestionCreator = ({ onAddQuestion }) => {
       }
     }
 
+    if (tipoPregunta === "short_answer") {
+      if (respuestasAceptadas.every(r => !r.trim())) {
+        setError("Ingrese al menos una respuesta aceptada");
+        return;
+      }
+
+      const respuestasNoVacias = respuestasAceptadas.filter(r => r.trim()).map(r => r.trim().toLowerCase());
+      const hayDuplicados = respuestasNoVacias.some((r, i) => respuestasNoVacias.indexOf(r) !== i);
+      if (hayDuplicados) {
+        setError("No se permiten respuestas aceptadas duplicadas (ignorando mayúsculas/minúsculas y espacios).");
+        return;
+      }
+    }
+
+    if (tipoPregunta === "numeric") {
+      if (valorNumericoCorrecto.trim() === "" || isNaN(Number(valorNumericoCorrecto))) {
+        setError("Ingrese el valor numérico correcto");
+        return;
+      }
+      if (toleranciaNumerica.trim() !== "" && isNaN(Number(toleranciaNumerica))) {
+        setError("La tolerancia debe ser un número");
+        return;
+      }
+    }
+
     // Preparar datos según el tipo de pregunta
     let preguntaData = {
       tipo: tipoPregunta,
+      dificultad,
+      puntos: Number(puntos),
       texto: textoPregunta,
       opciones: [],
-      correcta: correcta
+      correcta: correcta,
+      imagenUrl: imagenUrl || null,
+      imagenesOpciones: null
     };
-    
+
     if (tipoPregunta === "fill_in_blank") {
       // Combinar respuestas correctas y distractores
       // Las primeras N opciones son las correctas en orden
@@ -155,38 +369,108 @@ const QuestionCreator = ({ onAddQuestion }) => {
       // Primera mitad: conceptos, segunda mitad: respuestas
       preguntaData.opciones = [...conceptos, ...respuestasMatching];
       preguntaData.correcta = conceptos.length; // Indica cuántos son conceptos (el resto son respuestas)
+    } else if (tipoPregunta === "short_answer") {
+      preguntaData.opciones = respuestasAceptadas.filter(r => r.trim());
+      preguntaData.correcta = null;
+    } else if (tipoPregunta === "numeric") {
+      preguntaData.opciones = [valorNumericoCorrecto.trim(), toleranciaNumerica.trim() || "0"];
+      preguntaData.correcta = null;
+    } else if (tipoPregunta === "essay" || tipoPregunta === "file_upload") {
+      preguntaData.opciones = [];
+      preguntaData.correcta = null;
+    } else if (tipoPregunta === "multiple_response") {
+      preguntaData.opciones = [...opciones];
+      preguntaData.correcta = null;
+      preguntaData.correctas = [...correctasSeleccionadas].sort((a, b) => a - b);
     } else {
       preguntaData.opciones = [...opciones];
       preguntaData.correcta = correcta;
     }
-    
-    // Llamar al callback del padre con la nueva pregunta
+
+    if (tipoPregunta === "multiple_choice" || tipoPregunta === "multiple_response") {
+      const imagenes = opciones.map((_, i) => imagenesOpciones[i] || null);
+      preguntaData.imagenesOpciones = imagenes.some(Boolean) ? imagenes : null;
+    }
+
+    // En modo edición/modal (ExamPartBuilder) avisamos con onSave y listo: el
+    // modal se cierra y este componente se desmonta. En modo alta clásico
+    // (QuestionBank.js) seguimos usando onAddQuestion y limpiando el formulario
+    // para poder cargar la siguiente pregunta sin cerrar nada.
+    if (onSave) {
+      onSave(preguntaData);
+      return;
+    }
+
     onAddQuestion(preguntaData);
 
     // Limpiar inputs
     setTextoPregunta("");
     if (tipoPregunta === "multiple_choice") {
       setOpciones(["", ""]);
+    } else if (tipoPregunta === "multiple_response") {
+      setOpciones(["", ""]);
+      setCorrectasSeleccionadas([]);
     } else if (tipoPregunta === "fill_in_blank") {
       setRespuestasCorrectas([""]);
       setDistractores([]);
     } else if (tipoPregunta === "matching") {
       setConceptos(["", ""]);
       setRespuestasMatching(["", ""]);
+    } else if (tipoPregunta === "short_answer") {
+      setRespuestasAceptadas([""]);
+    } else if (tipoPregunta === "numeric") {
+      setValorNumericoCorrecto("");
+      setToleranciaNumerica("0");
     }
     setCorrecta(0);
+    setImagenUrl(null);
+    setImagenesOpciones([]);
+    setPuntos("1");
     setError("");
   };
 
   return (
-    <div className="modern-card mb-4">
-      <div className="modern-card-header">
-        <h3 className="modern-card-title">
-          <i className="fas fa-question-circle me-2"></i>
-          Agregar Pregunta
-        </h3>
-      </div>
-      <div className="modern-card-body">
+    <div className={isCard ? 'exam-card mb-3' : 'modern-card mb-4'}>
+      {isCard ? (
+        <div className="exam-card-header" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: '0.5rem' }}>
+          <div className="d-flex align-items-center flex-wrap gap-2">
+            <h5 className="exam-title mb-0">
+              <span className="question-number">{numero ? `Pregunta ${numero}` : 'Nueva pregunta'}</span>
+            </h5>
+            <select
+              className="form-select form-select-sm"
+              style={{ width: 'auto', maxWidth: '260px' }}
+              value={tipoPregunta}
+              onChange={(e) => setTipoPregunta(e.target.value)}
+              title="Cambiar el tipo de pregunta"
+            >
+              <optgroup label="Corrección automática — selección">
+                <option value="multiple_choice">Múltiple (una correcta)</option>
+                <option value="multiple_response">Múltiple (varias correctas)</option>
+                <option value="true_false">Verdadero / Falso</option>
+                <option value="matching">Emparejar</option>
+              </optgroup>
+              <optgroup label="Corrección automática — texto/número">
+                <option value="fill_in_blank">Completar espacios</option>
+                <option value="short_answer">Respuesta corta</option>
+                <option value="numeric">Numérica</option>
+              </optgroup>
+              <optgroup label="Corrección manual">
+                <option value="essay">Desarrollo / Ensayo</option>
+                <option value="file_upload">Adjuntar archivo</option>
+              </optgroup>
+            </select>
+          </div>
+        </div>
+      ) : (
+        <div className="modern-card-header">
+          <h3 className="modern-card-title">
+            <i className="fas fa-question-circle me-2"></i>
+            {editingQuestion ? 'Editar Pregunta' : 'Agregar Pregunta'}
+          </h3>
+        </div>
+      )}
+      <div className={isCard ? 'exam-card-body' : 'modern-card-body'}>
         {error && (
           <div className="error-message mb-3">
             <i className="fas fa-exclamation-triangle"></i>
@@ -194,34 +478,82 @@ const QuestionCreator = ({ onAddQuestion }) => {
           </div>
         )}
 
-        <div className="mb-4">
-          <label className="form-label d-flex align-items-center gap-2">
-            <i className="fas fa-clipboard-list text-muted"></i>
-            Tipo de pregunta
-          </label>
-          <select
-            className="form-select"
-            value={tipoPregunta}
-            onChange={(e) => setTipoPregunta(e.target.value)}
-            style={{
-              padding: '0.75rem 1rem',
-              border: '1px solid var(--border-color)',
-              borderRadius: '8px',
-              fontSize: '1rem'
-            }}
-          >
-            <option value="multiple_choice">Opción Múltiple</option>
-            <option value="true_false">Verdadero / Falso</option>
-            <option value="fill_in_blank">Completar Espacios</option>
-            <option value="matching">Unir con Flechas (Matching)</option>
-          </select>
+        {!isCard && (
+        <div className="row g-3 mb-4">
+          <div className={onSave ? "col-md-12" : "col-md-6"}>
+            <label className="form-label d-flex align-items-center gap-2">
+              <i className="fas fa-clipboard-list text-muted"></i>
+              Tipo de pregunta
+            </label>
+            <select
+              className="form-select"
+              value={tipoPregunta}
+              onChange={(e) => setTipoPregunta(e.target.value)}
+              style={{
+                padding: '0.75rem 1rem',
+                border: '1px solid var(--border-color)',
+                borderRadius: '8px',
+                fontSize: '1rem',
+                textOverflow: 'ellipsis',
+                overflow: 'hidden',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              <optgroup label="Corrección automática — selección">
+                <option value="multiple_choice">Multiple Choice (una respuesta correcta)</option>
+                <option value="multiple_response">Multiple Choice (varias respuestas correctas)</option>
+                <option value="true_false">Verdadero / Falso</option>
+                <option value="matching">Emparejar / Unir Conceptos</option>
+              </optgroup>
+              <optgroup label="Corrección automática — texto/número">
+                <option value="fill_in_blank">Completar Espacios</option>
+                <option value="short_answer">Respuesta Corta</option>
+                <option value="numeric">Numérica (con tolerancia)</option>
+              </optgroup>
+              <optgroup label="Corrección manual (la corregís vos)">
+                <option value="essay">Desarrollo / Ensayo</option>
+                <option value="file_upload">Adjuntar Archivo</option>
+              </optgroup>
+            </select>
+          </div>
+
+          {!onSave && (
+            <div className="col-md-6">
+              <label className="form-label d-flex align-items-center gap-2">
+                <i className="fas fa-signal text-muted"></i>
+                Dificultad
+              </label>
+              <select
+                className="form-select"
+                value={dificultad}
+                onChange={(e) => setDificultad(e.target.value)}
+                style={{
+                  padding: '0.75rem 1rem',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '8px',
+                  fontSize: '1rem'
+                }}
+              >
+                <option value="facil">Fácil</option>
+                <option value="media">Media</option>
+                <option value="dificil">Difícil</option>
+              </select>
+              <small className="form-text text-muted mt-1 d-block">
+                <i className="fas fa-info-circle me-1"></i>
+                Se usa para el pool balanceado (opcional).
+              </small>
+            </div>
+          )}
         </div>
+        )}
 
         <div className="mb-4">
+          {!isCard && (
           <label className="form-label d-flex align-items-center gap-2">
             <i className="fas fa-comment-alt text-muted"></i>
             Texto de la pregunta
           </label>
+          )}
           <div className="d-flex gap-2">
             <input
               type="text"
@@ -239,7 +571,7 @@ const QuestionCreator = ({ onAddQuestion }) => {
             {tipoPregunta === "fill_in_blank" && (
               <button
                 type="button"
-                className="btn btn-outline-primary"
+                className="modern-btn modern-btn-secondary"
                 onClick={handleInsertarGuion}
                 title="Insertar espacio en blanco"
                 style={{ minWidth: '120px' }}
@@ -257,40 +589,150 @@ const QuestionCreator = ({ onAddQuestion }) => {
           )}
         </div>
 
-        {tipoPregunta === "multiple_choice" && (
-          <>
-            <div className="mb-4">
+        <div className="mb-4">
+          <label className="form-label d-flex align-items-center gap-2">
+            <i className="fas fa-image text-muted"></i>
+            Imagen (Opcional)
+          </label>
+          <input
+            type="file"
+            className="form-control"
+            accept="image/*"
+            onChange={handleImagenChange}
+            disabled={isUploadingImagen}
+            style={{
+              padding: '0.75rem 1rem',
+              border: '1px solid var(--border-color)',
+              borderRadius: '8px',
+              fontSize: '1rem'
+            }}
+          />
+          {isUploadingImagen && (
+            <small className="text-muted d-block mt-2">
+              <i className="fas fa-spinner fa-spin me-1"></i>
+              Subiendo imagen...
+            </small>
+          )}
+          {!isUploadingImagen && imagenUrl && (
+            <div className="mt-2">
+              <img
+                src={imagenUrl}
+                alt="Vista previa"
+                style={{ maxHeight: '120px', borderRadius: '6px', border: '1px solid var(--border-color)', display: 'block', marginBottom: '0.5rem' }}
+              />
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-danger"
+                onClick={handleQuitarImagen}
+              >
+                <i className="fas fa-times me-1"></i>
+                Quitar imagen
+              </button>
+            </div>
+          )}
+        </div>
+
+        {(tipoPregunta === "multiple_choice" || tipoPregunta === "multiple_response") && (
+          <div className="mb-4">
               <label className="form-label d-flex align-items-center gap-2">
                 <i className="fas fa-list text-muted"></i>
                 Opciones de respuesta (mínimo 2, máximo 10)
               </label>
+              <small className="form-text text-muted d-block mb-2">
+                {tipoPregunta === "multiple_choice"
+                  ? "Marcá el círculo de la opción correcta."
+                  : "Marcá el check de todas las opciones correctas."}
+              </small>
               <div className="exam-creator-options-list">
                 {opciones.map((op, i) => (
-                  <div key={i} className="exam-creator-option-item mb-2 d-flex gap-2">
-                    <input
-                      type="text"
-                      className="form-control"
-                      placeholder={`Opción ${i + 1}`}
-                      value={op}
-                      onChange={(e) => {
-                        const nuevasOpciones = [...opciones];
-                        nuevasOpciones[i] = e.target.value;
-                        setOpciones(nuevasOpciones);
-                      }}
-                      style={{
-                        padding: '0.6rem 0.8rem',
-                        border: '1px solid var(--border-color)',
-                        borderRadius: '6px',
-                        fontSize: '0.9rem'
-                      }}
-                    />
+                  <div key={i} className="exam-creator-option-item mb-2 d-flex align-items-start gap-2">
+                    {tipoPregunta === "multiple_choice" ? (
+                      <input
+                        type="radio"
+                        className="flex-shrink-0"
+                        name="opcion-correcta"
+                        checked={correcta === i}
+                        onChange={() => setCorrecta(i)}
+                        title="Marcar como respuesta correcta"
+                        style={{ width: '1.15rem', height: '1.15rem', accentColor: 'var(--primary-color)', cursor: 'pointer', marginTop: '0.7rem' }}
+                      />
+                    ) : (
+                      <input
+                        type="checkbox"
+                        className="flex-shrink-0"
+                        checked={correctasSeleccionadas.includes(i)}
+                        onChange={(e) => {
+                          setCorrectasSeleccionadas(prev =>
+                            e.target.checked ? [...prev, i] : prev.filter(idx => idx !== i)
+                          );
+                        }}
+                        title="Marcar como respuesta correcta"
+                        style={{ width: '1.15rem', height: '1.15rem', accentColor: 'var(--primary-color)', cursor: 'pointer', marginTop: '0.7rem' }}
+                      />
+                    )}
+                    <div className="flex-grow-1">
+                      <input
+                        type="text"
+                        className="form-control"
+                        placeholder={imagenesOpciones[i] ? `Opción ${i + 1} (texto opcional)` : `Opción ${i + 1}`}
+                        value={op}
+                        onChange={(e) => {
+                          const nuevasOpciones = [...opciones];
+                          nuevasOpciones[i] = e.target.value;
+                          setOpciones(nuevasOpciones);
+                        }}
+                        style={{
+                          padding: '0.6rem 0.8rem',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '6px',
+                          fontSize: '0.9rem'
+                        }}
+                      />
+                      {uploadingOpcion === i && (
+                        <small className="text-muted d-block mt-1">
+                          <i className="fas fa-spinner fa-spin me-1"></i>
+                          Subiendo imagen...
+                        </small>
+                      )}
+                      {uploadingOpcion !== i && imagenesOpciones[i] && (
+                        <div className="d-flex align-items-start gap-2 mt-2">
+                          <img
+                            src={imagenesOpciones[i]}
+                            alt={`Imagen de la opción ${i + 1}`}
+                            style={{ maxHeight: '90px', maxWidth: '200px', borderRadius: '6px', border: '1px solid var(--border-color)' }}
+                          />
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-outline-danger"
+                            onClick={() => handleQuitarImagenOpcion(i)}
+                            title="Quitar imagen de la opción"
+                          >
+                            <i className="fas fa-times"></i>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <label
+                      className="btn btn-outline-secondary btn-sm mb-0 align-self-start"
+                      title={imagenesOpciones[i] ? "Cambiar imagen de la opción" : "Agregar imagen a la opción"}
+                      style={{ minWidth: '40px', cursor: uploadingOpcion !== null ? 'not-allowed' : 'pointer', marginTop: '0.25rem' }}
+                    >
+                      <i className="fas fa-image"></i>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        hidden
+                        disabled={uploadingOpcion !== null}
+                        onChange={(e) => handleImagenOpcionChange(i, e)}
+                      />
+                    </label>
                     {opciones.length > 2 && (
                       <button
                         type="button"
                         className="btn btn-outline-danger btn-sm"
                         onClick={() => handleEliminarOpcion(i)}
                         title="Eliminar opción"
-                        style={{ minWidth: '40px' }}
+                        style={{ minWidth: '40px', marginTop: '0.25rem' }}
                       >
                         <i className="fas fa-trash"></i>
                       </button>
@@ -301,25 +743,100 @@ const QuestionCreator = ({ onAddQuestion }) => {
               {opciones.length < 10 && (
                 <button
                   type="button"
-                  className="btn btn-outline-primary btn-sm mt-2"
+                  className="btn btn-sm mt-2"
                   onClick={handleAgregarOpcion}
+                  style={{ borderColor: 'var(--primary-color)', color: 'var(--primary-color)' }}
                 >
                   <i className="fas fa-plus me-2"></i>
                   Agregar opción
                 </button>
               )}
-            </div>
-          </>
+          </div>
         )}
 
-        {tipoPregunta === "true_false" && (
+        {tipoPregunta === "short_answer" && (
           <div className="mb-4">
-            <div className="alert alert-info">
-              <i className="fas fa-info-circle me-2"></i>
-              Las opciones para preguntas de Verdadero/Falso están predefinidas.
+            <label className="form-label d-flex align-items-center gap-2">
+              <i className="fas fa-check-circle text-success me-2"></i>
+              Respuestas aceptadas
+            </label>
+            <div className="exam-creator-options-list">
+              {respuestasAceptadas.map((respuesta, i) => (
+                <div key={i} className="exam-creator-option-item mb-2 d-flex gap-2">
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder={`Respuesta aceptada ${i + 1}`}
+                    value={respuesta}
+                    onChange={(e) => {
+                      const nuevas = [...respuestasAceptadas];
+                      nuevas[i] = e.target.value;
+                      setRespuestasAceptadas(nuevas);
+                    }}
+                    style={{ padding: '0.6rem 0.8rem', border: '1px solid var(--border-color)', borderRadius: '6px', fontSize: '0.9rem' }}
+                  />
+                  {respuestasAceptadas.length > 1 && (
+                    <button
+                      type="button"
+                      className="btn btn-outline-danger btn-sm"
+                      onClick={() => handleEliminarRespuestaAceptada(i)}
+                      title="Eliminar respuesta"
+                      style={{ minWidth: '40px' }}
+                    >
+                      <i className="fas fa-trash"></i>
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            {respuestasAceptadas.length < 10 && (
+              <button
+                type="button"
+                className="btn btn-outline-success btn-sm mt-2"
+                onClick={handleAgregarRespuestaAceptada}
+              >
+                <i className="fas fa-plus me-2"></i>
+                Agregar respuesta aceptada
+              </button>
+            )}
+          </div>
+        )}
+
+        {tipoPregunta === "numeric" && (
+          <div className="mb-4">
+            <div className="row g-3">
+              <div className="col-md-6">
+                <label className="form-label d-flex align-items-center gap-2">
+                  <i className="fas fa-check-circle text-success me-2"></i>
+                  Valor correcto
+                </label>
+                <input
+                  type="number"
+                  className="form-control"
+                  placeholder="Ej: 4.5"
+                  value={valorNumericoCorrecto}
+                  onChange={(e) => setValorNumericoCorrecto(e.target.value)}
+                  style={{ padding: '0.75rem 1rem', border: '1px solid var(--border-color)', borderRadius: '8px', fontSize: '1rem' }}
+                />
+              </div>
+              <div className="col-md-6">
+                <label className="form-label d-flex align-items-center gap-2">
+                  <i className="fas fa-arrows-alt-h text-muted me-2"></i>
+                  Tolerancia (±)
+                </label>
+                <input
+                  type="number"
+                  className="form-control"
+                  placeholder="Ej: 0.1 (0 = exacto)"
+                  value={toleranciaNumerica}
+                  onChange={(e) => setToleranciaNumerica(e.target.value)}
+                  style={{ padding: '0.75rem 1rem', border: '1px solid var(--border-color)', borderRadius: '8px', fontSize: '1rem' }}
+                />
+              </div>
             </div>
           </div>
         )}
+
 
         {tipoPregunta === "fill_in_blank" && (
           <>
@@ -523,10 +1040,7 @@ const QuestionCreator = ({ onAddQuestion }) => {
             <div className="mb-3">
               <div className="alert alert-info">
                 <i className="fas fa-info-circle me-2"></i>
-                <strong>Instrucciones:</strong> Agrega los conceptos en la columna izquierda y sus respuestas correspondientes en la columna derecha.
-                Los estudiantes deberán unir cada concepto con su respuesta correcta.
-                <br/>
-                <small>Ejemplo: Concepto "Francia" → Respuesta "París"</small>
+                Cargá cada concepto junto a su respuesta correcta (ej: "Francia" → "París").
               </div>
             </div>
             
@@ -534,15 +1048,17 @@ const QuestionCreator = ({ onAddQuestion }) => {
               {/* Columna de Conceptos */}
               <div className="col-md-6">
                 <label className="form-label d-flex align-items-center gap-2">
-                  <i className="fas fa-list-ul text-primary me-2"></i>
+                  <i className="fas fa-list-ul me-2" style={{ color: 'var(--primary-color)' }}></i>
                   Conceptos / Preguntas (Columna Izquierda)
                 </label>
                 <div className="exam-creator-options-list">
                   {conceptos.map((concepto, i) => (
                     <div key={i} className="exam-creator-option-item mb-2 d-flex gap-2 align-items-center">
-                      <span 
-                        className="badge bg-primary"
+                      <span
+                        className="badge"
                         style={{
+                          backgroundColor: 'var(--primary-color)',
+                          color: 'white',
                           minWidth: '35px',
                           height: '35px',
                           display: 'flex',
@@ -681,38 +1197,10 @@ const QuestionCreator = ({ onAddQuestion }) => {
                 </div>
               </div>
             </div>
-            
-            {/* Vista previa del matching */}
-            <div className="alert alert-secondary">
-              <strong><i className="fas fa-eye me-2"></i>Vista previa de los pares correctos:</strong>
-              <div className="mt-2">
-                {conceptos.map((concepto, i) => {
-                  const respuesta = respuestasMatching[i];
-                  if (!concepto.trim() || !respuesta.trim()) return null;
-                  
-                  return (
-                    <div key={i} className="mb-2 d-flex align-items-center gap-2">
-                      <span className="badge bg-primary" style={{ fontSize: '0.85rem', minWidth: '30px' }}>
-                        {i + 1}
-                      </span>
-                      <span style={{ fontSize: '0.9rem' }}>{concepto}</span>
-                      <i className="fas fa-arrow-right text-primary mx-1"></i>
-                      <span className="badge bg-success" style={{ fontSize: '0.85rem', minWidth: '30px' }}>
-                        {String.fromCharCode(65 + i)}
-                      </span>
-                      <span style={{ fontSize: '0.9rem' }}>{respuesta}</span>
-                    </div>
-                  );
-                })}
-                {conceptos.filter(c => c.trim()).length === 0 && (
-                  <small className="text-muted">Complete los campos para ver la vista previa</small>
-                )}
-              </div>
-            </div>
           </>
         )}
 
-        {tipoPregunta !== "fill_in_blank" && tipoPregunta !== "matching" && (
+        {tipoPregunta === "true_false" && (
           <div className="mb-4">
             <label className="form-label d-flex align-items-center gap-2">
               <i className="fas fa-check-circle text-muted"></i>
@@ -731,7 +1219,7 @@ const QuestionCreator = ({ onAddQuestion }) => {
             >
               {opciones.map((opcion, i) => (
                 <option key={i} value={i}>
-                  {tipoPregunta === "true_false" ? opcion : `Opción ${i + 1}`}
+                  {opcion}
                 </option>
               ))}
             </select>
@@ -739,12 +1227,23 @@ const QuestionCreator = ({ onAddQuestion }) => {
         )}
 
         <div className="exam-creator-buttons">
-          <button 
-            className="modern-btn modern-btn-secondary"
+          {onCancel && (
+            <button
+              className="modern-btn modern-btn-secondary"
+              onClick={onCancel}
+              type="button"
+            >
+              <i className="fas fa-times me-2"></i>
+              <span className="button-text">Cancelar</span>
+            </button>
+          )}
+          <button
+            className="modern-btn modern-btn-primary"
             onClick={handleAgregarPregunta}
+            type="button"
           >
-            <i className="fas fa-plus me-2"></i>
-            <span className="button-text">Agregar Pregunta</span>
+            <i className={`fas ${editingQuestion ? 'fa-save' : 'fa-plus'} me-2`}></i>
+            <span className="button-text">{editingQuestion ? 'Guardar Cambios' : 'Agregar Pregunta'}</span>
           </button>
         </div>
       </div>

@@ -1,5 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 
+// URL de salida por defecto de las ventanas (sebQuitUrl). SEB se cierra al
+// navegar a la quitURL de su configuración, así que tiene que ser la misma.
+const DEFAULT_QUIT_URL = 'https://ferocarcineto.com.ar/';
+
 /**
  * Hook personalizado para gestionar Safe Exam Browser (SEB)
  * Centraliza la lógica de detección y cierre de SEB
@@ -29,10 +33,10 @@ export const useSEB = () => {
    * Cierra SEB redireccionando a una URL específica
    * Esta es la forma estándar de "cerrar" SEB después de un examen
    * Primero intenta usar la API nativa de SEB si está disponible
-   * @param {string} redirectUrl - URL a la que redireccionar (default: ferrocarriloeste.com.ar)
+   * @param {string} redirectUrl - URL de salida de SEB (default: la de las ventanas)
    * @returns {Promise<boolean>} true si logró cerrar/redireccionar, false si fue cancelado
    */
-  const closeSEB = useCallback(async (redirectUrl = 'https://ferrocarriloeste.com.ar/') => {
+  const closeSEB = useCallback(async (redirectUrl = DEFAULT_QUIT_URL) => {
     try {
       console.log('Intentando cerrar SEB y redireccionar a:', redirectUrl);
       
@@ -54,9 +58,10 @@ export const useSEB = () => {
   /**
    * Intenta cerrar SEB con una confirmación y retorna si tuvo éxito
    * Usa un timeout para detectar si el usuario canceló el cierre
+   * @param {string} redirectUrl - URL de salida de SEB (default: la de las ventanas)
    * @returns {Promise<boolean>} true si el usuario confirmó y se cerró, false si canceló
    */
-  const tryCloseSEB = useCallback(async () => {
+  const tryCloseSEB = useCallback(async (redirectUrl = DEFAULT_QUIT_URL) => {
     try {
       console.log('Intentando cerrar SEB...');
       
@@ -73,7 +78,7 @@ export const useSEB = () => {
       } else {
         console.log('No hay API de SEB, intentando cerrar por URL...');
         // Si no hay API, intentar cerrar por URL de quit
-        window.location.href = 'https://ferocarcineto.com.ar/';
+        window.location.href = redirectUrl;
         return true;
       }
     } catch (error) {

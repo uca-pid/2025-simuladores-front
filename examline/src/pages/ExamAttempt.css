@@ -22,7 +22,7 @@
 .exam-attempt-questions-grid {
   display: grid;
   gap: 1.5rem;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  grid-template-columns: 1fr;
 }
 
 .exam-attempt-question-card {
@@ -83,7 +83,7 @@
 /* ExamAttempt Mobile Styles */
 @media (max-width: 991px) and (min-width: 769px) {
   .exam-attempt-questions-grid {
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    grid-template-columns: 1fr;
     gap: 1.25rem;
   }
 }

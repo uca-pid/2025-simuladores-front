@@ -4,6 +4,8 @@ import { ProfessorRoute, StudentRoute, AuthenticatedRoute } from "./components/P
 import ScrollToTop from "./components/ScrollToTop";
 import Login from "./pages/Login";
 import Registro from "./pages/Registro";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Principal from "./pages/Principal";
 import MisExamenes from "./pages/MisExamenes";
 import ExamCreator from "./pages/ExamCreator";
@@ -12,15 +14,16 @@ import UserSettingsPage from "./pages/userSettings";
 import StudentExamPage from "./pages/StudentExamPage";
 import StudentProgress from "./pages/StudentProgress";
 import ExamAttempt from "./pages/ExamAttempt";
-import ExamResults from "./pages/ExamResults";
 import ProgrammingExamView from "./pages/ProgrammingExamView";
 import ExamWindows from "./pages/ExamWindows";
 import StudentInscriptions from "./pages/StudentInscriptions";
-import ExamWindowResults from "./pages/ExamWindowResults";
+import GradingPage from "./pages/GradingPage";
 import SEBExamLauncher from "./pages/SEBExamLauncher";
 import QuestionBank from "./pages/QuestionBank";
 import WindowInscriptions from "./pages/WindowInscriptions";
+import ExamPreview from "./pages/ExamPreview";
 import "./styles/base.css";
+import { GAMIFICATION_ENABLED } from "./config/features";
 
 
 // Wrapper para login/registro: redirige si ya está logueado
@@ -51,6 +54,16 @@ function App() {
               <Registro />
             </AuthRedirect>
           } />
+          <Route path="/forgot-password" element={
+            <AuthRedirect>
+              <ForgotPassword />
+            </AuthRedirect>
+          } />
+          <Route path="/reset-password/:token" element={
+            <AuthRedirect>
+              <ResetPassword />
+            </AuthRedirect>
+          } />
 
           <Route path="/principal" element={
             <ProfessorRoute>
@@ -77,16 +90,20 @@ function App() {
               <StudentExamPage />
             </StudentRoute>
           } />
+          {GAMIFICATION_ENABLED && (
           <Route path="/student-progress" element={
             <StudentRoute>
               <StudentProgress />
             </StudentRoute>
           } />
+          )}
           <Route path="/seb-exam-launcher" element={
             <StudentRoute>
               <SEBExamLauncher />
             </StudentRoute>
           } />
+          {/* Vista previa dentro de SEB: se autoriza con el token corto del .seb de prueba, sin sesión */}
+          <Route path="/exam-preview/:examId" element={<ExamPreview />} />
           <Route path="/exam-attempt/:examId" element={
             
               <ExamAttempt />
@@ -114,7 +131,12 @@ function App() {
           } />
           <Route path="/exam-windows/:windowId/results" element={
             <ProfessorRoute>
-              <ExamWindowResults />
+              <GradingPage />
+            </ProfessorRoute>
+          } />
+          <Route path="/exam-windows/:windowId/results/:attemptId" element={
+            <ProfessorRoute>
+              <GradingPage />
             </ProfessorRoute>
           } />
           <Route path="/student-inscriptions" element={

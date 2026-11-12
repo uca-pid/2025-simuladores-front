@@ -1,8 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
-import { useSEB, useExamAttempt, useExamFiles, useCodeCompiler, useExamFinish } from '../hooks';
+import { useSEB, useExamAttempt, useExamFiles, useCodeCompiler, useExamFinish, useAttemptStatus } from '../hooks';
 import Modal from '../components/Modal';
+import EnunciadoArchivoViewer from '../components/EnunciadoArchivoViewer';
+import CsvDatasetViewer from '../components/CsvDatasetViewer';
+import PartBreakScreen from '../components/PartBreakScreen';
+
+const LANGUAGE_EXTENSIONS = { python: '.py', javascript: '.js', c: '.c' };
+const getExtensionForLanguage = (lenguaje) => LANGUAGE_EXTENSIONS[lenguaje] || '.js';
 
 const ProgrammingExamView = () => {
   const { examId } = useParams();
@@ -32,8 +38,39 @@ const ProgrammingExamView = () => {
     loading,
     setLoading,
     error,
-    setError
+    setError,
+    continueToNextPart
   } = useExamAttempt(examId, windowId, navigate);
+
+  // Se setea cuando advance-part responde "esperando_continuar": la parte de
+  // programación ya se cerró (código guardado y calificado) y solo queda
+  // esperar a que el estudiante confirme el paso a la siguiente.
+  const [partBreak, setPartBreak] = useState(null);
+  // true cuando el propio alumno entregó la última parte (no es un cierre del profesor)
+  const [finishedByStudent, setFinishedByStudent] = useState(false);
+  const [closedByProfessor, setClosedByProfessor] = useState(false);
+
+  // Si se recarga estando en la pantalla de corte, volver a mostrarla
+  useEffect(() => {
+    if (exam?.partStatus === 'esperando_continuar') {
+      setPartBreak({
+        partNumber: (exam.currentPartIndex ?? 0) + 1,
+        totalParts: exam.partes?.length
+      });
+    }
+  }, [exam]);
+
+  // Consulta periódica: cierre del examen por el profesor y habilitación de la siguiente parte
+  const attemptStatus = useAttemptStatus(
+    attempt && !finishedByStudent ? attempt.id : null,
+    {
+      intervalMs: partBreak ? 5000 : 15000,
+      onClosed: () => {
+        sessionStorage.removeItem(`exam_${examId}_windowId`);
+        setClosedByProfessor(true);
+      }
+    }
+  );
 
   // Archivos del examen (código, tabs, caché, guardado)
   const {
@@ -59,6 +96,7 @@ const ProgrammingExamView = () => {
     getMainFileName,
     isMainFile,
     handleEditorChange,
+    handleEditorMount,
     handleManualSave,
     loadFile,
     hideFile,
@@ -101,12 +139,34 @@ const ProgrammingExamView = () => {
   // Estados para modal de confirmación de finalizar examen
   const [showFinishModal, setShowFinishModal] = useState(false);
 
-  // Navegación lateral (Consigna | Programación)
-  const [activeSection, setActiveSection] = useState('programacion'); // 'consigna' | 'programacion'
-  
-  // 📱 Estado para sidebar colapsado en móviles
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  
+  // Navegación lateral: la consigna se muestra a la par del editor en desktop,
+  // y de forma exclusiva (una u otra) en móviles por falta de espacio.
+  const [showConsigna, setShowConsigna] = useState(true);
+  const [consignaTab, setConsignaTab] = useState('enunciado'); // 'enunciado' | nombre del dataset
+  const [consignaWidth, setConsignaWidth] = useState(null); // null = usar el ancho por defecto (400/620px); número = ancho fijado por el usuario arrastrando
+  const [consignaCollapsed, setConsignaCollapsed] = useState(false); // desktop: achica el panel a una franja mínima en vez de ocultarlo del todo
+  const isResizingConsignaRef = useRef(false);
+
+  const handleConsignaResizeStart = useCallback((e) => {
+    e.preventDefault();
+    isResizingConsignaRef.current = true;
+
+    const handleMouseMove = (moveEvent) => {
+      if (!isResizingConsignaRef.current) return;
+      const newWidth = Math.min(900, Math.max(300, moveEvent.clientX));
+      setConsignaWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      isResizingConsignaRef.current = false;
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, []);
+
   // 🔄 Estado para alternar entre vista de entrada/salida en móviles
   const [mobileTerminalView, setMobileTerminalView] = useState('output'); // 'input' | 'output'
 
@@ -117,12 +177,6 @@ const ProgrammingExamView = () => {
   useEffect(() => {
     const handleResize = () => {
       setWindowWidth(window.innerWidth);
-      // Auto-colapsar sidebar en móviles
-      if (window.innerWidth < 768) {
-        setIsSidebarCollapsed(true);
-      } else {
-        setIsSidebarCollapsed(false);
-      }
     };
     
     window.addEventListener('resize', handleResize);
@@ -251,6 +305,46 @@ const ProgrammingExamView = () => {
     );
   }
 
+  if (closedByProfessor) {
+    return (
+      <div className="container py-5">
+        <div className="modern-card" style={{ maxWidth: '560px', margin: '0 auto' }}>
+          <div className="modern-card-body text-center py-5">
+            <div className="empty-icon mb-3">
+              <i className="fas fa-lock"></i>
+            </div>
+            <h4 className="mb-3">El profesor cerró el examen</h4>
+            <p className="text-muted mb-4">
+              Se entregó automáticamente la última versión guardada de tu código.
+            </p>
+            <button
+              className="modern-btn modern-btn-primary"
+              onClick={() => (isInSEB ? closeSEB() : navigate('/student-exam'))}
+            >
+              <i className="fas fa-sign-out-alt me-2"></i>
+              Salir del examen
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (partBreak) {
+    return (
+      <PartBreakScreen
+        partNumber={partBreak.partNumber}
+        totalParts={partBreak.totalParts}
+        locked={attemptStatus ? !attemptStatus.siguienteParteHabilitada : false}
+        conCodigo={attemptStatus?.modoAvanceParte === 'codigo'}
+        onContinue={async (codigo) => {
+          await continueToNextPart(codigo);
+          setPartBreak(null);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="programming-exam-container">
       {/* Header personalizado para el examen */}
@@ -265,7 +359,7 @@ const ProgrammingExamView = () => {
             <div className="col">
               <h1 className="exam-title mb-0">{exam.titulo}</h1>
               <small className="exam-subtitle d-none d-sm-block">
-                {exam.lenguajeProgramacion === 'python' ? '🐍 Python' : '⚡ JavaScript'} • 
+                {exam.lenguajeProgramacion === 'python' ? '🐍 Python' : exam.lenguajeProgramacion === 'c' ? '🔧 C' : '⚡ JavaScript'} • 
                 {exam.intellisenseHabilitado ? ' ✨ Intellisense activo' : ' 🔒 Intellisense desactivado'}
                 {isInSEB && ' • 🔒 Modo Seguro (SEB)'}
               </small>
@@ -290,108 +384,125 @@ const ProgrammingExamView = () => {
                 )}
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Contenido principal con sidebar */}
-      <div className="programming-exam-content">
-        <div className={`exam-shell ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
-          {/* Overlay para cerrar el sidebar en móviles */}
-          {!isSidebarCollapsed && windowWidth < 768 && (
-            <div 
-              className="sidebar-overlay"
-              onClick={() => setIsSidebarCollapsed(true)}
-            />
-          )}
-          
-          {/* Botón toggle para móviles */}
-          <button 
-            className="sidebar-toggle d-md-none"
-            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-            aria-label="Toggle menu"
-          >
-            <i className={`fas ${isSidebarCollapsed ? 'fa-bars' : 'fa-times'}`}></i>
-          </button>
-          
-          {/* Sidebar */}
-          <aside className={`exam-sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
-            <div className="sidebar-header">
-              <div className="student-pill" title="Alumno">
-                <i className="fas fa-user-graduate"></i>
-              </div>
-              <div className="sidebar-title">Examen</div>
-            </div>
-            <nav className="sidebar-nav">
-              <button
-                className={`sidebar-item ${activeSection === 'consigna' ? 'active' : ''}`}
-                onClick={() => {
-                  setActiveSection('consigna');
-                  if (windowWidth < 768) setIsSidebarCollapsed(true);
-                }}
-              >
-                <i className="fas fa-file-alt me-2"></i>
-                <span className="sidebar-text">Consigna</span>
-              </button>
-              <button
-                className={`sidebar-item ${activeSection === 'programacion' ? 'active' : ''}`}
-                onClick={() => {
-                  setActiveSection('programacion');
-                  if (windowWidth < 768) setIsSidebarCollapsed(true);
-                }}
-              >
-                <i className="fas fa-code me-2"></i>
-                <span className="sidebar-text">Programación</span>
-              </button>
-            </nav>
-            
-            {/* Aviso importante sobre la entrega */}
-            <div style={{
-              padding: '12px',
-              margin: '12px',
-              backgroundColor: '#e3f2fd',
-              border: '1px solid #2196f3',
-              borderLeft: '4px solid #2196f3',
-              borderRadius: '4px',
-              fontSize: '0.85rem'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'start', gap: '8px' }}>
-                <div style={{ flex: 1 }}>
-                  <strong style={{ color: '#1976d2', display: 'block', marginBottom: '6px', fontSize: '0.9rem' }}>
-                    📝 Importante:
-                  </strong>
-                  <div style={{ color: '#0d47a1', lineHeight: '1.4' }}>
-                    Entregar la versión final en el archivo main.py y guardar manualmente antes de finalizar.
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="sidebar-footer">
+            <div className="col-auto d-flex align-items-center gap-2">
+              {windowWidth < 768 && (
+                <button
+                  className={`btn-header-toggle ${showConsigna ? 'active' : ''}`}
+                  onClick={() => setShowConsigna(!showConsigna)}
+                >
+                  <i className={`fas ${showConsigna ? 'fa-code' : 'fa-file-alt'} me-2`}></i>
+                  <span>{showConsigna ? 'Programación' : 'Mostrar consigna'}</span>
+                </button>
+              )}
               <button
                 className="btn-send-exam"
                 onClick={handleFinishExamClick}
                 disabled={loading || saving}
               >
                 <i className="fas fa-paper-plane me-2"></i>
-                <span className="sidebar-text">Finalizar examen</span>
+                <span>Finalizar examen</span>
               </button>
             </div>
-          </aside>
+          </div>
+        </div>
+      </div>
 
+      {/* Contenido principal */}
+      <div className="programming-exam-content">
+        <div className="exam-shell">
           {/* Main content */}
           <main className="exam-main">
-            {activeSection === 'consigna' ? (
-              <div className="consigna-panel">
-                <h3 className="consigna-title">
-                  <i className="fas fa-puzzle-piece me-2"></i>
-                  Consigna
-                </h3>
-                <div className="problem-statement">
-                  {exam.enunciadoProgramacion}
+            {(windowWidth < 768 ? showConsigna : true) && (() => {
+              // En desktop, en vez de desmontar el panel (showConsigna), se lo puede
+              // "achicar" a una franja mínima (consignaCollapsed) sin perder su lugar
+              // en el layout. En mobile se mantiene el comportamiento anterior: o se
+              // ve la consigna, o se ve el editor (no hay espacio para ambos).
+              const collapsedDesktop = windowWidth >= 768 && consignaCollapsed;
+
+              // Array normalizado de datasets: usa `datasetFiles` (nuevo) o cae
+              // al par legacy `datasetCsvUrl`/`datasetCsvNombre` (exámenes viejos, un solo archivo).
+              const datasetFilesList = Array.isArray(exam.datasetFiles) && exam.datasetFiles.length > 0
+                ? exam.datasetFiles
+                : (exam.datasetCsvUrl ? [{ url: exam.datasetCsvUrl, nombre: exam.datasetCsvNombre }] : []);
+
+              if (collapsedDesktop) {
+                return (
+                  <button
+                    type="button"
+                    className="consigna-collapsed-strip"
+                    onClick={() => setConsignaCollapsed(false)}
+                    title="Mostrar consigna"
+                  >
+                    <i className="fas fa-chevron-right"></i>
+                  </button>
+                );
+              }
+
+              return (
+                <div
+                  className={`consigna-panel ${exam.enunciadoTipo === 'archivo' ? 'with-iframe' : ''}`}
+                  style={consignaWidth ? { width: `${consignaWidth}px` } : undefined}
+                >
+                  <div className="consigna-notice">
+                    <strong>📝 Importante:</strong> Entregar la versión final en el archivo {{ python: 'main.py', javascript: 'main.js', c: 'main.c' }[exam?.lenguajeProgramacion] || 'main.py'} y guardar manualmente antes de finalizar.
+                  </div>
+
+                  {datasetFilesList.length > 0 && (
+                    <div className="consigna-tabs">
+                      <button
+                        type="button"
+                        className={`consigna-tab ${consignaTab === 'enunciado' ? 'active' : ''}`}
+                        onClick={() => setConsignaTab('enunciado')}
+                      >
+                        Enunciado
+                      </button>
+                      {datasetFilesList.map(f => (
+                        <button
+                          key={f.nombre}
+                          type="button"
+                          className={`consigna-tab ${consignaTab === f.nombre ? 'active' : ''}`}
+                          onClick={() => setConsignaTab(f.nombre)}
+                        >
+                          {f.nombre}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="consigna-body">
+                    {consignaTab === 'enunciado' && (
+                      exam.enunciadoTipo === 'archivo' ? (
+                        <EnunciadoArchivoViewer url={exam.enunciadoUrl} nombre={exam.enunciadoArchivoNombre} />
+                      ) : (
+                        <div className="problem-statement">
+                          {exam.enunciadoProgramacion}
+                        </div>
+                      )
+                    )}
+
+                    {datasetFilesList.map(f => (
+                      consignaTab === f.nombre && (
+                        <CsvDatasetViewer key={f.nombre} url={f.url} nombre={f.nombre} standalone />
+                      )
+                    ))}
+                  </div>
                 </div>
+              );
+            })()}
+            {windowWidth >= 768 && !consignaCollapsed && (
+              <div className="consigna-resizer" onMouseDown={handleConsignaResizeStart} title="Arrastrar para cambiar el ancho">
+                <button
+                  type="button"
+                  className="consigna-resizer-toggle"
+                  onClick={(e) => { e.stopPropagation(); setConsignaCollapsed(true); }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  title="Achicar consigna"
+                >
+                  <i className="fas fa-chevron-left"></i>
+                </button>
               </div>
-            ) : (
+            )}
+            {(windowWidth >= 768 || !showConsigna) && (
               <div className="programming-area">
                 {/* Toolbar superior: tabs y acciones */}
                 <div className="editor-header">
@@ -590,6 +701,7 @@ const ProgrammingExamView = () => {
                         theme="vs-dark"
                         value={code}
                         onChange={handleEditorChange}
+                        onMount={handleEditorMount}
                         options={{
                           ...editorOptions,
                           readOnly: saving || fileOperationLoading,
@@ -737,7 +849,7 @@ const ProgrammingExamView = () => {
           height: 100vh;
           display: flex;
           flex-direction: column;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
           font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
@@ -751,7 +863,7 @@ const ProgrammingExamView = () => {
         .exam-logo {
           width: 48px;
           height: 48px;
-          background: linear-gradient(45deg, #667eea, #764ba2);
+          background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
           border-radius: 12px;
           display: flex;
           align-items: center;
@@ -1589,206 +1701,294 @@ const ProgrammingExamView = () => {
       {/* Estilos del nuevo layout con sidebar */}
       <style>{`
         .exam-shell {
-          display: grid;
-          grid-template-columns: 260px 1fr;
+          display: flex;
           height: 100%;
           position: relative;
         }
-        
-        .exam-shell.sidebar-collapsed {
-          grid-template-columns: 1fr;
-        }
-        
-        /* Overlay para cerrar sidebar en móviles */
-        .sidebar-overlay {
-          display: none;
-        }
-        
-        @media (max-width: 767px) {
-          .sidebar-overlay {
-            display: block;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 999;
-            animation: fadeIn 0.3s ease;
-          }
-        }
-        
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-          }
-          to {
-            opacity: 1;
-          }
-        }
-        
-        /* Botón toggle para móviles */
-        .sidebar-toggle {
-          position: fixed;
-          top: 80px;
-          left: 10px;
-          z-index: 1001;
-          background: #111827;
-          border: 2px solid #374151;
-          color: #e5e7eb;
-          width: 44px;
-          height: 44px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-          transition: all 0.3s ease;
-        }
-        
-        .sidebar-toggle:hover {
-          background: #1f2937;
-          transform: scale(1.05);
-        }
-        
-        .sidebar-toggle:active {
-          transform: scale(0.95);
-        }
-        
-        @media (min-width: 768px) {
-          .sidebar-toggle {
-            display: none;
-          }
-        }
-        
-        .exam-sidebar {
-          background: #111827;
-          color: #d1d5db;
-          border-right: 1px solid #1f2937;
-          display: flex;
-          flex-direction: column;
-          padding: 14px 10px;
-          gap: 10px;
-          transition: transform 0.3s ease;
-        }
-        
-        @media (max-width: 767px) {
-          .exam-sidebar {
-            position: fixed;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 260px;
-            z-index: 1000;
-            transform: translateX(0);
-            box-shadow: 2px 0 10px rgba(0,0,0,0.3);
-          }
-          
-          .exam-sidebar.collapsed {
-            transform: translateX(-100%);
-          }
-        }
-        
-        .sidebar-header {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          padding: 6px 8px;
-        }
-        
-        .student-pill {
-          width: 28px; 
-          height: 28px;
-          border-radius: 6px;
-          background: #374151;
-          display: flex; 
-          align-items: center; 
-          justify-content: center;
-          flex-shrink: 0;
-        }
-        
-        .sidebar-title { 
-          font-weight: 700; 
-          color: #e5e7eb; 
-        }
-        
-        .sidebar-nav { 
-          display: flex; 
-          flex-direction: column; 
-          gap: 6px; 
-          margin-top: 6px; 
-        }
-        
-        .sidebar-item {
-          text-align: left;
+
+        .btn-header-toggle {
           background: transparent;
-          border: 1px solid transparent;
-          color: inherit;
-          padding: 10px 12px;
+          border: 1px solid #2563eb;
+          color: #2563eb;
+          padding: 8px 14px;
           border-radius: 8px;
           cursor: pointer;
-          transition: background .15s, border .15s;
+          transition: background .15s, border .15s, color .15s;
           display: flex;
           align-items: center;
+          white-space: nowrap;
         }
-        
-        .sidebar-item:hover { 
-          background: #1f2937; 
+
+        .btn-header-toggle:hover {
+          background: rgba(37, 99, 235, 0.1);
         }
-        
-        .sidebar-item.active { 
-          background: #2563eb; 
-          color: #fff; 
-          border-color: #2563eb; 
+
+        .btn-header-toggle.active {
+          background: #2563eb;
+          color: #fff;
+          border-color: #2563eb;
         }
-        
-        .sidebar-footer { 
-          margin-top: auto; 
-          padding-top: 8px; 
-          border-top: 1px solid #1f2937; 
+
+        .btn-header-toggle.active:hover {
+          background: #1d4ed8;
         }
-        
+
+        .consigna-notice {
+          padding: 10px 14px;
+          margin-bottom: 14px;
+          background-color: #e3f2fd;
+          border: 1px solid #2196f3;
+          border-left: 4px solid #2196f3;
+          border-radius: 4px;
+          font-size: 0.85rem;
+          color: #0d47a1;
+          line-height: 1.4;
+        }
+
         .btn-send-exam {
-          width: 100%;
           background: linear-gradient(45deg, #10b981, #059669);
-          border: none; 
-          color: #fff; 
+          border: none;
+          color: #fff;
           font-weight: 700;
-          padding: 10px 12px; 
-          border-radius: 10px; 
+          padding: 8px 16px;
+          border-radius: 10px;
           cursor: pointer;
           transition: all 0.2s ease;
           display: flex;
           align-items: center;
           justify-content: center;
+          white-space: nowrap;
         }
-        
+
         .btn-send-exam:hover:not(:disabled) {
           transform: translateY(-2px);
           box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
         }
-        
-        .btn-send-exam:disabled { 
-          opacity: .6; 
-          cursor: not-allowed; 
+
+        .btn-send-exam:disabled {
+          opacity: .6;
+          cursor: not-allowed;
         }
 
-        .exam-main { 
-          height: 100%; 
-          overflow: hidden; 
-          background: #0b0f17; 
+        .exam-main {
+          height: 100%;
+          width: 100%;
+          flex: 1;
+          overflow: hidden;
+          background: #0b0f17;
+          display: flex;
+          flex-direction: row;
         }
-        
-        .consigna-panel { 
-          padding: 18px; 
-          height: 100%; 
-          overflow: auto; 
+
+        .consigna-panel {
+          padding: 18px;
+          height: 100%;
+          overflow: auto;
+          width: 400px;
+          flex-shrink: 0;
+          border-right: 1px solid rgba(255, 255, 255, 0.08);
+          display: flex;
+          flex-direction: column;
         }
-        
+
+        .consigna-panel.with-iframe {
+          width: 620px;
+        }
+
+        .consigna-resizer {
+          width: 6px;
+          flex-shrink: 0;
+          cursor: col-resize;
+          background: rgba(255, 255, 255, 0.06);
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .consigna-resizer:hover,
+        .consigna-resizer:active {
+          background: rgba(59, 130, 246, 0.5);
+        }
+
+        .consigna-resizer-toggle {
+          position: absolute;
+          width: 20px;
+          height: 40px;
+          border-radius: 6px;
+          background: #1f2937;
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          color: #9ca3af;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          z-index: 2;
+        }
+
+        .consigna-resizer-toggle:hover {
+          color: #e5e7eb;
+          border-color: rgba(59, 130, 246, 0.6);
+        }
+
+        .consigna-collapsed-strip {
+          width: 22px;
+          flex-shrink: 0;
+          height: 100%;
+          background: rgba(255, 255, 255, 0.03);
+          border-right: 1px solid rgba(255, 255, 255, 0.08);
+          border-left: none;
+          border-top: none;
+          border-bottom: none;
+          color: #9ca3af;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .consigna-collapsed-strip:hover {
+          color: #e5e7eb;
+          background: rgba(59, 130, 246, 0.15);
+        }
+
+        .consigna-body {
+          margin-top: 16px;
+        }
+
+        .enunciado-archivo-toolbar {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-top: 14px;
+          color: #e5e7eb;
+          font-size: 0.85rem;
+        }
+
+        .enunciado-archivo-toolbar button {
+          background: rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          color: #e5e7eb;
+          border-radius: 6px;
+          width: 28px;
+          height: 28px;
+          cursor: pointer;
+        }
+
+        .enunciado-archivo-toolbar button:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+        }
+
+        .enunciado-archivo-pdf,
+        .enunciado-archivo-docx {
+          margin-top: 10px;
+          border: 2px solid rgba(226, 232, 240, 0.5);
+          border-radius: 12px;
+          background: #fff;
+          padding: 16px;
+        }
+
+        .enunciado-archivo-pdf {
+          overflow-x: auto;
+        }
+
+        .enunciado-archivo-pdf .textLayer {
+          user-select: text;
+        }
+
+        .enunciado-archivo-docx {
+          color: #1a1a1a;
+          font-size: 0.95rem;
+          line-height: 1.5;
+        }
+
+        .enunciado-archivo-loading,
+        .enunciado-archivo-error {
+          margin-top: 14px;
+          padding: 16px;
+          border-radius: 12px;
+          color: #e5e7eb;
+        }
+
+        .enunciado-archivo-error {
+          background: rgba(220, 38, 38, 0.15);
+          border: 1px solid rgba(220, 38, 38, 0.4);
+        }
+
+        .consigna-tabs {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 4px;
+          margin-top: 14px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .consigna-tab {
+          background: none;
+          border: none;
+          color: #9ca3af;
+          padding: 8px 14px;
+          font-size: 0.9rem;
+          cursor: pointer;
+          border-bottom: 2px solid transparent;
+        }
+
+        .consigna-tab.active {
+          color: #e5e7eb;
+          border-bottom-color: #3b82f6;
+        }
+
+        .dataset-csv-viewer {
+          margin-top: 14px;
+        }
+
+        .dataset-csv-toggle {
+          width: 100%;
+          text-align: left;
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          color: #e5e7eb;
+          border-radius: 8px;
+          padding: 10px 14px;
+          font-size: 0.9rem;
+          cursor: pointer;
+        }
+
+        .dataset-csv-table-wrapper {
+          margin-top: 8px;
+          max-height: 320px;
+          overflow: auto;
+          border: 2px solid rgba(226, 232, 240, 0.5);
+          border-radius: 8px;
+          background: #fff;
+        }
+
+        .dataset-csv-table {
+          border-collapse: collapse;
+          font-size: 0.8rem;
+          color: #1a1a1a;
+          white-space: nowrap;
+        }
+
+        .dataset-csv-table th,
+        .dataset-csv-table td {
+          padding: 6px 10px;
+          border-bottom: 1px solid #e5e7eb;
+          border-right: 1px solid #e5e7eb;
+        }
+
+        .dataset-csv-table th {
+          background: #f1f5f9;
+          position: sticky;
+          top: 0;
+        }
+
         @media (max-width: 768px) {
-          .consigna-panel {
+          .consigna-panel, .consigna-panel.with-iframe {
             padding: 12px;
+            width: 100%;
+            border-right: none;
           }
         }
         
@@ -1804,9 +2004,11 @@ const ProgrammingExamView = () => {
           }
         }
         
-        .programming-area { 
-          height: 100%; 
-          display: flex; 
+        .programming-area {
+          height: 100%;
+          flex: 1;
+          min-width: 0;
+          display: flex;
           flex-direction: column;
           overflow: hidden;
         }
@@ -2126,15 +2328,6 @@ const ProgrammingExamView = () => {
 
         /* Media queries para tablets */
         @media (max-width: 992px) and (min-width: 768px) {
-          .exam-shell { 
-            grid-template-columns: 200px 1fr; 
-          }
-          
-          .sidebar-item {
-            padding: 8px 10px;
-            font-size: 0.9rem;
-          }
-          
           .programming-grid {
             grid-template-columns: 1.5fr 1fr;
           }
@@ -2198,10 +2391,6 @@ const ProgrammingExamView = () => {
             max-height: 50vh;
           }
           
-          .sidebar-text {
-            font-size: 0.9rem;
-          }
-          
           .mobile-terminal-content {
             height: calc(100% - 44px);
           }
@@ -2253,13 +2442,13 @@ const ProgrammingExamView = () => {
                       newFileName.trim() && 
                       (/[<>:"/\\|?*]/.test(newFileName) || 
                        files.find(f => {
-                         const extension = exam?.lenguajeProgramacion === 'python' ? '.py' : '.js';
+                         const extension = getExtensionForLanguage(exam?.lenguajeProgramacion);
                          const fileName = newFileName.endsWith(extension) ? newFileName : `${newFileName}${extension}`;
                          return f.filename.toLowerCase() === fileName.toLowerCase();
                        })) 
                       ? 'is-invalid' : ''
                     }`}
-                    placeholder={`nombre.${exam?.lenguajeProgramacion === 'python' ? 'py' : 'js'}`}
+                    placeholder={`nombre${getExtensionForLanguage(exam?.lenguajeProgramacion)}`}
                     value={newFileName}
                     onChange={(e) => setNewFileName(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && createNewFile()}
@@ -2271,7 +2460,7 @@ const ProgrammingExamView = () => {
                       !newFileName.trim() || 
                       /[<>:"/\\|?*]/.test(newFileName) ||
                       files.find(f => {
-                        const extension = exam?.lenguajeProgramacion === 'python' ? '.py' : '.js';
+                        const extension = getExtensionForLanguage(exam?.lenguajeProgramacion);
                         const fileName = newFileName.endsWith(extension) ? newFileName : `${newFileName}${extension}`;
                         return f.filename.toLowerCase() === fileName.toLowerCase();
                       })
@@ -2289,7 +2478,7 @@ const ProgrammingExamView = () => {
                         Caracteres no permitidos: {"< > : \" / \\ | ? *"}
                       </span>
                     ) : files.find(f => {
-                      const extension = exam?.lenguajeProgramacion === 'python' ? '.py' : '.js';
+                      const extension = getExtensionForLanguage(exam?.lenguajeProgramacion);
                       const fileName = newFileName.endsWith(extension) ? newFileName : `${newFileName}${extension}`;
                       return f.filename.toLowerCase() === fileName.toLowerCase();
                     }) ? (
@@ -2686,9 +2875,18 @@ const ProgrammingExamView = () => {
       <Modal
         show={showFinishModal}
         onClose={() => setShowFinishModal(false)}
-        onConfirm={() => {
+        onConfirm={async () => {
           setShowFinishModal(false);
-          finishExam();
+          const response = await finishExam();
+          if (response?.estado === 'finalizado') {
+            setFinishedByStudent(true);
+          }
+          if (response?.partStatus === 'esperando_continuar') {
+            setPartBreak({
+              partNumber: (exam?.currentPartIndex ?? 0) + 1,
+              totalParts: exam?.partes?.length
+            });
+          }
         }}
         title="Finalizar Examen"
         message="¿Estás seguro de que quieres finalizar el examen?"

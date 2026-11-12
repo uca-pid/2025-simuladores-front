@@ -16,22 +16,18 @@ export default function StudentInscriptionsPage({
   const { user, token } = useAuth();
   const navigate = useNavigate();
   const { modal, showModal, closeModal, setModalProcessing } = useModal();
-  const [availableWindows, setAvailableWindows] = useState([]);
   const [myInscriptions, setMyInscriptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isClearing, setIsClearing] = useState(false);
   const [isOnFilterCooldown, setIsOnFilterCooldown] = useState(false);
-  const [filteredAvailableWindows, setFilteredAvailableWindows] = useState([]);
   const [activeTab, setActiveTab] = useState(() => {
     // Recuperar la pestaña del localStorage o usar 'available' por defecto
     return localStorage.getItem('studentInscriptions_activeTab') || 'available';
   });
-  const [filters, setFilters] = useState({
-    materia: '',
-    profesor: '',
-    fecha: '',
-    windowId: ''
-  });
+  const [codigoInput, setCodigoInput] = useState('');
+  const [codigoWindow, setCodigoWindow] = useState(null);
+  const [codigoError, setCodigoError] = useState('');
+  const [codigoLoading, setCodigoLoading] = useState(false);
   const [myInscriptionsFilters, setMyInscriptionsFilters] = useState({
     materia: '',
     profesor: '',
@@ -40,52 +36,36 @@ export default function StudentInscriptionsPage({
   });
   const [filteredInscriptions, setFilteredInscriptions] = useState([]);
 
-  const loadAvailableWindows = useCallback(async () => {
+  const handleBuscarCodigo = async (e) => {
+    e.preventDefault();
+    const codigo = codigoInput.trim();
+
+    if (!codigo) return;
+
+    setCodigoLoading(true);
+    setCodigoError('');
+    setCodigoWindow(null);
+
     try {
-      const response = await fetch(`${API_BASE_URL}/exam-windows/disponibles`, {
+      const response = await fetch(`${API_BASE_URL}/exam-windows/por-codigo/${encodeURIComponent(codigo)}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setAvailableWindows(data);
-        setFilteredAvailableWindows(data);
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setCodigoError(data.error || 'No se encontró ninguna ventana con ese código');
+        return;
       }
+
+      setCodigoWindow(data);
     } catch (error) {
-      console.error('Error cargando ventanas disponibles:', error);
+      console.error('Error buscando ventana por código:', error);
+      setCodigoError('Error de conexión al buscar el código');
+    } finally {
+      setCodigoLoading(false);
     }
-  }, [token]);
-
-  useEffect(() => {
-    let filtered = [...availableWindows];
-
-    if (filters.materia) {
-      filtered = filtered.filter(window =>
-        window.nombre.toLowerCase().includes(filters.materia.toLowerCase())
-      );
-    }
-
-    if (filters.profesor) {
-      filtered = filtered.filter(window =>
-        window.exam.profesor.nombre.toLowerCase().includes(filters.profesor.toLowerCase())
-      );
-    }
-
-    if (filters.fecha) {
-      filtered = filtered.filter(window => {
-        const windowDate = new Date(window.fechaInicio).toISOString().split('T')[0];
-        return windowDate === filters.fecha;
-      });
-    }
-
-    if (filters.windowId) {
-      filtered = filtered.filter(window =>
-        window.id.toString().includes(filters.windowId)
-      );
-    }
-
-    setFilteredAvailableWindows(filtered);
-  }, [availableWindows, filters]);
+  };
 
   const loadMyInscriptions = useCallback(async () => {
     try {
@@ -163,27 +143,19 @@ export default function StudentInscriptionsPage({
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      await Promise.all([loadAvailableWindows(), loadMyInscriptions()]);
+      await loadMyInscriptions();
     } catch (error) {
       console.error('Error cargando datos:', error);
       showModal('error', 'Error', 'Error cargando los datos');
     } finally {
       setLoading(false);
     }
-  }, [loadAvailableWindows, loadMyInscriptions, showModal]);
+  }, [loadMyInscriptions, showModal]);
 
   // Guardar la pestaña activa en localStorage
   useEffect(() => {
     localStorage.setItem('studentInscriptions_activeTab', activeTab);
   }, [activeTab]);
-
-  // Actualizar ventanas filtradas cuando cambian las ventanas disponibles
-  useEffect(() => {
-    if (availableWindows.length > 0 && filteredAvailableWindows.length === 0 && 
-        !filters.materia && !filters.profesor && !filters.fecha && !filters.windowId) {
-      setFilteredAvailableWindows(availableWindows);
-    }
-  }, [availableWindows, filteredAvailableWindows.length, filters]);
 
   // Actualizar inscripciones filtradas cuando cambian las inscripciones
   useEffect(() => {
@@ -295,24 +267,6 @@ const openExam = async (examId, windowId, token, window) => {
 
 
 
-  const handleFilterChange = (e) => {
-    const { name, value } = e.target;
-    setFilters(prev => ({ ...prev, [name]: value }));
-  };
-
-  const clearFilters = () => {
-    if (isClearing || isOnFilterCooldown) return;
-    
-    setIsClearing(true);
-    setFilters({ materia: '', profesor: '', fecha: '', windowId: '' });
-    setFilteredAvailableWindows(availableWindows);
-    setTimeout(() => {
-      setIsClearing(false);
-      setIsOnFilterCooldown(true);
-      setTimeout(() => setIsOnFilterCooldown(false), 800);
-    }, 100);
-  };
-
   const handleMyInscriptionsFilterChange = (e) => {
     const { name, value } = e.target;
     setMyInscriptionsFilters(prev => ({ ...prev, [name]: value }));
@@ -363,6 +317,8 @@ const handleInscription = (window) => {
 
         // ✅ ÉXITO
         showModal('success', '¡Éxito!', 'Te has inscrito correctamente al examen');
+        setCodigoWindow(null);
+        setCodigoInput('');
         loadData();
         closeModal(); // ✅ solo en éxito
 
@@ -492,13 +448,12 @@ const handleInscription = (window) => {
       <div className="modern-card mb-4">
         <div className="modern-card-body p-0">
           <div className="student-exam-tabs">
-            <button 
+            <button
               className={`student-tab-button ${activeTab === 'available' ? 'active' : ''}`}
               onClick={() => setActiveTab('available')}
             >
-              <i className="fas fa-calendar-check me-2"></i>
-              <span className="tab-text">Exámenes Disponibles</span>
-              <span className="tab-count">({availableWindows.length})</span>
+              <i className="fas fa-key me-2"></i>
+              <span className="tab-text">Inscribirme con Código</span>
             </button>
             <button 
               className={`student-tab-button ${activeTab === 'myInscriptions' ? 'active' : ''}`}
@@ -515,228 +470,171 @@ const handleInscription = (window) => {
       {/* Tab Content */}
       {activeTab === 'available' && (
         <div>
-          {/* Filtros */}
+          {/* Buscador por código */}
           <div className="modern-card mb-4">
             <div className="modern-card-header">
               <h5 className="modern-card-title">
-                <i className="fas fa-filter me-2"></i>
-                Filtros de Búsqueda
+                <i className="fas fa-key me-2"></i>
+                Ingresar código de inscripción
               </h5>
             </div>
             <div className="modern-card-body">
-              <div className="row g-3">
-                <div className="col-lg-2 col-md-6">
-                  <label className="form-label fw-semibold">Nombre</label>
-                  <input 
-                    type="text" 
-                    className="form-control modern-input"
-                    name="materia"
-                    value={filters.materia}
-                    onChange={handleFilterChange}
-                    placeholder="Buscar por nombre"
+              <p className="text-muted">
+                Pedile a tu profesor el código de la ventana del examen al que querés inscribirte.
+              </p>
+              <form className="row g-3 align-items-end" onSubmit={handleBuscarCodigo}>
+                <div className="col-md-8">
+                  <label className="form-label fw-semibold">Código</label>
+                  <input
+                    type="text"
+                    className="form-control modern-input text-uppercase"
+                    value={codigoInput}
+                    onChange={(e) => setCodigoInput(e.target.value)}
+                    placeholder="Ej: A1B2C3"
+                    maxLength={12}
                   />
                 </div>
-                <div className="col-lg-2 col-md-6">
-                  <label className="form-label fw-semibold">Profesor</label>
-                  <input 
-                    type="text" 
-                    className="form-control modern-input"
-                    name="profesor"
-                    value={filters.profesor}
-                    onChange={handleFilterChange}
-                    placeholder="Buscar por profesor"
-                  />
-                </div>
-                <div className="col-lg-2 col-md-6">
-                  <label className="form-label fw-semibold">Fecha</label>
-                  <input 
-                    type="date" 
-                    className="form-control modern-input"
-                    name="fecha"
-                    value={filters.fecha}
-                    onChange={handleFilterChange}
-                  />
-                </div>
-                <div className="col-lg-2 col-md-6">
-                  <label className="form-label fw-semibold">ID Ventana</label>
-                  <input 
-                    type="text" 
-                    className="form-control modern-input"
-                    name="windowId"
-                    value={filters.windowId}
-                    onChange={handleFilterChange}
-                    placeholder="Buscar por ID"
-                  />
-                </div>
-                <div className="col-lg-4 col-md-12 d-flex align-items-end gap-2 student-filters-actions">
+                <div className="col-md-4">
                   <button
-                    className="modern-btn modern-btn-secondary flex-fill"
-                    onClick={() => setFilters({ materia: '', profesor: '', fecha: '', windowId: '' })}
+                    type="submit"
+                    className="modern-btn modern-btn-primary w-100"
+                    disabled={codigoLoading || !codigoInput.trim()}
                   >
-                    <i className="fas fa-times me-2"></i>
-                    Limpiar Filtros
+                    <i className="fas fa-search me-2"></i>
+                    {codigoLoading ? 'Buscando...' : 'Buscar'}
                   </button>
-
                 </div>
-              </div>
+              </form>
+              {codigoError && (
+                <div className="alert alert-danger mt-3 mb-0">
+                  <i className="fas fa-exclamation-triangle me-2"></i>
+                  {codigoError}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Lista de exámenes disponibles */}
-          {availableWindows.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-icon">
-                <i className="fas fa-calendar-times"></i>
-              </div>
-              <h4 className="empty-title">No hay exámenes disponibles</h4>
-              <p className="empty-subtitle">
-                No hay exámenes disponibles para inscripción en este momento.
-              </p>
-            </div>
-          ) : filteredAvailableWindows.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-icon">
-                <i className="fas fa-search"></i>
-              </div>
-              <h4 className="empty-title">No se encontraron exámenes</h4>
-              <p className="empty-subtitle">
-                No hay exámenes que coincidan con los filtros aplicados.
-              </p>
-              <button 
-                className="modern-btn modern-btn-primary"
-                onClick={clearFilters}
-                disabled={isClearing || isOnFilterCooldown}
-              >
-                <i className="fas fa-times me-2"></i>
-                Limpiar Filtros
-              </button>
-            </div>
-          ) : (
-            <div className="row g-4">
-              {filteredAvailableWindows.map((window, index) => {
-                const timeStatus = getTimeStatus(window.fechaInicio, window.duracion, window.sinTiempo);
-                return (
-                  <div key={window.id} className="col-md-6 col-lg-4">
-                    <div className={`exam-card fade-in-up`} style={{animationDelay: `${index * 0.1}s`}}>
-                      <div className="exam-card-header">
-                        <h5 className="exam-title">
-                          {window.nombre}
-                        </h5>
-                        <div className="d-flex flex-wrap gap-2">
-                          <span className="exam-badge">
-                            Prof. {window.exam.profesor.nombre}
-                          </span>
-                          <span className="exam-badge" style={{backgroundColor: '#6c757d'}}>
-                            ID: {window.id}
-                          </span>
+          {/* Resultado de la búsqueda */}
+          {codigoWindow && (() => {
+            const window = codigoWindow;
+            const timeStatus = getTimeStatus(window.fechaInicio, window.duracion, window.sinTiempo);
+            return (
+              <div className="row g-4">
+                <div className="col-md-6 col-lg-4">
+                  <div className="exam-card fade-in-up">
+                    <div className="exam-card-header">
+                      <h5 className="exam-title">
+                        {window.nombre}
+                      </h5>
+                      <div className="d-flex flex-wrap gap-2">
+                        <span className="exam-badge">
+                          Prof. {window.exam.profesor.nombre}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="exam-card-body">
+                      <div className="exam-info">
+                        {window.sinTiempo ? (
+                          <div className="exam-info-item">
+                            <i className="fas fa-infinity text-success"></i>
+                            <span><strong>Ventana:</strong>
+                              <span className="ms-1 badge bg-success text-white">
+                                🕐 Disponible siempre
+                              </span>
+                            </span>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="exam-info-item">
+                              <i className="fas fa-calendar"></i>
+                              <span><strong>Fecha:</strong> {new Date(window.fechaInicio).toLocaleDateString()}</span>
+                            </div>
+                            <div className="exam-info-item">
+                              <i className="fas fa-clock"></i>
+                              <span><strong>Hora de inicio:</strong> {new Date(window.fechaInicio).toLocaleTimeString()}</span>
+                            </div>
+                            <div className="exam-info-item">
+                              <i className="fas fa-hourglass-half"></i>
+                              <span><strong>Duración:</strong> {window.duracion} min</span>
+                            </div>
+                          </>
+                        )}
+                        <div className="exam-info-item">
+                          <i className="fas fa-laptop"></i>
+                          <span><strong>Modalidad:</strong> {window.modalidad ? window.modalidad.charAt(0).toUpperCase() + window.modalidad.slice(1) : ''}</span>
+                        </div>
+                        {window.usaSEB && (
+                          <div className="exam-info-item">
+                            <i className="fas fa-shield-alt text-warning"></i>
+                            <span><strong>Seguridad:</strong>
+                              <span className="ms-1 badge text-white" style={{
+                                backgroundColor: '#ff8c00',
+                                fontWeight: 'bold',
+                                padding: '0.35rem 0.6rem',
+                                fontSize: '0.75rem'
+                              }}>
+                                🔒 Requiere Safe Exam Browser
+                              </span>
+                            </span>
+                          </div>
+                        )}
+                        <div className="exam-info-item">
+                          <i className="fas fa-users"></i>
+                          <span><strong>Inscritos:</strong> {window.cupoMaximo - window.cupoDisponible}/{window.cupoMaximo}</span>
+                        </div>
+                        <div className={`exam-info-item ${timeStatus.class}`}>
+                          <i className="fas fa-info-circle"></i>
+                          <strong>{timeStatus.text}</strong>
                         </div>
                       </div>
-                      <div className="exam-card-body">
-                        <div className="exam-info">
-                          {window.sinTiempo ? (
-                            <div className="exam-info-item">
-                              <i className="fas fa-infinity text-success"></i>
-                              <span><strong>Ventana:</strong> 
-                                <span className="ms-1 badge bg-success text-white">
-                                  🕐 Disponible siempre
-                                </span>
-                              </span>
-                            </div>
-                          ) : (
-                            <>
-                              <div className="exam-info-item">
-                                <i className="fas fa-calendar"></i>
-                                <span><strong>Fecha:</strong> {new Date(window.fechaInicio).toLocaleDateString()}</span>
-                              </div>
-                              <div className="exam-info-item">
-                                <i className="fas fa-clock"></i>
-                                <span><strong>Hora de inicio:</strong> {new Date(window.fechaInicio).toLocaleTimeString()}</span>
-                              </div>
-                              <div className="exam-info-item">
-                                <i className="fas fa-hourglass-half"></i>
-                                <span><strong>Duración:</strong> {window.duracion} min</span>
-                              </div>
-                            </>
-                          )}
-                          <div className="exam-info-item">
-                            <i className="fas fa-laptop"></i>
-                            <span><strong>Modalidad:</strong> {window.modalidad ? window.modalidad.charAt(0).toUpperCase() + window.modalidad.slice(1) : ''}</span>
-                          </div>
-                          {window.usaSEB && (
-                            <div className="exam-info-item">
-                              <i className="fas fa-shield-alt text-warning"></i>
-                              <span><strong>Seguridad:</strong> 
-                                <span className="ms-1 badge text-white" style={{
-                                  backgroundColor: '#ff8c00',
-                                  fontWeight: 'bold',
-                                  padding: '0.35rem 0.6rem',
-                                  fontSize: '0.75rem'
-                                }}>
-                                  🔒 Requiere Safe Exam Browser
-                                </span>
-                              </span>
-                            </div>
-                          )}
-                          <div className="exam-info-item">
-                            <i className="fas fa-users"></i>
-                            <span><strong>Inscritos:</strong> {window.cupoMaximo - window.cupoDisponible}/{window.cupoMaximo}</span>
-                          </div>
-                          <div className={`exam-info-item ${timeStatus.class}`}>
-                            <i className="fas fa-info-circle"></i>
-                            <strong>{timeStatus.text}</strong>
-                          </div>
+                      {window.notas && (
+                        <div className="exam-info-item">
+                          <i className="fas fa-sticky-note"></i>
+                          <span className="me-2"><strong>Notas:</strong></span>
+                          <span
+                            style={{
+                              display: '-webkit-box',
+                              WebkitLineClamp: 3,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              maxHeight: '3.75em',
+                              lineHeight: '1.25em',
+                              fontSize: '0.9em'
+                            }}
+                          >
+                            {window.notas}
+                          </span>
                         </div>
-                          {window.notas && (
-                            <div className="exam-info-item">
-                              <i className="fas fa-sticky-note"></i>
-                              <span className="me-2"><strong>Notas:</strong></span>
-                              <span 
-                                style={{
-                                  display: '-webkit-box',
-                                  WebkitLineClamp: 3,
-                                  WebkitBoxOrient: 'vertical',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  maxHeight: '3.75em',
-                                  lineHeight: '1.25em',
-                                  fontStyle: !window.notas ? 'italic' : 'normal',
-                                  color: !window.notas ? '#6c757d' : 'inherit',
-                                  fontSize: '0.9em'
-                                }}
-                              >
-                                {window.notas || 'Sin notas adicionales'}
-                              </span>
-                            </div>
-                          )}
-                        <div className="mt-3">
-                          {window.yaInscrito ? (
-                            <button className="modern-btn modern-btn-secondary w-100" disabled>
-                              <i className="fas fa-check me-2"></i>
-                              Ya inscrito
-                            </button>
-                          ) : window.cupoDisponible === 0 ? (
-                            <button className="modern-btn modern-btn-secondary w-100" disabled>
-                              <i className="fas fa-users-slash me-2"></i>
-                              Completo
-                            </button>
-                          ) : (
-                            <button 
-                              className="modern-btn modern-btn-primary w-100"
-                              onClick={() => handleInscription(window)}
-                            >
-                              <i className="fas fa-user-plus me-2"></i>
-                              Inscribirse
-                              {window.usaSEB && <i className="fas fa-shield-alt ms-2"></i>}
-                            </button>
-                          )}
-                        </div>
+                      )}
+                      <div className="mt-3">
+                        {window.yaInscrito ? (
+                          <button className="modern-btn modern-btn-secondary w-100" disabled>
+                            <i className="fas fa-check me-2"></i>
+                            Ya inscrito
+                          </button>
+                        ) : window.cupoDisponible === 0 ? (
+                          <button className="modern-btn modern-btn-secondary w-100" disabled>
+                            <i className="fas fa-users-slash me-2"></i>
+                            Completo
+                          </button>
+                        ) : (
+                          <button
+                            className="modern-btn modern-btn-primary w-100"
+                            onClick={() => handleInscription(window)}
+                          >
+                            <i className="fas fa-user-plus me-2"></i>
+                            Inscribirse
+                            {window.usaSEB && <i className="fas fa-shield-alt ms-2"></i>}
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
 
