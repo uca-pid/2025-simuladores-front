@@ -1,7 +1,7 @@
 import { hashPassword } from '../utils/password';
 
 // Exportar API_BASE_URL para uso en otros componentes
-export const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
+export const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:4000';
 
 // Helper function to get auth headers
 const getAuthHeaders = () => {
@@ -58,7 +58,15 @@ const handleResponse = async (response) => {
       throw error;
     }
   }
-  
+
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    throw new Error(
+      `El backend devolvió una respuesta no JSON (HTTP ${response.status}, ${contentType || 'tipo desconocido'}). ` +
+      `Verificá que esté activo en ${API_BASE_URL}.`
+    );
+  }
+
   const data = await response.json();
   
   if (!response.ok) {
