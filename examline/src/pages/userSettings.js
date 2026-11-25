@@ -158,7 +158,7 @@ export default function UserSettingsPage() {
           setIsDeleting(true);
           setModal(prev => ({ ...prev, isProcessing: true }));
           
-          const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://two025-simuladores-back-1.onrender.com';
+          const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:4000';
           const res = await fetch(`${API_BASE_URL}/users/${user.userId}`, { 
             method: "DELETE",
             headers: {
