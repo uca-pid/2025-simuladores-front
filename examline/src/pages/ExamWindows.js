@@ -162,14 +162,16 @@ export default function ExamWindowsPage() {
     loadData(false);
   }, [user, navigate, loadData]);
 
-  // Atajo "Crear ventana de este examen" desde Mis Exámenes
+  // ?examId=X solo arma el estado inicial (filtro y, con openCreate=1, el modal
+  // con el examen preseleccionado). Después se limpia de la URL para que la
+  // página se comporte como la normal y no quede atada a ese examen.
   useEffect(() => {
-    if (openCreateOnLoad && !loading && scopedExamId) {
+    if (loading || !scopedExamId) return;
+    if (openCreateOnLoad) {
       resetForm(scopedExamId);
       setShowCreateModal(true);
-      searchParams.delete('openCreate');
-      setSearchParams(searchParams, { replace: true });
     }
+    setSearchParams({}, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openCreateOnLoad, loading, scopedExamId]);
 
@@ -271,14 +273,13 @@ export default function ExamWindowsPage() {
   };
 
   const handleCreateWindow = () => {
-    const presetExamId = examFilterIds.length === 1 ? examFilterIds[0] : (scopedExamId || '');
-    resetForm(presetExamId);
+    resetForm();
     setShowCreateModal(true);
   };
 
   const handleSelectSlot = (slotInfo) => {
     if (exams.length === 0) return;
-    resetForm(examFilterIds.length === 1 ? examFilterIds[0] : '');
+    resetForm();
     setFormData(prev => ({ ...prev, fechaInicio: formatDateTimeLocal(slotInfo.start) }));
     setShowCreateModal(true);
   };
@@ -1367,7 +1368,7 @@ export default function ExamWindowsPage() {
                           value={formData.examId}
                           onChange={handleInputChange}
                           required
-                          disabled={editingWindow || isSavingWindow || !!scopedExamId}
+                          disabled={editingWindow || isSavingWindow}
                           style={{
                             borderRadius: '8px',
                             border: `1px solid ${validationErrors.examId ? '#dc3545' : 'var(--border-color)'}`,
