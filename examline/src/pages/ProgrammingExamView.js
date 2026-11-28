@@ -313,7 +313,7 @@ const ProgrammingExamView = () => {
             <div className="empty-icon mb-3">
               <i className="fas fa-lock"></i>
             </div>
-            <h4 className="mb-3">El profesor cerró el examen</h4>
+            <h4 className="mb-3">El examen se cerró</h4>
             <p className="text-muted mb-4">
               Se entregó automáticamente la última versión guardada de tu código.
             </p>

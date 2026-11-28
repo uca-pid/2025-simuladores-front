@@ -10,7 +10,8 @@ import { getAttemptStatus } from '../services/api';
  * @param {Object} options
  * @param {number} options.intervalMs - Cada cuánto consultar
  * @param {Function} options.onClosed - Se llama una vez cuando el intento queda
- *   finalizado sin que el alumno lo haya entregado (cierre del profesor)
+ *   finalizado sin que el alumno lo haya entregado (cierre del profesor o fin
+ *   del horario)
  * @returns {Object|null} Último estado recibido
  */
 export const useAttemptStatus = (attemptId, { intervalMs = 15000, onClosed } = {}) => {
@@ -33,7 +34,10 @@ export const useAttemptStatus = (attemptId, { intervalMs = 15000, onClosed } = {
         if (cancelled) return;
         setStatus(data);
 
-        if ((data.estado === 'finalizado' || data.examenCerrado) && !closedNotified.current) {
+        // Solo avisar cuando el servidor efectivamente entregó el intento. Con
+        // examenCerrado y el intento todavía en curso no hubo entrega (por
+        // ejemplo, ventana desactivada): se sigue consultando.
+        if (data.estado === 'finalizado' && !closedNotified.current) {
           closedNotified.current = true;
           onClosedRef.current?.(data);
         }

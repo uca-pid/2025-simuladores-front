@@ -113,7 +113,7 @@ const ExamAttempt = ({ examId: propExamId, onBack }) => {
         showModal(
           'warning',
           'Examen cerrado',
-          'El profesor cerró el examen. Tus respuestas guardadas fueron entregadas automáticamente.',
+          'El examen se cerró. Tus respuestas guardadas fueron entregadas automáticamente.',
           async () => {
             closeModal();
             if (isInSEB) {
